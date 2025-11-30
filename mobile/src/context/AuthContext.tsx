@@ -27,10 +27,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Navigate based on role after authentication
   useEffect(() => {
-    if (!isLoading && user) {
-      navigateToRoleScreen(user.role);
-    } else if (!isLoading && !user) {
-      router.replace('/(auth)/login');
+    // Only navigate if loading is completely done
+    if (!isLoading) {
+        if (user) {
+            navigateToRoleScreen(user.role);
+        } else {
+            // If not authenticated, we just stay on the current screen (likely login or splash)
+            // But to be safe, if we are at root and not logged in, go to login
+            // router.replace('/(auth)/login'); // Removed auto-redirect to prevent Flash Screen interruption
+        }
     }
   }, [user, isLoading]);
 
@@ -52,13 +57,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkAuth = async () => {
     try {
+      // Add artificial delay for Flash Screen
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
       const token = await storage.getToken();
       const userData = await storage.getUser();
       
       if (token && userData) {
         setUser(userData);
-        // Optionally refresh profile from API
-        // await refreshProfile();
       }
     } catch (error) {
       console.error('Auth check error:', error);

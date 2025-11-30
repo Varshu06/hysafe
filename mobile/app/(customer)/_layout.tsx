@@ -20,6 +20,7 @@ export default function CustomerLayout() {
         name="index"
         options={{
           title: 'Home',
+          headerShown: false, // Hide default header for custom one
           tabBarLabel: 'Home',
         }}
       />
@@ -42,6 +43,38 @@ export default function CustomerLayout() {
         options={{
           href: null, // Hide from tab bar
           title: 'Order Details',
+        }}
+      />
+      <Tabs.Screen
+        name="address/search"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="address/add"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="products/index"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="checkout/index"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
         }}
       />
     </Tabs>
