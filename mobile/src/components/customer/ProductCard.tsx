@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../../utils/constants';
 
 interface ProductCardProps {
@@ -8,7 +8,7 @@ interface ProductCardProps {
     name: string;
     price: number;
     deliveryCharge: string;
-    image: string;
+    image: ImageSourcePropType;
     volume: string;
   };
   selected?: boolean;
@@ -29,7 +29,7 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       )}
       <View style={styles.imageContainer}>
          <Image 
-            source={{ uri: item.image }} 
+            source={item.image} 
             style={styles.productImage}
             resizeMode="contain"
          />

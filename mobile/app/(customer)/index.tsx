@@ -5,32 +5,52 @@ import { ActiveOrderCard } from '../../src/components/customer/ActiveOrderCard';
 import { CustomerHeader } from '../../src/components/customer/Header';
 import { OrderCard } from '../../src/components/customer/OrderCard';
 import { WhyChooseUs } from '../../src/components/customer/WhyChooseUs';
+import { FloatingAddButton } from '../../src/components/ui/FloatingAddButton';
+import { useCart } from '../../src/context/CartContext';
 import { ACTIVE_ORDER, PAST_ORDERS, PRODUCTS } from '../../src/data/dummy';
 import { COLORS } from '../../src/utils/constants';
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
+  const { addToCart, getQuantity, incrementQuantity, decrementQuantity } = useCart();
+
+  const handleAddProduct = (product: typeof PRODUCTS[0]) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      volume: product.volume,
+    });
+    // Redirect to checkout after adding
+    router.push('/(customer)/checkout');
+  };
+
+  const handleIncrement = (productId: string) => {
+    incrementQuantity(productId);
+  };
+
+  const handleDecrement = (productId: string) => {
+    decrementQuantity(productId);
+  };
 
   return (
     <View style={styles.container}>
       <CustomerHeader />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        
         {/* Products Horizontal Scroll */}
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>Products</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsScroll}>
                 {PRODUCTS.map((product) => (
-                    <TouchableOpacity 
+                    <View 
                         key={product.id} 
                         style={styles.productCardSmall}
-                        onPress={() => router.push('/(customer)/products')}
                     >
                         <View style={styles.productImageContainer}>
-                             {/* Real Image Placeholder - user will add local assets */}
                              <Image 
-                                source={{ uri: product.image }} 
+                                source={product.image} 
                                 style={styles.productImage}
                                 resizeMode="contain"
                              />
@@ -38,21 +58,41 @@ export default function CustomerHomeScreen() {
                         <Text style={styles.productName}>{product.name}</Text>
                         <View style={styles.priceRow}>
                             <Text style={styles.price}>₹ {product.price}</Text>
-                            <TouchableOpacity style={styles.addButton}>
-                                <Text style={styles.addButtonText}>ADD</Text>
-                                <Text style={styles.plusIcon}>+</Text>
-                            </TouchableOpacity>
+                            {getQuantity(product.id) > 0 ? (
+                                <View style={styles.quantitySelector}>
+                                    <TouchableOpacity 
+                                        style={styles.qtyButton}
+                                        onPress={() => handleDecrement(product.id)}
+                                    >
+                                        <Text style={styles.qtyButtonText}>−</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.qtyText}>{getQuantity(product.id)}</Text>
+                                    <TouchableOpacity 
+                                        style={styles.qtyButton}
+                                        onPress={() => handleIncrement(product.id)}
+                                    >
+                                        <Text style={styles.qtyButtonText}>+</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <TouchableOpacity 
+                                    style={styles.addButton}
+                                    onPress={() => handleAddProduct(product)}
+                                >
+                                    <Text style={styles.addButtonText}>ADD</Text>
+                                    <Text style={styles.plusIcon}>+</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
-                    </TouchableOpacity>
+                    </View>
                 ))}
-                
-                <TouchableOpacity 
-                    style={styles.nextBtn}
-                    onPress={() => router.push('/(customer)/products')}
-                >
-                    <Text style={styles.nextBtnText}>Next ›</Text>
-                </TouchableOpacity>
             </ScrollView>
+            <TouchableOpacity 
+                style={styles.viewMoreBtn}
+                onPress={() => router.push('/(customer)/products')}
+            >
+                <Text style={styles.viewMoreText}>View More</Text>
+            </TouchableOpacity>
         </View>
 
         {/* Active Orders */}
@@ -74,6 +114,8 @@ export default function CustomerHomeScreen() {
         
         <View style={styles.bottomSpacer} />
       </ScrollView>
+      
+      <FloatingAddButton />
     </View>
   );
 }
@@ -141,13 +183,14 @@ const styles = StyleSheet.create({
       color: COLORS.text,
   },
   addButton: {
-      backgroundColor: COLORS.primary,
+      backgroundColor: '#102841',
       paddingHorizontal: 16,
       paddingVertical: 6,
       borderRadius: 8,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      height: 32,
   },
   addButtonText: {
       color: 'white',
@@ -159,16 +202,45 @@ const styles = StyleSheet.create({
       fontSize: 14,
       fontWeight: 'bold',
   },
-  nextBtn: {
-      backgroundColor: '#0F172A',
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginLeft: 8,
+  quantitySelector: {
+      backgroundColor: '#102841',
+      borderRadius: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      height: 32,
+      gap: 8,
   },
-  nextBtnText: {
+  qtyButton: {
+      width: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+  },
+  qtyButtonText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: 'bold',
+  },
+  qtyText: {
+      color: 'white',
+      fontSize: 12,
+      fontWeight: 'bold',
+      minWidth: 14,
+      textAlign: 'center',
+  },
+  viewMoreBtn: {
+      backgroundColor: '#102841',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 20,
+      alignSelf: 'flex-end',
+      marginTop: 16,
+  },
+  viewMoreText: {
       color: 'white',
       fontWeight: 'bold',
+      fontSize: 14,
   },
   bottomSpacer: {
       height: 80,

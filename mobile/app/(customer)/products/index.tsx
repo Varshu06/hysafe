@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductCard } from '../../../src/components/customer/ProductCard';
 import { PRODUCTS } from '../../../src/data/dummy';
 import { COLORS } from '../../../src/utils/constants';
 
 export default function ProductsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
   const toggleSelection = (id: string) => {
@@ -18,7 +20,7 @@ export default function ProductsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
@@ -60,7 +62,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F9FF',
-    paddingTop: 50,
   },
   header: {
     flexDirection: 'row',

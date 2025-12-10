@@ -1,17 +1,22 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddOns } from '../../../src/components/customer/AddOns';
 import { DeliveryInstructionsSheet } from '../../../src/components/customer/DeliveryInstructionsSheet';
 import { Button } from '../../../src/components/ui/Button';
+import { useCart } from '../../../src/context/CartContext';
 import { COLORS } from '../../../src/utils/constants';
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
+  const insets = useSafeAreaInsets();
+  const { items, incrementQuantity, decrementQuantity, getTotalPrice, clearCart } = useCart();
   const [showInstructions, setShowInstructions] = useState(false);
   const [selectedDate, setSelectedDate] = useState(0); // Index
   const [selectedTime, setSelectedTime] = useState({ hour: '07', minute: '30', ampm: 'AM' });
+
+  const totalPrice = getTotalPrice();
 
   const dates = [
     { day: '07', label: 'Today', full: '7th, July' },
@@ -22,7 +27,7 @@ export default function CheckoutScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
@@ -58,22 +63,42 @@ export default function CheckoutScreen() {
 
         <View style={styles.divider} />
 
-        {/* Main Item */}
-        <View style={styles.mainItemContainer}>
-           <Text style={styles.itemName}>20L Water Can</Text>
-           <View style={styles.quantityRow}>
-              <View style={styles.counter}>
-                  <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))}>
-                      <Text style={styles.counterBtn}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.count}>{quantity}</Text>
-                  <TouchableOpacity onPress={() => setQuantity(quantity + 1)}>
-                      <Text style={styles.counterBtn}>+</Text>
-                  </TouchableOpacity>
+        {/* Cart Items */}
+        {items.length === 0 ? (
+          <View style={styles.emptyCart}>
+            <Text style={styles.emptyCartText}>Your cart is empty</Text>
+            <TouchableOpacity 
+              style={styles.browseBtn}
+              onPress={() => router.push('/(customer)/products')}
+            >
+              <Text style={styles.browseBtnText}>Browse Products</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          items.map((item) => (
+            <View key={item.id} style={styles.mainItemContainer}>
+              <View style={styles.itemRow}>
+                <Image source={item.image} style={styles.cartItemImage} resizeMode="contain" />
+                <View style={styles.itemDetails}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemVolume}>{item.volume}</Text>
+                </View>
               </View>
-              <Text style={styles.itemPrice}>₹ 30</Text>
-           </View>
-        </View>
+              <View style={styles.quantityRow}>
+                <View style={styles.counter}>
+                    <TouchableOpacity onPress={() => decrementQuantity(item.id)}>
+                        <Text style={styles.counterBtn}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.count}>{item.quantity}</Text>
+                    <TouchableOpacity onPress={() => incrementQuantity(item.id)}>
+                        <Text style={styles.counterBtn}>+</Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={styles.itemPrice}>₹ {item.price * item.quantity}</Text>
+              </View>
+            </View>
+          ))
+        )}
 
         {/* Add Ons */}
         <AddOns />
@@ -120,39 +145,44 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Bill Details */}
-        <View style={styles.billSection}>
-            <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Item Total</Text>
-                <Text style={styles.billValue}>₹ {quantity * 30}</Text>
-            </View>
-             <View style={styles.billRow}>
-                <Text style={styles.billLabel}>Delivery Fee</Text>
-                <Text style={styles.billValue}>Free</Text>
-            </View>
-            <View style={[styles.billRow, styles.totalRow]}>
-                <Text style={styles.totalLabel}>Total Bill</Text>
-                <Text style={styles.totalValue}>₹ {quantity * 30}</Text>
-            </View>
-        </View>
+        {items.length > 0 && (
+          <View style={styles.billSection}>
+              <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Item Total</Text>
+                  <Text style={styles.billValue}>₹ {totalPrice}</Text>
+              </View>
+               <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Delivery Fee</Text>
+                  <Text style={styles.billValue}>Free</Text>
+              </View>
+              <View style={[styles.billRow, styles.totalRow]}>
+                  <Text style={styles.totalLabel}>Total Bill</Text>
+                  <Text style={styles.totalValue}>₹ {totalPrice}</Text>
+              </View>
+          </View>
+        )}
       </ScrollView>
 
-      <View style={styles.footer}>
-          <View style={styles.paymentRow}>
-             <Text style={styles.payVia}>Pay using</Text>
-             <Text style={styles.gpay}>Google Pay</Text>
-          </View>
-          <View style={styles.payBtnContainer}>
-              <Button 
-                title={`Pay ₹ ${quantity * 30}`} 
-                onPress={() => {
-                    alert('Order Placed!');
-                    router.push('/(customer)/home');
-                }}
-                variant="primary"
-                style={{backgroundColor: '#0F172A'}} // Override to dark blue
-              />
-          </View>
-      </View>
+      {items.length > 0 && (
+        <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
+            <View style={styles.paymentRow}>
+               <Text style={styles.payVia}>Pay using</Text>
+               <Text style={styles.gpay}>Google Pay</Text>
+            </View>
+            <View style={styles.payBtnContainer}>
+                <Button 
+                  title={`Pay ₹ ${totalPrice}`} 
+                  onPress={() => {
+                      alert('Order Placed!');
+                      clearCart();
+                      router.push('/(customer)');
+                  }}
+                  variant="primary"
+                  style={{backgroundColor: '#0F172A'}} // Override to dark blue
+                />
+            </View>
+        </View>
+      )}
 
       <DeliveryInstructionsSheet 
         visible={showInstructions} 
@@ -166,7 +196,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F0F9FF',
-    paddingTop: 50,
   },
   header: {
     flexDirection: 'row',
@@ -239,25 +268,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
   },
+  emptyCart: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 40,
+  },
+  emptyCartText: {
+      fontSize: 16,
+      color: '#64748B',
+      marginBottom: 16,
+  },
+  browseBtn: {
+      backgroundColor: '#102841',
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+  },
+  browseBtnText: {
+      color: 'white',
+      fontWeight: 'bold',
+  },
   mainItemContainer: {
       backgroundColor: 'white',
       marginHorizontal: 20,
-      marginVertical: 12,
+      marginVertical: 8,
       padding: 16,
       borderRadius: 12,
+  },
+  itemRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
+      marginBottom: 12,
+  },
+  cartItemImage: {
+      width: 50,
+      height: 50,
+      marginRight: 12,
+  },
+  itemDetails: {
+      flex: 1,
   },
   itemName: {
       fontSize: 16,
       fontWeight: '500',
       color: COLORS.text,
   },
+  itemVolume: {
+      fontSize: 12,
+      color: '#64748B',
+  },
   quantityRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
+      justifyContent: 'space-between',
   },
   counter: {
       flexDirection: 'row',

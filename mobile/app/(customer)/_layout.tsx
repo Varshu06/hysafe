@@ -1,12 +1,14 @@
 import { Tabs } from 'expo-router';
+import { CustomTabBar } from '../../src/components/ui/CustomTabBar';
 import { COLORS } from '../../src/utils/constants';
 
 export default function CustomerLayout() {
   return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textLight,
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#94A3B8',
         headerStyle: {
           backgroundColor: COLORS.primary,
         },
@@ -20,22 +22,26 @@ export default function CustomerLayout() {
         name="index"
         options={{
           title: 'Home',
-          headerShown: false, // Hide default header for custom one
-          tabBarLabel: 'Home',
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="products/index"
+        options={{
+          title: 'Products',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
           title: 'My Orders',
-          tabBarLabel: 'Orders',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarLabel: 'Profile',
         }}
       />
       <Tabs.Screen
@@ -55,14 +61,6 @@ export default function CustomerLayout() {
       />
       <Tabs.Screen
         name="address/add"
-        options={{
-          href: null,
-          tabBarStyle: { display: 'none' },
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
-        name="products/index"
         options={{
           href: null,
           tabBarStyle: { display: 'none' },

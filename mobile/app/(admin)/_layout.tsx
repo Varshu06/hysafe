@@ -1,12 +1,20 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../src/utils/constants';
 
 export default function AdminLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textLight,
+        tabBarStyle: {
+          height: 60 + insets.bottom,
+          paddingBottom: 10 + insets.bottom,
+          paddingTop: 10,
+        },
         headerStyle: {
           backgroundColor: COLORS.primary,
         },

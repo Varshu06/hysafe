@@ -1,3 +1,12 @@
+// Import product images
+const ProductImages = {
+  '1l': require('../assets/1l.png'),
+  '2l': require('../assets/2l.png'),
+  '20l': require('../assets/20l.png'),
+  '250ml': require('../assets/250.png'),
+  '300ml': require('../assets/300ml.png'),
+  '500ml': require('../assets/500ml.png'),
+};
 
 export const PRODUCTS = [
   {
@@ -5,32 +14,48 @@ export const PRODUCTS = [
     name: '20L Water Can',
     price: 30,
     deliveryCharge: 'Free',
-    image: 'https://via.placeholder.com/150?text=20L+Can', // Replace with real asset later
+    image: ProductImages['20l'],
     volume: '20L'
   },
   {
     id: '2',
-    name: '300ml Bottle',
-    price: 10,
+    name: '2L Bottle',
+    price: 25,
     deliveryCharge: 'Free',
-    image: 'https://via.placeholder.com/150?text=300ml',
-    volume: '300ml'
+    image: ProductImages['2l'],
+    volume: '2L'
   },
   {
     id: '3',
-    name: '5L Water Can',
-    price: 40,
-    deliveryCharge: 'Free',
-    image: 'https://via.placeholder.com/150?text=5L+Can',
-    volume: '5L'
-  },
-  {
-    id: '4',
     name: '1L Bottle',
     price: 20,
     deliveryCharge: 'Free',
-    image: 'https://via.placeholder.com/150?text=1L+Bottle',
+    image: ProductImages['1l'],
     volume: '1L'
+  },
+  {
+    id: '4',
+    name: '500ml Bottle',
+    price: 15,
+    deliveryCharge: 'Free',
+    image: ProductImages['500ml'],
+    volume: '500ml'
+  },
+  {
+    id: '5',
+    name: '300ml Bottle',
+    price: 10,
+    deliveryCharge: 'Free',
+    image: ProductImages['300ml'],
+    volume: '300ml'
+  },
+  {
+    id: '6',
+    name: '250ml Bottle',
+    price: 8,
+    deliveryCharge: 'Free',
+    image: ProductImages['250ml'],
+    volume: '250ml'
   }
 ];
 
