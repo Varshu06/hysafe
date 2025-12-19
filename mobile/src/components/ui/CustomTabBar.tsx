@@ -21,14 +21,12 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, navigation }) => {
   const insets = useSafeAreaInsets();
   const indicatorAnim = useRef(new Animated.Value(0)).current;
-
+  
   // Get current route name
   const currentRouteName = state.routes[state.index]?.name;
-
-
-
+  
   // Filter only the 4 main tabs
-  const visibleRoutes = state.routes.filter((route: any) =>
+  const visibleRoutes = state.routes.filter((route: any) => 
     VISIBLE_TAB_ROUTES.includes(route.name)
   );
 
@@ -40,16 +38,18 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, 
   );
 
   useEffect(() => {
-    // Animate indicator to active tab position
-    Animated.spring(indicatorAnim, {
-      toValue: activeIndex,
-      friction: 6,
-      tension: 100,
-      useNativeDriver: true,
-    }).start();
-  }, [activeIndex]);
-
-  // Hide tab bar on certain routes
+    // Only animate if tab bar is visible
+    if (!HIDDEN_TAB_BAR_ROUTES.includes(currentRouteName)) {
+      Animated.spring(indicatorAnim, {
+        toValue: activeIndex,
+        friction: 6,
+        tension: 100,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [activeIndex, currentRouteName]);
+  
+  // Hide tab bar on certain routes (after all hooks are called)
   if (HIDDEN_TAB_BAR_ROUTES.includes(currentRouteName)) {
     return null;
   }
@@ -71,15 +71,15 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, 
 
   const getIcon = (routeName: string, isFocused: boolean) => {
     const color = isFocused ? '#FFFFFF' : '#94A3B8';
-
+    
     switch (routeName) {
       case 'index':
         return <Feather name="home" size={22} color={color} />;
       case 'products/index':
         return (
-          <Image
-            source={ProductIcon}
-            style={{ width: 26, height: 26, tintColor: color }}
+          <Image 
+            source={ProductIcon} 
+            style={{ width: 26, height: 26, tintColor: color }} 
             resizeMode="contain"
           />
         );
@@ -104,16 +104,16 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       {/* Animated top indicator */}
-      <Animated.View
+      <Animated.View 
         style={[
           styles.indicator,
           {
             width: INDICATOR_WIDTH,
             transform: [{ translateX: indicatorTranslateX }],
           }
-        ]}
+        ]} 
       />
-
+      
       <View style={styles.tabsContainer}>
         {visibleRoutes.map((route: any, index: number) => {
           const isFocused = activeIndex === index;
@@ -131,7 +131,7 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({ state, descriptors, 
           };
 
           const color = isFocused ? '#FFFFFF' : '#94A3B8';
-
+          
           return (
             <TouchableOpacity
               key={route.key}

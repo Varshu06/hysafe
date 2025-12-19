@@ -38,7 +38,7 @@ export const MapPicker = ({ latitude, longitude }: MapPickerProps) => {
       
       {/* Center Pin */}
       <View style={styles.pinContainer}>
-        <View style={styles.pin}>
+          <View style={styles.pin}>
           <View style={styles.pinHead}>
             <Ionicons name="location" size={20} color="white" />
           </View>
@@ -105,21 +105,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   pinContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
     marginTop: -44,
     marginLeft: -16,
     alignItems: 'center',
   },
   pin: {
-    alignItems: 'center',
+      alignItems: 'center',
   },
   pinHead: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#EF4444',
+      backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

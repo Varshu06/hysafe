@@ -1,12 +1,15 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
     ScrollView,
     StyleSheet,
     Text,
+  TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Loader } from '../../../src/components/ui/Loader';
 import { StatusBadge } from '../../../src/components/ui/StatusBadge';
 import { useOrder } from '../../../src/context/OrderContext';
@@ -16,9 +19,19 @@ import { COLORS } from '../../../src/utils/constants';
 
 export default function OrderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { orders } = useOrder();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const getPaymentMethodLabel = (method?: string) => {
+    if (!method) return 'N/A';
+    const methodLower = method.toLowerCase();
+    if (methodLower === 'online') return 'Card';
+    if (methodLower === 'offline') return 'Cash';
+    return method.charAt(0).toUpperCase() + method.slice(1);
+  };
 
   useEffect(() => {
     loadOrder();
@@ -57,86 +70,176 @@ export default function OrderDetailsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => router.push('/(customer)/orders')} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Order Details</Text>
+        <TouchableOpacity onPress={() => router.push('/(customer)')} style={styles.homeButton}>
+          <Feather name="home" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Status Badge */}
       <View style={styles.statusContainer}>
         <StatusBadge status={order.status} style={styles.statusBadge} />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order Details</Text>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Quantity:</Text>
-          <Text style={styles.detailValue}>{order.quantity} x 20L cans</Text>
+        {/* Order Info Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Order Information</Text>
+          
+          <View style={styles.infoItem}>
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="water" size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Quantity</Text>
+              <Text style={styles.infoValue}>{order.quantity} x 20L cans</Text>
         </View>
+          </View>
+
         {(order.price || order.totalPrice) && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Price:</Text>
-            <Text style={styles.detailValue}>₹{order.price || order.totalPrice}</Text>
+            <View style={styles.infoItem}>
+              <View style={styles.infoIconContainer}>
+                <Feather name="dollar-sign" size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Total Amount</Text>
+                <Text style={styles.infoValue}>₹{order.price || order.totalPrice}</Text>
+              </View>
           </View>
         )}
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Payment Method:</Text>
-          <Text style={styles.detailValue}>{order.paymentMethod?.toUpperCase()}</Text>
+
+          <View style={styles.infoItem}>
+            <View style={styles.infoIconContainer}>
+              <Feather name="credit-card" size={20} color={COLORS.primary} />
         </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Payment Status:</Text>
-          <Text style={styles.detailValue}>{order.paymentStatus?.toUpperCase()}</Text>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Payment Method</Text>
+              <Text style={styles.infoValue}>Paid with {getPaymentMethodLabel(order.paymentMethod)}</Text>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Delivery Information</Text>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Pickup Address:</Text>
-          <Text style={styles.detailValue}>{order.pickupAddress}</Text>
+          <View style={styles.infoItem}>
+            <View style={styles.infoIconContainer}>
+              <Feather name={order.paymentStatus === 'paid' ? 'check-circle' : 'clock'} size={20} color={order.paymentStatus === 'paid' ? COLORS.success : COLORS.warning} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Payment Status</Text>
+              <Text style={[styles.infoValue, { color: order.paymentStatus === 'paid' ? COLORS.success : COLORS.warning }]}>
+                {order.paymentStatus?.charAt(0).toUpperCase() + order.paymentStatus?.slice(1) || 'Pending'}
+              </Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Delivery Address:</Text>
-          <Text style={styles.detailValue}>{order.deliveryAddress}</Text>
+
+        {/* Delivery Info Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Delivery Information</Text>
+          
+          <View style={styles.infoItem}>
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="location-outline" size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Delivery Address</Text>
+              <Text style={styles.infoValue}>{order.deliveryAddress}</Text>
+            </View>
         </View>
+
         {order.deliverySlot && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Delivery Slot:</Text>
-            <Text style={styles.detailValue}>
-              {new Date(order.deliverySlot).toLocaleString()}
+            <View style={styles.infoItem}>
+              <View style={styles.infoIconContainer}>
+                <Feather name="calendar" size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Delivery Slot</Text>
+                <Text style={styles.infoValue}>
+                  {new Date(order.deliverySlot).toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  })}
             </Text>
+              </View>
           </View>
         )}
       </View>
 
+        {/* Notes Card */}
       {order.notes && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notes</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Special Instructions</Text>
           <Text style={styles.notesText}>{order.notes}</Text>
         </View>
       )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Timeline</Text>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Order Placed:</Text>
-          <Text style={styles.detailValue}>
-            {order.createdAt ? new Date(order.createdAt).toLocaleString() : ''}
+        {/* Timeline Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Order Timeline</Text>
+          
+          <View style={styles.timelineItem}>
+            <View style={styles.timelineDot} />
+            <View style={styles.timelineContent}>
+              <Text style={styles.timelineLabel}>Order Placed</Text>
+              <Text style={styles.timelineValue}>
+                {order.createdAt ? new Date(order.createdAt).toLocaleString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  year: 'numeric',
+                  hour: 'numeric', 
+                  minute: '2-digit' 
+                }) : 'N/A'}
           </Text>
         </View>
+          </View>
+
         {order.acceptedAt && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Accepted:</Text>
-            <Text style={styles.detailValue}>
-              {new Date(order.acceptedAt).toLocaleString()}
+            <View style={styles.timelineItem}>
+              <View style={styles.timelineDot} />
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineLabel}>Order Accepted</Text>
+                <Text style={styles.timelineValue}>
+                  {new Date(order.acceptedAt).toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  })}
             </Text>
+              </View>
           </View>
         )}
+
         {order.deliveredAt && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Delivered:</Text>
-            <Text style={styles.detailValue}>
-              {new Date(order.deliveredAt).toLocaleString()}
+            <View style={styles.timelineItem}>
+              <View style={[styles.timelineDot, styles.timelineDotCompleted]} />
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineLabel}>Delivered</Text>
+                <Text style={styles.timelineValue}>
+                  {new Date(order.deliveredAt).toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  })}
             </Text>
+              </View>
           </View>
         )}
       </View>
+
+        <View style={{ height: 20 }} />
     </ScrollView>
+    </View>
   );
 }
 
@@ -145,50 +248,118 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.accent,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: COLORS.accent,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  homeButton: {
+    padding: 8,
+  },
+  scrollView: {
+    flex: 1,
+  },
   content: {
     padding: 16,
   },
   statusContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   statusBadge: {
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  section: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 8,
-    padding: 16,
+  card: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  sectionTitle: {
+  cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 12,
+    color: 'white',
+    marginBottom: 16,
   },
-  detailRow: {
+  infoItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  detailLabel: {
-    fontSize: 14,
-    color: COLORS.textLight,
+  infoIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  infoContent: {
     flex: 1,
   },
-  detailValue: {
-    fontSize: 14,
-    color: COLORS.text,
+  infoLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 4,
     fontWeight: '500',
-    flex: 2,
-    textAlign: 'right',
+  },
+  infoValue: {
+    fontSize: 15,
+    color: 'white',
+    fontWeight: '600',
   },
   notesText: {
     fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
+    color: 'white',
+    lineHeight: 22,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#3B82F6',
+    marginTop: 4,
+    marginRight: 16,
+  },
+  timelineDotCompleted: {
+    backgroundColor: COLORS.success,
+  },
+  timelineContent: {
+    flex: 1,
+  },
+  timelineLabel: {
+    fontSize: 14,
+    color: 'white',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  timelineValue: {
+    fontSize: 13,
+    color: '#94A3B8',
   },
   errorText: {
     fontSize: 16,

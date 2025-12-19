@@ -1,10 +1,10 @@
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddOns } from '../../../src/components/customer/AddOns';
 import { DeliveryInstructionsSheet } from '../../../src/components/customer/DeliveryInstructionsSheet';
-import { Button } from '../../../src/components/ui/Button';
 import { useCart } from '../../../src/context/CartContext';
 import { COLORS } from '../../../src/utils/constants';
 
@@ -28,40 +28,23 @@ export default function CheckoutScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
       <View style={styles.header}>
-         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-         </TouchableOpacity>
-         <Text style={styles.headerTitle}>Review Order</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color="#64748B" />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <View style={styles.homeRow}>
+            <Text style={styles.homeText}>Home</Text>
+            <Feather name="chevron-down" size={18} color="#102841" />
+          </View>
+          <Text style={styles.headerAddress} numberOfLines={1}>
+            9/482,B type,40th Street,sidco nagar,chennai-...
+          </Text>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Address Section */}
-        <View style={styles.section}>
-           <Text style={styles.sectionLabel}>Delivery at <Text style={styles.bold}>Home</Text></Text>
-           <View style={styles.addressRow}>
-              <Text style={styles.addressText} numberOfLines={1}>
-                 9/482,B type,40th Street,sidco nagar,chen...
-              </Text>
-              <Text style={styles.arrow}>›</Text>
-           </View>
-           <TouchableOpacity onPress={() => setShowInstructions(true)}>
-              <Text style={styles.addInstructions}>Add instructions for delivery partner</Text>
-           </TouchableOpacity>
-        </View>
-        
-        <View style={styles.divider} />
-
-        {/* Contact */}
-        <View style={styles.section}>
-           <View style={styles.contactRow}>
-              <Text style={styles.phoneIcon}>📞</Text>
-              <Text style={styles.phoneText}>Varsha, +91 9342981893</Text>
-              <Text style={styles.arrow}>›</Text>
-           </View>
-        </View>
-
-        <View style={styles.divider} />
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Cart Items */}
         {items.length === 0 ? (
@@ -78,23 +61,19 @@ export default function CheckoutScreen() {
           items.map((item) => (
             <View key={item.id} style={styles.mainItemContainer}>
               <View style={styles.itemRow}>
-                <Image source={item.image} style={styles.cartItemImage} resizeMode="contain" />
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemVolume}>{item.volume}</Text>
-                </View>
-              </View>
-              <View style={styles.quantityRow}>
-                <View style={styles.counter}>
+                <Text style={styles.itemName}>{item.name}</Text>
+                <View style={styles.quantityRow}>
+                  <View style={styles.counter}>
                     <TouchableOpacity onPress={() => decrementQuantity(item.id)}>
-                        <Text style={styles.counterBtn}>-</Text>
+                      <Text style={styles.counterBtn}>-</Text>
                     </TouchableOpacity>
                     <Text style={styles.count}>{item.quantity}</Text>
                     <TouchableOpacity onPress={() => incrementQuantity(item.id)}>
-                        <Text style={styles.counterBtn}>+</Text>
+                      <Text style={styles.counterBtn}>+</Text>
                     </TouchableOpacity>
+                  </View>
+                  <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
                 </View>
-                <Text style={styles.itemPrice}>₹ {item.price * item.quantity}</Text>
               </View>
             </View>
           ))
@@ -103,84 +82,76 @@ export default function CheckoutScreen() {
         {/* Add Ons */}
         <AddOns />
 
-        {/* Delivery Time */}
-        <View style={styles.deliveryCard}>
-            <View style={styles.deliveryHeader}>
-                <Text style={styles.deliveryIcon}>🚚</Text>
-                <Text style={styles.deliveryTitle}>Delivery in 1hr - 2hrs</Text>
-            </View>
-            <Text style={styles.deliverySubtitle}>Not Now? Set time for delivery</Text>
-            
-            {/* Date Selector */}
-            <Text style={styles.dateLabel}>{dates[selectedDate].full}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateScroll}>
-               {dates.map((d, index) => (
-                   <TouchableOpacity 
-                      key={index} 
-                      style={[styles.dateBox, selectedDate === index && styles.activeDateBox]}
-                      onPress={() => setSelectedDate(index)}
-                   >
-                       <Text style={[styles.dateLabelSmall, selectedDate === index && styles.activeDateText]}>
-                           {d.label}
-                       </Text>
-                       <Text style={[styles.dateNum, selectedDate === index && styles.activeDateText]}>
-                           {d.day}
-                       </Text>
-                   </TouchableOpacity>
-               ))}
-            </ScrollView>
-            
-            {/* Time Selector */}
-            <Text style={styles.timeLabel}>Enter drop time</Text>
-            <View style={styles.timeRow}>
-                <View style={styles.timeBox}>
-                    <Text style={styles.timeText}>{selectedTime.hour}</Text>
-                </View>
-                <Text style={styles.colon}>:</Text>
-                <View style={styles.timeBox}>
-                    <Text style={styles.timeText}>{selectedTime.minute}</Text>
-                </View>
-                <Text style={styles.ampm}>{selectedTime.ampm}</Text>
-            </View>
-        </View>
-
-        {/* Bill Details */}
+        {/* Delivery and Bill Details Card */}
         {items.length > 0 && (
-          <View style={styles.billSection}>
-              <View style={styles.billRow}>
-                  <Text style={styles.billLabel}>Item Total</Text>
-                  <Text style={styles.billValue}>₹ {totalPrice}</Text>
+          <View style={styles.detailsCard}>
+            {/* Delivery Time */}
+            <View style={styles.detailRow}>
+              <Ionicons name="car-outline" size={20} color="#102841" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailTitle}>Delivery in 1hr - 2hrs</Text>
+                <TouchableOpacity>
+                  <Text style={styles.detailLink}>Not Now? Set time for delivery</Text>
+                </TouchableOpacity>
               </View>
-               <View style={styles.billRow}>
-                  <Text style={styles.billLabel}>Delivery Fee</Text>
-                  <Text style={styles.billValue}>Free</Text>
+            </View>
+
+            {/* Delivery Address */}
+            <View style={styles.detailRow}>
+              <Ionicons name="home-outline" size={20} color="#102841" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailTitle}>Delivery at Home</Text>
+                <Text style={styles.detailSubtext} numberOfLines={1}>
+                  9/482,B type, 40th Street, sidco nagar,che.....
+                </Text>
+                <TouchableOpacity onPress={() => setShowInstructions(true)}>
+                  <Text style={styles.detailLink}>Add instructions for delivery partner</Text>
+                </TouchableOpacity>
               </View>
-              <View style={[styles.billRow, styles.totalRow]}>
-                  <Text style={styles.totalLabel}>Total Bill</Text>
-                  <Text style={styles.totalValue}>₹ {totalPrice}</Text>
+              <Feather name="chevron-right" size={20} color="#94A3B8" />
+            </View>
+
+            {/* Contact Person */}
+            <View style={styles.detailRow}>
+              <Ionicons name="call-outline" size={20} color="#102841" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailTitle}>Varsha,+91 9342981893</Text>
               </View>
+              <Feather name="chevron-right" size={20} color="#94A3B8" />
+            </View>
+
+            {/* Total Bill */}
+            <View style={styles.detailRowLast}>
+              <Ionicons name="receipt-outline" size={20} color="#102841" />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailTitle}>Total Bill ₹{totalPrice}</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#94A3B8" />
+            </View>
           </View>
         )}
       </ScrollView>
 
       {items.length > 0 && (
-        <View style={[styles.footer, { paddingBottom: 16 + insets.bottom }]}>
-            <View style={styles.paymentRow}>
-               <Text style={styles.payVia}>Pay using</Text>
-               <Text style={styles.gpay}>Google Pay</Text>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity style={styles.paymentRow}>
+            <Text style={styles.gpayLogo}>GP</Text>
+            <View style={styles.paymentTextContainer}>
+              <Text style={styles.payVia}>Pay using</Text>
+              <Text style={styles.gpay}>Google Pay</Text>
             </View>
-            <View style={styles.payBtnContainer}>
-                <Button 
-                  title={`Pay ₹ ${totalPrice}`} 
-                  onPress={() => {
-                      alert('Order Placed!');
-                      clearCart();
-                      router.push('/(customer)');
-                  }}
-                  variant="primary"
-                  style={{backgroundColor: '#0F172A'}} // Override to dark blue
-                />
-            </View>
+            <Feather name="chevron-right" size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.payButton}
+            onPress={() => {
+              alert('Order Placed!');
+              clearCart();
+              router.push('/(customer)');
+            }}
+          >
+            <Text style={styles.payButtonText}>Pay ₹{totalPrice}</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -201,72 +172,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F0F9FF',
   },
   backButton: {
-    marginRight: 16,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: COLORS.text,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  content: {
-    paddingBottom: 100,
-  },
-  section: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  bold: {
-    fontWeight: 'bold',
-  },
-  addressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  addressText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#475569',
-  },
-  arrow: {
-    fontSize: 20,
-    color: '#94A3B8',
-  },
-  addInstructions: {
-    fontSize: 12,
-    color: '#475569',
-    textDecorationLine: 'underline',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 20,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  phoneIcon: {
-    fontSize: 16,
     marginRight: 12,
   },
-  phoneText: {
+  headerCenter: {
     flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
+  },
+  homeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  homeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#102841',
+  },
+  headerAddress: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  content: {
+    paddingBottom: 120,
   },
   emptyCart: {
       alignItems: 'center',
@@ -282,228 +213,153 @@ const styles = StyleSheet.create({
       backgroundColor: '#102841',
       paddingHorizontal: 24,
       paddingVertical: 12,
-      borderRadius: 8,
+      borderRadius: 10,
   },
   browseBtnText: {
       color: 'white',
       fontWeight: 'bold',
   },
   mainItemContainer: {
-      backgroundColor: 'white',
-      marginHorizontal: 20,
-      marginVertical: 8,
-      padding: 16,
-      borderRadius: 12,
+    backgroundColor: '#E0F2FE',
+    marginHorizontal: 20,
+    marginVertical: 8,
+    padding: 16,
+    borderRadius: 12,
   },
   itemRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
-  },
-  cartItemImage: {
-      width: 50,
-      height: 50,
-      marginRight: 12,
-  },
-  itemDetails: {
-      flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   itemName: {
-      fontSize: 16,
-      fontWeight: '500',
-      color: COLORS.text,
-  },
-  itemVolume: {
-      fontSize: 12,
-      color: '#64748B',
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#102841',
+    flex: 1,
+    marginRight: 12,
   },
   quantityRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   counter: {
-      flexDirection: 'row',
-      backgroundColor: '#0F172A',
-      borderRadius: 8,
-      alignItems: 'center',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+    flexDirection: 'row',
+    backgroundColor: '#102841',
+    borderRadius: 8,
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    gap: 8,
   },
   counterBtn: {
-      color: 'white',
-      fontSize: 18,
-      paddingHorizontal: 8,
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    paddingHorizontal: 8,
   },
   count: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: 'bold',
-      paddingHorizontal: 4,
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 20,
+    textAlign: 'center',
   },
   itemPrice: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#102841',
   },
-  deliveryCard: {
-      backgroundColor: '#E0F2FE',
-      margin: 20,
-      padding: 16,
-      borderRadius: 16,
+  detailsCard: {
+    backgroundColor: '#E0F2FE',
+    marginHorizontal: 20,
+    marginVertical: 12,
+    padding: 16,
+    borderRadius: 12,
   },
-  deliveryHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 4,
-      gap: 8,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
-  deliveryIcon: {
-      fontSize: 18,
+  detailRowLast: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 0,
   },
-  deliveryTitle: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: COLORS.text,
+  detailContent: {
+    flex: 1,
+    marginLeft: 12,
   },
-  deliverySubtitle: {
-      fontSize: 12,
-      color: '#475569',
-      textDecorationLine: 'underline',
-      marginLeft: 26,
-      marginBottom: 16,
+  detailTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#102841',
+    marginBottom: 4,
   },
-  dateLabel: {
-      fontSize: 14,
-      color: '#475569',
-      marginBottom: 8,
+  detailSubtext: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 4,
   },
-  dateScroll: {
-      flexDirection: 'row',
-      marginBottom: 20,
-  },
-  dateBox: {
-      width: 60,
-      height: 70,
-      backgroundColor: 'white',
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-      borderWidth: 1,
-      borderColor: 'transparent',
-  },
-  activeDateBox: {
-      backgroundColor: '#0F172A',
-      borderColor: '#0F172A',
-  },
-  dateLabelSmall: {
-      fontSize: 12,
-      color: '#64748B',
-      marginBottom: 4,
-  },
-  dateNum: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: COLORS.text,
-  },
-  activeDateText: {
-      color: 'white',
-  },
-  timeLabel: {
-      fontSize: 14,
-      color: COLORS.text,
-      marginBottom: 8,
-  },
-  timeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-  },
-  timeBox: {
-      backgroundColor: 'white',
-      borderWidth: 1,
-      borderColor: COLORS.text,
-      borderRadius: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-  },
-  timeText: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: COLORS.text,
-  },
-  colon: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      marginHorizontal: 8,
-  },
-  ampm: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      marginLeft: 8,
-      color: COLORS.text,
-  },
-  billSection: {
-      padding: 20,
-      backgroundColor: 'white',
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-  },
-  billRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-  },
-  billLabel: {
-      fontSize: 14,
-      color: '#64748B',
-  },
-  billValue: {
-      fontSize: 14,
-      color: COLORS.text,
-  },
-  totalRow: {
-      marginTop: 8,
-      paddingTop: 8,
-      borderTopWidth: 1,
-      borderTopColor: '#E2E8F0',
-  },
-  totalLabel: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: COLORS.text,
-  },
-  totalValue: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: COLORS.text,
+  detailLink: {
+    fontSize: 12,
+    color: '#102841',
+    textDecorationLine: 'underline',
   },
   footer: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      backgroundColor: 'white',
-      padding: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderTopWidth: 1,
-      borderTopColor: '#E2E8F0',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#102841',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   paymentRow: {
-      marginRight: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  gpayLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    color: '#102841',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    lineHeight: 32,
+  },
+  paymentTextContainer: {
+    flex: 1,
   },
   payVia: {
-      fontSize: 10,
-      color: '#64748B',
+    fontSize: 10,
+    color: '#94A3B8',
   },
   gpay: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  payBtnContainer: {
-      flex: 1,
-  }
+  payButton: {
+    backgroundColor: '#102841',
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  payButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 

@@ -34,8 +34,8 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const getTextColor = () => {
-    if (variant === 'outline' || variant === 'secondary') return COLORS.text; // Or primary for outline
     if (variant === 'outline') return COLORS.primary;
+    if (variant === 'secondary') return COLORS.text;
     return COLORS.secondary;
   };
 
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,

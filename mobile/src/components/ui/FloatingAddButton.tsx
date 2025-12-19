@@ -14,7 +14,8 @@ export function FloatingAddButton() {
   };
 
   // Position just above the tab bar in the right corner
-  const bottomPosition = 15 + insets.bottom;
+  // Positioned closer to the navbar (tab bar height ~70px)
+  const bottomPosition = 25 + insets.bottom;
 
   return (
     <TouchableOpacity 
@@ -40,8 +41,6 @@ export function FloatingAddButton() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 40,
-    right: 20,
     width: 60,
     height: 60,
     borderRadius: 30,

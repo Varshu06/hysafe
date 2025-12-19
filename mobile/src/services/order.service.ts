@@ -41,6 +41,7 @@ export const getMyOrders = async (): Promise<Order[]> => {
           paymentStatus: 'pending',
           deliveryAddress: 'Flat 302, Green Apts, MG Road',
           createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+          driverName: undefined, // Not assigned yet
         },
         {
           _id: '2',
@@ -53,6 +54,7 @@ export const getMyOrders = async (): Promise<Order[]> => {
           deliveryAddress: 'Office 4B, Tech Park',
           createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
           deliveredAt: new Date(Date.now() - 86400000).toISOString(),
+          driverName: 'Baskar',
         },
         {
           _id: '3',
@@ -64,6 +66,7 @@ export const getMyOrders = async (): Promise<Order[]> => {
           paymentStatus: 'pending',
           deliveryAddress: 'Home 12, Street 5',
           createdAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+          driverName: 'Shanmugam',
         },
       ]);
     }, 1000);
@@ -89,6 +92,7 @@ export const getOrderById = async (id: string): Promise<Order> => {
         acceptedAt: new Date(Date.now() - 1800000).toISOString(),
         outForDeliveryAt: new Date(Date.now() - 900000).toISOString(),
         notes: 'Please call before reaching.',
+        driverName: 'Baskar',
       });
     }, 800);
   });

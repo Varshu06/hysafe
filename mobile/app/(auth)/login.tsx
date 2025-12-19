@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
       backgroundColor: COLORS.primary,
       width: '100%',
       paddingVertical: 16,
-      borderRadius: 12,
+      borderRadius: 10,
       alignItems: 'center',
       marginBottom: 24,
       elevation: 2,

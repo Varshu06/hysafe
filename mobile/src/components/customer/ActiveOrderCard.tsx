@@ -92,19 +92,19 @@ export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
         </Animated.View>
 
         <View style={styles.timelineItems}>
-          <View style={styles.timelineItem}>
-            <View style={[styles.dot, styles.completedDot]}>
+            <View style={styles.timelineItem}>
+                <View style={[styles.dot, styles.completedDot]}>
               <Feather name="check" size={12} color="white" />
+                </View>
+                <Text style={styles.timelineLabel}>Picked UP</Text>
             </View>
-            <Text style={styles.timelineLabel}>Picked UP</Text>
-          </View>
-          <View style={styles.timelineItem}>
+             <View style={styles.timelineItem}>
             <View style={styles.spacer} />
-          </View>
-          <View style={styles.timelineItem}>
-            <View style={[styles.dot, styles.pendingDot]} />
-            <Text style={styles.timelineLabel}>Delivered</Text>
-          </View>
+            </View>
+             <View style={styles.timelineItem}>
+                <View style={[styles.dot, styles.pendingDot]} />
+                <Text style={styles.timelineLabel}>Delivered</Text>
+            </View>
         </View>
       </View>
 
@@ -180,39 +180,39 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   timelineItems: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
     paddingTop: 4,
   },
   timelineItem: {
-    alignItems: 'center',
-    zIndex: 1,
+      alignItems: 'center',
+      zIndex: 1,
   },
   spacer: {
     width: 32,
     height: 32,
   },
   dot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#334155',
-    marginBottom: 8,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#334155',
+      marginBottom: 8,
   },
   completedDot: {
     backgroundColor: '#3B82F6',
   },
   pendingDot: {
-    backgroundColor: 'white',
+      backgroundColor: 'white',
     borderWidth: 3,
-    borderColor: '#334155',
+      borderColor: '#334155',
   },
   timelineLabel: {
-    color: 'white',
-    fontSize: 12,
+      color: 'white',
+      fontSize: 12,
   },
   footer: {
     flexDirection: 'row',

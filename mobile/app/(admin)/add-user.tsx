@@ -1,16 +1,16 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { createUser } from '../../src/services/admin.service';
 import { COLORS } from '../../src/utils/constants';
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   roleButton: {
     flex: 1,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: COLORS.primary,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 16,
     alignItems: 'center',
     marginTop: 20,

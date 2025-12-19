@@ -101,13 +101,13 @@ export const WhyChooseUs = () => {
             },
           ]}
         >
-          <View style={styles.iconContainer}>
+        <View style={styles.iconContainer}>
             {renderIcon(currentFeature.icon)}
-          </View>
+        </View>
           <View style={styles.textContainer}>
             <Text style={styles.title}>{currentFeature.title}</Text>
             <Text style={styles.desc}>{currentFeature.description}</Text>
-          </View>
+        </View>
         </Animated.View>
         
         <View style={styles.dots}>
@@ -128,7 +128,7 @@ export const WhyChooseUs = () => {
         <Text style={styles.promoTitle}>Prompt</Text>
         <View style={styles.deliveryRow}>
           <Text style={styles.promoTitle}>Delivery</Text>
-          <Text style={styles.promoIcon}>🚚</Text>
+       <Text style={styles.promoIcon}>🚚</Text>
         </View>
       </View>
     </View>
@@ -163,10 +163,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+      backgroundColor: 'white',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -177,9 +177,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    color: 'white',
+      color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
+      fontWeight: 'bold',
     marginBottom: 6,
   },
   desc: {
@@ -187,23 +187,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   dots: {
-    flexDirection: 'row',
+      flexDirection: 'row',
     gap: 8,
     marginTop: 8,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
     backgroundColor: 'rgba(255,255,255,0.4)',
   },
   activeDot: {
-    backgroundColor: 'white',
+      backgroundColor: 'white',
     width: 24,
   },
   promoTitle: {
     fontSize: 62,
-    fontWeight: '900',
+      fontWeight: '900',
     color: '#B8D4E8',
     opacity: 0.7,
     lineHeight: 76,

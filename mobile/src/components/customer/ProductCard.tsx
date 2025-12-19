@@ -1,5 +1,5 @@
-import React from 'react';
-import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../../utils/constants';
 
 interface ProductCardProps {
@@ -16,6 +16,40 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const prevSelectedRef = useRef(selected);
+
+  useEffect(() => {
+    // Only animate if item just changed from not selected to selected
+    if (!prevSelectedRef.current && selected) {
+      setShouldAnimate(true);
+    }
+    prevSelectedRef.current = selected;
+  }, [selected]);
+
+  useEffect(() => {
+    if (shouldAnimate) {
+      // Animate when item is added
+      Animated.sequence([
+        Animated.spring(scaleAnim, {
+          toValue: 1.3,
+          friction: 3,
+          tension: 200,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShouldAnimate(false);
+      });
+    }
+  }, [shouldAnimate]);
+
   return (
     <TouchableOpacity 
       style={[styles.card, selected && styles.selectedCard]} 
@@ -23,9 +57,16 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       activeOpacity={0.8}
     >
       {selected && (
-        <View style={styles.checkIcon}>
-           <Text style={{color: 'white', fontSize: 10}}>✓</Text>
-        </View>
+        <Animated.View 
+          style={[
+            styles.checkIcon,
+            {
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+           <Text style={styles.checkText}>✓</Text>
+        </Animated.View>
       )}
       <View style={styles.imageContainer}>
          <Image 
@@ -78,6 +119,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  checkText: {
+    color: 'white',
+    fontSize: 10,
   },
   imageContainer: {
     height: 100,

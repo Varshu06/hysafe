@@ -1,16 +1,16 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   roleButton: {
     flex: 1,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: COLORS.border,
     backgroundColor: COLORS.secondary,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: COLORS.primary,
-    borderRadius: 8,
+    borderRadius: 10,
     padding: 16,
     alignItems: 'center',
     marginTop: 8,

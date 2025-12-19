@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RECENT_SEARCHES, SAVED_ADDRESSES } from '../../../src/data/dummy';
+import { SAVED_ADDRESSES } from '../../../src/data/dummy';
 import { COLORS } from '../../../src/utils/constants';
 
 export default function AddressSearchScreen() {
@@ -12,6 +12,8 @@ export default function AddressSearchScreen() {
   const insets = useSafeAreaInsets();
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [showAllAddresses, setShowAllAddresses] = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(SAVED_ADDRESSES[0]?.id || null);
 
   const handleUseCurrentLocation = async () => {
     setIsLoadingLocation(true);
@@ -39,7 +41,7 @@ export default function AddressSearchScreen() {
         longitude: location.coords.longitude,
       });
 
-      // Navigate to add address screen with location data
+      // Navigate to confirm location screen (add address screen) with location data
       router.push({
         pathname: '/(customer)/address/add',
         params: {
@@ -50,6 +52,7 @@ export default function AddressSearchScreen() {
           region: address?.region || '',
           postalCode: address?.postalCode || '',
           name: address?.name || '',
+          fromCurrentLocation: 'true',
         },
       });
     } catch (error) {
@@ -63,6 +66,15 @@ export default function AddressSearchScreen() {
   const handleAddNewAddress = () => {
     router.push('/(customer)/address/add');
   };
+
+  // Sort addresses to show selected address first
+  const sortedAddresses = [...SAVED_ADDRESSES].sort((a, b) => {
+    if (a.id === selectedAddressId) return -1;
+    if (b.id === selectedAddressId) return 1;
+    return 0;
+  });
+
+  const displayedAddresses = showAllAddresses ? sortedAddresses : sortedAddresses.slice(0, 3);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -78,9 +90,9 @@ export default function AddressSearchScreen() {
       <View style={styles.searchContainer}>
         <Feather name="search" size={20} color="#64748B" style={styles.searchIcon} />
         <TextInput 
-          placeholder="Tr Jp nagar, siri gardeniam, etc." 
-          style={styles.searchInput}
-          placeholderTextColor="#94A3B8"
+           placeholder="Tr Jp nagar, siri gardeniam, etc." 
+           style={styles.searchInput}
+           placeholderTextColor="#94A3B8"
           value={searchText}
           onChangeText={setSearchText}
         />
@@ -110,9 +122,9 @@ export default function AddressSearchScreen() {
         <View style={styles.addIconContainer}>
           <MaterialIcons name="add-location-alt" size={22} color={COLORS.text} />
         </View>
-        <Text style={styles.addNewText}>Add new address</Text>
+         <Text style={styles.addNewText}>Add new address</Text>
       </TouchableOpacity>
-
+      
       {/* Saved Address Section */}
       <View style={styles.sectionDivider}>
         <View style={styles.sectionLine} />
@@ -121,43 +133,56 @@ export default function AddressSearchScreen() {
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {SAVED_ADDRESSES.map((addr) => (
-          <TouchableOpacity key={addr.id} style={styles.addressItem}>
-            <View style={styles.addressIconContainer}>
-              {addr.type === 'Home' ? (
-                <Feather name="home" size={20} color={COLORS.text} />
-              ) : (
-                <Ionicons name="navigate-outline" size={20} color={COLORS.text} />
-              )}
+        {displayedAddresses.map((addr) => {
+          const isSelected = addr.id === selectedAddressId;
+          return (
+            <TouchableOpacity 
+              key={addr.id} 
+              style={[styles.addressItem, isSelected && styles.selectedAddressItem]}
+              onPress={() => {
+                setSelectedAddressId(addr.id);
+                // Update address and redirect to home page
+                router.push('/(customer)');
+              }}
+            >
+              <View style={styles.addressIconContainer}>
+                {addr.type === 'Home' ? (
+                  <Feather name="home" size={20} color={COLORS.text} />
+                ) : addr.type === 'Office' || addr.type === 'Work' ? (
+                  <Ionicons name="business-outline" size={20} color={COLORS.text} />
+                ) : addr.type === 'Friends and Family' ? (
+                  <Ionicons name="people-outline" size={20} color={COLORS.text} />
+                ) : (
+                  <Ionicons name="navigate-outline" size={20} color={COLORS.text} />
+                )}
+              </View>
+              <View style={styles.addressContent}>
+                <View style={styles.addressTypeRow}>
+                    <Text style={styles.addressType}>{addr.type}</Text>
+                  {isSelected && (
+                    <View style={styles.selectedBadge}>
+                      <Text style={styles.selectedText}>Selected</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.addressDetail} numberOfLines={1}>{addr.address}</Text>
             </View>
-            <View style={styles.addressContent}>
-              <Text style={styles.addressType}>{addr.type}</Text>
-              <Text style={styles.addressDetail} numberOfLines={1}>{addr.address}</Text>
-            </View>
-            <TouchableOpacity style={styles.moreButton}>
-              <Feather name="more-vertical" size={20} color={COLORS.text} />
+              <TouchableOpacity style={styles.moreButton}>
+                <Feather name="more-vertical" size={20} color={COLORS.text} />
+              </TouchableOpacity>
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
 
-        {/* Recent Search Section */}
-        <View style={styles.sectionDivider}>
-          <View style={styles.sectionLine} />
-          <Text style={styles.sectionTitle}>Recent Search</Text>
-          <View style={styles.sectionLine} />
-        </View>
-
-        {RECENT_SEARCHES.map((search, index) => (
-          <TouchableOpacity key={index} style={styles.recentItem}>
-            <View style={styles.recentIconContainer}>
-              <Feather name="clock" size={18} color="#64748B" />
-            </View>
-            <View style={styles.recentContent}>
-              <Text style={styles.recentTitle}>{search.split(',')[0]}</Text>
-              <Text style={styles.recentDetail} numberOfLines={1}>{search}</Text>
-            </View>
+        {sortedAddresses.length > 3 && !showAllAddresses && (
+          <TouchableOpacity 
+            style={styles.viewAllButton}
+            onPress={() => setShowAllAddresses(true)}
+          >
+            <Text style={styles.viewAllText}>View All</Text>
+            <Feather name="chevron-down" size={18} color={COLORS.text} />
           </TouchableOpacity>
-        ))}
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -191,9 +216,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     marginHorizontal: 16,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 16,
+    paddingVertical: 5,
+    borderRadius: 10,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -277,6 +302,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+  },
+  selectedAddressItem: {
+    backgroundColor: 'rgba(16, 40, 65, 0.05)',
+    borderWidth: 2,
+    borderColor: '#102841',
   },
   addressIconContainer: {
     width: 36,
@@ -288,11 +321,27 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
   },
+  addressTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   addressType: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
     color: COLORS.text,
+  },
+  selectedBadge: {
+    marginLeft: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: '#102841',
+    borderRadius: 10,
+  },
+  selectedText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'white',
   },
   addressDetail: {
     fontSize: 13,
@@ -301,29 +350,18 @@ const styles = StyleSheet.create({
   moreButton: {
     padding: 8,
   },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
-  recentIconContainer: {
-    width: 36,
-    height: 36,
+  viewAllButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+    marginBottom: 8,
   },
-  recentContent: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  recentTitle: {
+  viewAllText: {
     fontSize: 15,
-    color: COLORS.text,
-    marginBottom: 2,
-    fontWeight: '500',
-  },
-  recentDetail: {
-    fontSize: 13,
-    color: '#64748B',
+    fontWeight: '600',
+      color: COLORS.text,
+    marginRight: 6,
   },
 });

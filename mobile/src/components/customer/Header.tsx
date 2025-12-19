@@ -17,26 +17,26 @@ export const CustomerHeader = () => {
 
   return (
     <View style={[styles.wrapper, { paddingTop: insets.top }]}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.addressContainer} onPress={() => router.push('/(customer)/address/search')}>
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.addressContainer} onPress={() => router.push('/(customer)/address/search')}>
           <View style={styles.labelRow}>
             <Text style={styles.label}>Home</Text>
             <Feather name="chevron-down" size={16} color={COLORS.text} style={styles.chevron} />
           </View>
-          <Text style={styles.address} numberOfLines={1}>
-            9/482,B type,40th Street,sidco nagar,chennai-...
-          </Text>
-        </TouchableOpacity>
-        
-        <View style={styles.actions}>
+        <Text style={styles.address} numberOfLines={1}>
+          9/482,B type,40th Street,sidco nagar,chennai-...
+        </Text>
+      </TouchableOpacity>
+      
+      <View style={styles.actions}>
            <TouchableOpacity style={styles.iconButton} onPress={() => setShowNotifications(true)}>
-              <Text style={styles.icon}>🔔</Text>
+            <Text style={styles.icon}>🔔</Text>
               {notificationCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{notificationCount > 9 ? '9+' : notificationCount}</Text>
                 </View>
               )}
-           </TouchableOpacity>
+         </TouchableOpacity>
            <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/(customer)/checkout')}>
               <Feather name="shopping-cart" size={18} color="#FFFFFF" />
               {cartCount > 0 && (
@@ -44,7 +44,7 @@ export const CustomerHeader = () => {
                   <Text style={styles.badgeText}>{cartCount > 9 ? '9+' : cartCount}</Text>
                 </View>
               )}
-           </TouchableOpacity>
+         </TouchableOpacity>
         </View>
       </View>
       <View style={styles.divider} />

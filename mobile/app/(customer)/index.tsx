@@ -79,20 +79,20 @@ export default function CustomerHomeScreen() {
                                     style={styles.addButton}
                                     onPress={() => handleAddProduct(product)}
                                 >
-                                    <Text style={styles.addButtonText}>ADD</Text>
-                                    <Text style={styles.plusIcon}>+</Text>
-                                </TouchableOpacity>
+                                <Text style={styles.addButtonText}>ADD</Text>
+                                <Text style={styles.plusIcon}>+</Text>
+                            </TouchableOpacity>
                             )}
                         </View>
                     </View>
                 ))}
             </ScrollView>
-            <TouchableOpacity 
+                <TouchableOpacity 
                 style={styles.viewMoreBtn}
-                onPress={() => router.push('/(customer)/products')}
-            >
+                    onPress={() => router.push('/(customer)/products')}
+                >
                 <Text style={styles.viewMoreText}>View More</Text>
-            </TouchableOpacity>
+                </TouchableOpacity>
         </View>
 
         {/* Active Orders */}
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
       backgroundColor: '#102841',
       paddingHorizontal: 16,
       paddingVertical: 6,
-      borderRadius: 8,
+      borderRadius: 10,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   },
   quantitySelector: {
       backgroundColor: '#102841',
-      borderRadius: 8,
+      borderRadius: 10,
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 10,
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
       backgroundColor: '#102841',
       paddingHorizontal: 20,
       paddingVertical: 10,
-      borderRadius: 20,
+      borderRadius: 10,
       alignSelf: 'flex-end',
       marginTop: 16,
   },

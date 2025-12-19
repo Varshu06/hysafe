@@ -1,13 +1,13 @@
 import * as Location from 'expo-location';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { Button } from '../../src/components/ui/Button';
 import { Loader } from '../../src/components/ui/Loader';
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   toggleButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     minWidth: 120,
     alignItems: 'center',
   },

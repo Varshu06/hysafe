@@ -27,13 +27,13 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <AuthProvider>
+    <AuthProvider>
         <CartProvider>
-          <OrderProvider>
-            <RootStack />
-          </OrderProvider>
+      <OrderProvider>
+        <RootStack />
+      </OrderProvider>
         </CartProvider>
-      </AuthProvider>
+    </AuthProvider>
     </SafeAreaProvider>
   );
 }

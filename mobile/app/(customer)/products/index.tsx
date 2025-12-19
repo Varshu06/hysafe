@@ -1,21 +1,29 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProductCard } from '../../../src/components/customer/ProductCard';
+import { useCart } from '../../../src/context/CartContext';
 import { PRODUCTS } from '../../../src/data/dummy';
 import { COLORS } from '../../../src/utils/constants';
 
 export default function ProductsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const { addToCart, removeFromCart, getQuantity, getTotalItems } = useCart();
 
-  const toggleSelection = (id: string) => {
-    if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter(item => item !== id));
+  const toggleSelection = (product: typeof PRODUCTS[0]) => {
+    const isInCart = getQuantity(product.id) > 0;
+    if (isInCart) {
+      removeFromCart(product.id);
     } else {
-      setSelectedItems([...selectedItems, id]);
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        volume: product.volume,
+      });
     }
   };
 
@@ -30,21 +38,24 @@ export default function ProductsScreen() {
 
       <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
         <View style={styles.row}>
-            {PRODUCTS.map((product) => (
+            {PRODUCTS.map((product) => {
+              const isInCart = getQuantity(product.id) > 0;
+              return (
                 <ProductCard
                     key={product.id}
                     item={product}
-                    selected={selectedItems.includes(product.id)}
-                    onSelect={() => toggleSelection(product.id)}
+                    selected={isInCart}
+                    onSelect={() => toggleSelection(product)}
                 />
-            ))}
+              );
+            })}
         </View>
       </ScrollView>
 
-      {selectedItems.length > 0 && (
+      {getTotalItems() > 0 && (
         <View style={styles.footer}>
             <View style={styles.footerContent}>
-                <Text style={styles.itemsCount}>{selectedItems.length} items selected</Text>
+                <Text style={styles.itemsCount}>{getTotalItems()} items selected</Text>
                 <TouchableOpacity 
                     style={styles.nextButton}
                     onPress={() => router.push('/(customer)/checkout')}

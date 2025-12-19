@@ -23,5 +23,12 @@ export interface Order {
   deliveredAt?: string;
   deliverySlot?: string;
   staffId?: string;
+  assignedStaffId?: string;
+  driverName?: string; // Delivery person's name
+  assignedStaff?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
 }
 
