@@ -30,19 +30,19 @@ export default function CheckoutScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color="#64748B" />
-        </TouchableOpacity>
+         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <View style={styles.homeRow}>
             <Text style={styles.homeText}>Home</Text>
             <Feather name="chevron-down" size={18} color="#102841" />
-          </View>
+      </View>
           <Text style={styles.headerAddress} numberOfLines={1}>
             9/482,B type,40th Street,sidco nagar,chennai-...
-          </Text>
+              </Text>
+           </View>
         </View>
-      </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -62,19 +62,19 @@ export default function CheckoutScreen() {
             <View key={item.id} style={styles.mainItemContainer}>
               <View style={styles.itemRow}>
                 <Text style={styles.itemName}>{item.name}</Text>
-                <View style={styles.quantityRow}>
-                  <View style={styles.counter}>
+           <View style={styles.quantityRow}>
+              <View style={styles.counter}>
                     <TouchableOpacity onPress={() => decrementQuantity(item.id)}>
                       <Text style={styles.counterBtn}>-</Text>
-                    </TouchableOpacity>
+                  </TouchableOpacity>
                     <Text style={styles.count}>{item.quantity}</Text>
                     <TouchableOpacity onPress={() => incrementQuantity(item.id)}>
                       <Text style={styles.counterBtn}>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
-                </View>
+                  </TouchableOpacity>
               </View>
+                  <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+           </View>
+        </View>
             </View>
           ))
         )}
@@ -85,7 +85,7 @@ export default function CheckoutScreen() {
         {/* Delivery and Bill Details Card */}
         {items.length > 0 && (
           <View style={styles.detailsCard}>
-            {/* Delivery Time */}
+        {/* Delivery Time */}
             <View style={styles.detailRow}>
               <Ionicons name="car-outline" size={20} color="#102841" />
               <View style={styles.detailContent}>
@@ -103,11 +103,11 @@ export default function CheckoutScreen() {
                 <Text style={styles.detailTitle}>Delivery at Home</Text>
                 <Text style={styles.detailSubtext} numberOfLines={1}>
                   9/482,B type, 40th Street, sidco nagar,che.....
-                </Text>
+                       </Text>
                 <TouchableOpacity onPress={() => setShowInstructions(true)}>
                   <Text style={styles.detailLink}>Add instructions for delivery partner</Text>
-                </TouchableOpacity>
-              </View>
+                   </TouchableOpacity>
+                </View>
               <Feather name="chevron-right" size={20} color="#94A3B8" />
             </View>
 
@@ -116,7 +116,7 @@ export default function CheckoutScreen() {
               <Ionicons name="call-outline" size={20} color="#102841" />
               <View style={styles.detailContent}>
                 <Text style={styles.detailTitle}>Varsha,+91 9342981893</Text>
-              </View>
+        </View>
               <Feather name="chevron-right" size={20} color="#94A3B8" />
             </View>
 
@@ -125,10 +125,10 @@ export default function CheckoutScreen() {
               <Ionicons name="receipt-outline" size={20} color="#102841" />
               <View style={styles.detailContent}>
                 <Text style={styles.detailTitle}>Total Bill ₹{totalPrice}</Text>
-              </View>
+            </View>
               <Feather name="chevron-right" size={20} color="#94A3B8" />
             </View>
-          </View>
+        </View>
         )}
       </ScrollView>
 
@@ -137,22 +137,22 @@ export default function CheckoutScreen() {
           <TouchableOpacity style={styles.paymentRow}>
             <Text style={styles.gpayLogo}>GP</Text>
             <View style={styles.paymentTextContainer}>
-              <Text style={styles.payVia}>Pay using</Text>
-              <Text style={styles.gpay}>Google Pay</Text>
-            </View>
+             <Text style={styles.payVia}>Pay using</Text>
+             <Text style={styles.gpay}>Google Pay</Text>
+          </View>
             <Feather name="chevron-right" size={18} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.payButton}
-            onPress={() => {
-              alert('Order Placed!');
+                onPress={() => {
+                    alert('Order Placed!');
               clearCart();
               router.push('/(customer)');
-            }}
+                }}
           >
             <Text style={styles.payButtonText}>Pay ₹{totalPrice}</Text>
           </TouchableOpacity>
-        </View>
+          </View>
       )}
 
       <DeliveryInstructionsSheet 
@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   emptyCart: {
-      alignItems: 'center',
+    alignItems: 'center',
       justifyContent: 'center',
       padding: 40,
   },
   emptyCartText: {
-      fontSize: 16,
+    fontSize: 16,
       color: '#64748B',
       marginBottom: 16,
   },
@@ -221,69 +221,69 @@ const styles = StyleSheet.create({
   },
   mainItemContainer: {
     backgroundColor: '#E0F2FE',
-    marginHorizontal: 20,
+      marginHorizontal: 20,
     marginVertical: 8,
-    padding: 16,
-    borderRadius: 12,
+      padding: 16,
+      borderRadius: 12,
   },
   itemRow: {
-    flexDirection: 'row',
+      flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+      justifyContent: 'space-between',
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: '500',
+      fontSize: 16,
+      fontWeight: '500',
     color: '#102841',
     flex: 1,
     marginRight: 12,
   },
   quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
     gap: 16,
   },
   counter: {
-    flexDirection: 'row',
+      flexDirection: 'row',
     backgroundColor: '#102841',
-    borderRadius: 8,
-    alignItems: 'center',
+      borderRadius: 8,
+      alignItems: 'center',
     paddingHorizontal: 4,
-    paddingVertical: 4,
+      paddingVertical: 4,
     gap: 8,
   },
   counterBtn: {
-    color: 'white',
-    fontSize: 18,
+      color: 'white',
+      fontSize: 18,
     fontWeight: '600',
-    paddingHorizontal: 8,
+      paddingHorizontal: 8,
   },
   count: {
-    color: 'white',
-    fontSize: 16,
+      color: 'white',
+      fontSize: 16,
     fontWeight: '600',
     minWidth: 20,
     textAlign: 'center',
   },
   itemPrice: {
-    fontSize: 16,
+      fontSize: 16,
     fontWeight: '600',
     color: '#102841',
   },
   detailsCard: {
-    backgroundColor: '#E0F2FE',
+      backgroundColor: '#E0F2FE',
     marginHorizontal: 20,
     marginVertical: 12,
-    padding: 16,
+      padding: 16,
     borderRadius: 12,
   },
   detailRow: {
-    flexDirection: 'row',
+      flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 20,
   },
   detailRowLast: {
-    flexDirection: 'row',
+      flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 0,
   },
@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
   },
   detailSubtext: {
     fontSize: 13,
-    color: '#64748B',
-    marginBottom: 4,
+      color: '#64748B',
+      marginBottom: 4,
   },
   detailLink: {
     fontSize: 12,
@@ -308,15 +308,15 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
     backgroundColor: '#102841',
     paddingHorizontal: 20,
     paddingTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+      flexDirection: 'row',
+      alignItems: 'center',
     gap: 12,
   },
   paymentRow: {
@@ -340,11 +340,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   payVia: {
-    fontSize: 10,
+      fontSize: 10,
     color: '#94A3B8',
   },
   gpay: {
-    fontSize: 14,
+      fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },

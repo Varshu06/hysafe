@@ -354,49 +354,49 @@ export default function AddAddressScreen() {
 
           {/* Information Box - Hide for current location flow */}
           {!fromCurrentLocation && (
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                  The more accurate your address, the quicker we can reach you!
-              </Text>
-            </View>
+         <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+                The more accurate your address, the quicker we can reach you!
+            </Text>
+         </View>
           )}
 
           {/* Form Inputs - Hide for current location flow */}
           {!fromCurrentLocation && (
             <>
-              <View style={styles.form}>
-                <TextInput 
-                    placeholder="House / Flat / Block number."
-                    style={styles.input}
-                    placeholderTextColor="#94A3B8"
+         <View style={styles.form}>
+            <TextInput 
+                placeholder="House / Flat / Block number."
+                style={styles.input}
+                placeholderTextColor="#94A3B8"
                   value={houseNumber}
                   onChangeText={setHouseNumber}
-                />
-                <TextInput 
+            />
+            <TextInput 
                   placeholder="Apartment / Road / Area (Recommended)"
-                    style={styles.input}
-                    placeholderTextColor="#94A3B8"
+                style={styles.input}
+                placeholderTextColor="#94A3B8"
                   value={apartmentRoad}
                   onChangeText={setApartmentRoad}
-                />
-              </View>
+            />
+         </View>
 
               {/* Save As Section */}
-              <Text style={styles.saveAsLabel}>Save As</Text>
+         <Text style={styles.saveAsLabel}>Save As</Text>
               <View style={saveAs === 'Others' ? styles.tagsContainerWithOthers : styles.tagsContainer}>
-                {['Home', 'Work', 'Friends and Family', 'Others'].map((tag) => (
-                    <TouchableOpacity 
-                        key={tag} 
-                        style={[styles.tag, saveAs === tag && styles.activeTag]}
-                        onPress={() => setSaveAs(tag)}
-                    >
+            {['Home', 'Work', 'Friends and Family', 'Others'].map((tag) => (
+                <TouchableOpacity 
+                    key={tag} 
+                    style={[styles.tag, saveAs === tag && styles.activeTag]}
+                    onPress={() => setSaveAs(tag)}
+                >
                     <Text style={styles.tagIcon}>{getTagIcon(tag)}</Text>
-                       <Text style={[styles.tagText, saveAs === tag && styles.activeTagText]}>
-                           {tag}
-                       </Text>
-                    </TouchableOpacity>
-                ))}
-              </View>
+                   <Text style={[styles.tagText, saveAs === tag && styles.activeTagText]}>
+                       {tag}
+                   </Text>
+                </TouchableOpacity>
+            ))}
+         </View>
 
               {/* Save As Name Input - Only show for Others */}
               {saveAs === 'Others' && (
@@ -426,8 +426,8 @@ export default function AddAddressScreen() {
                     value={receiverPhone}
                     onChangeText={setReceiverPhone}
                     keyboardType="phone-pad"
-                />
-             </View>
+            />
+         </View>
               )}
             </>
           )}
