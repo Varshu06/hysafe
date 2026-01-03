@@ -7,14 +7,14 @@ import { CartProvider } from '../src/context/CartContext';
 import { OrderProvider } from '../src/context/OrderContext';
 
 function RootStack() {
-  const { isLoading, user } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return <FlashScreen />;
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false }} initialRouteName="(auth)">
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(customer)" />
       <Stack.Screen name="(staff)" />

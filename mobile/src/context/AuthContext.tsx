@@ -27,31 +27,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Navigate based on role after authentication
   useEffect(() => {
-    // Only navigate if loading is completely done
-    if (!isLoading) {
-        if (user) {
-            navigateToRoleScreen(user.role);
-        } else {
-            // If not authenticated, we just stay on the current screen (likely login or splash)
-            // But to be safe, if we are at root and not logged in, go to login
-            // router.replace('/(auth)/login'); // Removed auto-redirect to prevent Flash Screen interruption
+    // Only navigate if loading is completely done and router is ready
+    if (!isLoading && user && router) {
+      // Use setTimeout to ensure router is fully initialized
+      setTimeout(() => {
+        try {
+          navigateToRoleScreen(user.role);
+        } catch (error) {
+          console.error('Navigation error:', error);
         }
+      }, 100);
     }
   }, [user, isLoading]);
 
   const navigateToRoleScreen = (role: UserRole) => {
-    switch (role) {
-      case 'customer':
-        router.replace('/(customer)');
-        break;
-      case 'staff':
-        router.replace('/(staff)');
-        break;
-      case 'admin':
-        router.replace('/(admin)');
-        break;
-      default:
-        router.replace('/(auth)/login');
+    if (!router) return;
+    try {
+      switch (role) {
+        case 'customer':
+          router.replace('/(customer)');
+          break;
+        case 'staff':
+          router.replace('/(staff)');
+          break;
+        case 'admin':
+          router.replace('/(admin)');
+          break;
+        default:
+          router.replace('/(auth)/login');
+      }
+    } catch (error) {
+      console.error('Navigation error:', error);
     }
   };
 
@@ -64,7 +70,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userData = await storage.getUser();
       
       if (token && userData) {
-        setUser(userData);
+        // Normalize user data - ensure id field exists
+        const normalizedUser = {
+          ...userData,
+          id: userData.id || userData._id || '',
+        };
+        setUser(normalizedUser);
       }
     } catch (error) {
       console.error('Auth check error:', error);
@@ -77,7 +88,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await login(credentials);
       if (response.user) {
-        setUser(response.user);
+        // Normalize user data - ensure id field exists
+        const normalizedUser = {
+          ...response.user,
+          id: response.user.id || response.user._id || '',
+        };
+        setUser(normalizedUser);
         // Navigation will happen automatically via useEffect
       }
     } catch (error: any) {
@@ -89,7 +105,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const response = await register(data);
       if (response.user) {
-        setUser(response.user);
+        // Normalize user data - ensure id field exists
+        const normalizedUser = {
+          ...response.user,
+          id: response.user.id || response.user._id || '',
+        };
+        setUser(normalizedUser);
         // Navigation will happen automatically via useEffect
       }
     } catch (error: any) {
@@ -101,7 +122,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await logoutService();
       setUser(null);
-      router.replace('/(auth)/login');
+      if (router) {
+        router.replace('/(auth)/login');
+      }
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -111,8 +134,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const profile = await getProfile();
       if (profile.user) {
-        setUser(profile.user);
-        await storage.setUser(profile.user);
+        // Normalize user data - ensure id field exists
+        const normalizedUser = {
+          ...profile.user,
+          id: profile.user.id || profile.user._id || '',
+        };
+        setUser(normalizedUser);
+        await storage.setUser(normalizedUser);
       }
     } catch (error) {
       console.error('Refresh profile error:', error);

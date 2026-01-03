@@ -1,10 +1,12 @@
 export type UserRole = 'admin' | 'staff' | 'customer';
 
 export interface User {
-  id: string;
+  id?: string;
+  _id?: string;
   email?: string;
   phone: string;
   role: UserRole;
+  name?: string;
 }
 
 export interface CustomerProfile {

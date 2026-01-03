@@ -41,12 +41,12 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       message: 'Login successful (MOCK)',
       token: 'mock-jwt-token-12345',
       user: {
+        id: 'mock-user-id-123',
         _id: 'mock-user-id-123',
         name: 'Mock User',
         email: credentials.email || 'mock@example.com',
         phone: credentials.phone || '1234567890',
         role: role,
-        address: '123 Mock St, Demo City'
       }
     };
 
@@ -79,12 +79,12 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
       message: 'Registration successful (MOCK)',
       token: 'mock-jwt-token-12345',
       user: {
+        id: 'mock-user-id-new',
         _id: 'mock-user-id-new',
         name: data.name,
         email: data.email || 'new@example.com',
         phone: data.phone,
         role: data.role || 'customer',
-        address: data.address || ''
       }
     };
 

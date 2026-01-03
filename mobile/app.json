@@ -10,7 +10,10 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "enabled": false,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "NEVER",
+      "url": ""
     },
     "assetBundlePatterns": [
       "**/*"
