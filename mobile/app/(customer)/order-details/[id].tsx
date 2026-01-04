@@ -6,14 +6,16 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-  TouchableOpacity,
+    TouchableOpacity,
     View,
+    Linking,
+    Clipboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Loader } from '../../../src/components/ui/Loader';
 import { StatusBadge } from '../../../src/components/ui/StatusBadge';
 import { useOrder } from '../../../src/context/OrderContext';
-import { getOrderById } from '../../../src/services/order.service';
+import { getOrderById, updateOrderStatus } from '../../../src/services/order.service';
 import { Order } from '../../../src/types/order.types';
 import { COLORS } from '../../../src/utils/constants';
 
@@ -31,6 +33,82 @@ export default function OrderDetailsScreen() {
     if (methodLower === 'online') return 'Card';
     if (methodLower === 'offline') return 'Cash';
     return method.charAt(0).toUpperCase() + method.slice(1);
+  };
+
+  const getDriverName = (): string => {
+    if (order?.driverName) return order.driverName;
+    if (order?.assignedStaff?.name) return order.assignedStaff.name;
+    if (order?.status === 'pending') return 'Not Assigned';
+    return 'Delivery Partner';
+  };
+
+  const getDriverPhone = (): string | null => {
+    return order?.assignedStaff?.phone || null;
+  };
+
+  const handleCallDriver = () => {
+    const phone = getDriverPhone();
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    } else {
+      Alert.alert('No Phone Number', 'Driver phone number is not available');
+    }
+  };
+
+  const handleCopyOrderId = () => {
+    if (order?._id) {
+      Clipboard.setString(order._id);
+      Alert.alert('Copied!', 'Order ID copied to clipboard');
+    }
+  };
+
+  const handleCancelOrder = () => {
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updateOrderStatus(order!._id, 'cancelled');
+              Alert.alert('Success', 'Order cancelled successfully');
+              router.back();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to cancel order');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleTrackOrder = () => {
+    // Navigate to tracking page or show tracking info
+    Alert.alert('Track Order', 'Tracking feature coming soon!');
+  };
+
+  const handleReorder = () => {
+    // Navigate to checkout with same order details
+    Alert.alert('Reorder', 'Adding items to cart...');
+    // You can implement reorder logic here
+  };
+
+  const canCancel = () => {
+    const status = order?.status?.toLowerCase();
+    return status === 'pending' || status === 'accepted';
+  };
+
+  const canTrack = () => {
+    const status = order?.status?.toLowerCase();
+    return status === 'out_for_delivery' || status === 'accepted';
+  };
+
+  const canReorder = () => {
+    const status = order?.status?.toLowerCase();
+    return status === 'delivered' || status === 'cancelled';
   };
 
   useEffect(() => {
@@ -84,9 +162,48 @@ export default function OrderDetailsScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Status Badge */}
-      <View style={styles.statusContainer}>
-        <StatusBadge status={order.status} style={styles.statusBadge} />
-      </View>
+        <View style={styles.statusContainer}>
+          <StatusBadge status={order.status} style={styles.statusBadge} />
+        </View>
+
+        {/* Order ID Display */}
+        <View style={styles.orderIdContainer}>
+          <Text style={styles.orderIdLabel}>Order ID</Text>
+          <View style={styles.orderIdRow}>
+            <Text style={styles.orderIdValue}>#{order._id}</Text>
+            <TouchableOpacity onPress={handleCopyOrderId} style={styles.copyButton}>
+              <Feather name="copy" size={16} color={COLORS.primary} />
+              <Text style={styles.copyText}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Driver Contact Card */}
+        {(order.driverName || order.assignedStaff?.name) && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Delivery Partner</Text>
+            
+            <View style={styles.driverInfo}>
+              <View style={styles.driverAvatar}>
+                <Ionicons name="person" size={24} color={COLORS.primary} />
+              </View>
+              <View style={styles.driverDetails}>
+                <Text style={styles.driverName}>{getDriverName()}</Text>
+                {getDriverPhone() && (
+                  <Text style={styles.driverPhone}>{getDriverPhone()}</Text>
+                )}
+                {!getDriverPhone() && (
+                  <Text style={styles.driverPhone}>Phone number not available</Text>
+                )}
+              </View>
+              {getDriverPhone() && (
+                <TouchableOpacity style={styles.callButton} onPress={handleCallDriver}>
+                  <Feather name="phone" size={20} color="white" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Order Info Card */}
         <View style={styles.card}>
@@ -218,6 +335,24 @@ export default function OrderDetailsScreen() {
           </View>
         )}
 
+        {order.outForDeliveryAt && (
+            <View style={styles.timelineItem}>
+              <View style={styles.timelineDot} />
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineLabel}>Out for Delivery</Text>
+                <Text style={styles.timelineValue}>
+                  {new Date(order.outForDeliveryAt).toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    year: 'numeric',
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  })}
+                </Text>
+              </View>
+            </View>
+          )}
+
         {order.deliveredAt && (
             <View style={styles.timelineItem}>
               <View style={[styles.timelineDot, styles.timelineDotCompleted]} />
@@ -231,14 +366,38 @@ export default function OrderDetailsScreen() {
                     hour: 'numeric', 
                     minute: '2-digit' 
                   })}
-            </Text>
+                </Text>
               </View>
           </View>
         )}
       </View>
 
-        <View style={{ height: 20 }} />
-    </ScrollView>
+        <View style={{ height: 100 }} />
+      </ScrollView>
+
+      {/* Action Buttons Footer */}
+      <View style={[styles.actionFooter, { paddingBottom: insets.bottom + 16 }]}>
+        {canCancel() && (
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
+            <Feather name="x-circle" size={20} color={COLORS.error} />
+            <Text style={styles.cancelButtonText}>Cancel Order</Text>
+          </TouchableOpacity>
+        )}
+        
+        {canTrack() && (
+          <TouchableOpacity style={styles.trackButton} onPress={handleTrackOrder}>
+            <Feather name="map-pin" size={20} color="white" />
+            <Text style={styles.trackButtonText}>Track Order</Text>
+          </TouchableOpacity>
+        )}
+        
+        {canReorder() && (
+          <TouchableOpacity style={styles.reorderButton} onPress={handleReorder}>
+            <Feather name="refresh-cw" size={20} color="white" />
+            <Text style={styles.reorderButtonText}>Reorder</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -257,6 +416,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
     padding: 8,
@@ -273,7 +437,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
   },
   statusContainer: {
     alignItems: 'center',
@@ -366,6 +530,142 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     textAlign: 'center',
     marginTop: 40,
+  },
+  orderIdContainer: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  orderIdLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  orderIdRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orderIdValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    letterSpacing: 1,
+  },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    borderRadius: 8,
+    gap: 6,
+  },
+  copyText: {
+    fontSize: 12,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  driverInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  driverAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  driverDetails: {
+    flex: 1,
+  },
+  driverName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 4,
+  },
+  driverPhone: {
+    fontSize: 14,
+    color: '#94A3B8',
+  },
+  callButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    gap: 8,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: COLORS.error,
+  },
+  trackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  trackButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  reorderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  reorderButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
   },
 });
 

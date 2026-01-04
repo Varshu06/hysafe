@@ -134,7 +134,6 @@ export const AddOns = () => {
 const styles = StyleSheet.create({
   container: {
     marginVertical: 16,
-    paddingHorizontal: 20,
   },
   title: {
     fontSize: 14,
@@ -143,7 +142,7 @@ const styles = StyleSheet.create({
     color: '#102841',
   },
   scrollContent: {
-    paddingRight: 20,
+    paddingRight: 0,
     paddingBottom: 4,
   },
   card: {

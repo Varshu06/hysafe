@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,16 +13,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../src/context/AuthContext';
 import { COLORS } from '../../src/utils/constants';
-
-type Role = 'customer' | 'staff' | 'admin';
 
 export default function SignupScreen() {
   const router = useRouter();
   const { register } = useAuth();
-  const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -31,7 +28,7 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!name || (!email && !phone) || !password) {
+    if (!name || !phone || !password) {
       Alert.alert('Error', 'Please fill all required fields');
       return;
     }
@@ -43,6 +40,11 @@ export default function SignupScreen() {
 
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters');
+      return;
+    }
+
+    if (phone.length < 10) {
+      Alert.alert('Error', 'Please enter a valid phone number');
       return;
     }
 
@@ -67,11 +69,29 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Water Theme Header */}
+      <ImageBackground 
+        source={require('../../src/assets/loginimage.png')} 
+        style={styles.headerContainer}
+        resizeMode="cover"
+      >
+         <View style={styles.overlay} />
+         <View style={styles.headerWave} />
+      </ImageBackground>
+
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Create Account</Text>
+        <Text style={styles.title}>Hy-Safe</Text>
+        <Text style={styles.tagline}>Create Your Account</Text>
+        <Text style={styles.subtitle}>Join us to order fresh water cans anytime, anywhere.</Text>
+        
+        <View style={styles.dividerContainer}>
+            <View style={styles.line} />
+            <Text style={styles.dividerText}>Sign up</Text>
+            <View style={styles.line} />
+        </View>
 
         <View style={styles.form}>
           <TextInput
@@ -92,22 +112,30 @@ export default function SignupScreen() {
             autoCapitalize="none"
           />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Phone Number *"
-            placeholderTextColor={COLORS.textLight}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
+          <View style={styles.inputContainer}>
+            <View style={styles.countryCode}>
+              <Text style={styles.flag}>🇮🇳</Text>
+              <Text style={styles.code}>+91</Text>
+            </View>
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="Enter Phone Number"
+              placeholderTextColor={COLORS.textLight}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+          </View>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.addressInput]}
             placeholder="Address (optional)"
             placeholderTextColor={COLORS.textLight}
             value={address}
             onChangeText={setAddress}
             multiline
+            numberOfLines={3}
           />
 
           <TextInput
@@ -134,7 +162,7 @@ export default function SignupScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.secondary} />
+              <ActivityIndicator color="white" />
             ) : (
               <Text style={styles.buttonText}>Sign Up</Text>
             )}
@@ -148,6 +176,17 @@ export default function SignupScreen() {
               Already have an account? <Text style={styles.loginLinkText}>Login</Text>
             </Text>
           </TouchableOpacity>
+
+          <Text style={styles.orText}>or</Text>
+
+          <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.socialButton}>
+              <Text style={styles.socialIcon}>G</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton}>
+              <Text style={styles.socialIcon}>📧</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -157,82 +196,148 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.accent,
+    backgroundColor: 'white',
+  },
+  headerContainer: {
+    height: 350,
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(2, 132, 199, 0.3)',
+  },
+  headerWave: {
+    position: 'absolute',
+    bottom: -50,
+    width: '150%',
+    height: 100,
+    backgroundColor: 'white',
+    borderTopLeftRadius: 200,
+    borderTopRightRadius: 200,
+    alignSelf: 'center',
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    flexGrow: 1,
+    padding: 24,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: COLORS.primary,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.textLight,
     marginBottom: 30,
     textAlign: 'center',
+    lineHeight: 20,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    width: '100%',
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    color: COLORS.textLight,
+    fontWeight: '500',
   },
   form: {
     width: '100%',
   },
   input: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
+    width: '100%',
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  roleContainer: {
+  inputContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  roleButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.secondary,
+    borderRadius: 12,
+    padding: 4,
+    width: '100%',
+    marginBottom: 16,
+    height: 56,
+    backgroundColor: '#F8FAFC',
+  },
+  countryCode: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border,
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
   },
-  roleButtonActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.accent,
+  flag: {
+    fontSize: 18,
+    marginRight: 8,
   },
-  roleText: {
-    fontSize: 14,
+  code: {
+    fontSize: 16,
     color: COLORS.text,
-    fontWeight: '500',
-  },
-  roleTextActive: {
-    color: COLORS.primary,
     fontWeight: '600',
+  },
+  phoneInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  addressInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+    paddingTop: 16,
   },
   button: {
     backgroundColor: COLORS.primary,
+    width: '100%',
+    paddingVertical: 16,
     borderRadius: 10,
-    padding: 16,
     alignItems: 'center',
     marginTop: 8,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.7,
   },
   buttonText: {
-    color: COLORS.secondary,
+    color: 'white',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   loginLink: {
-    marginTop: 20,
     alignItems: 'center',
+    marginBottom: 24,
   },
   loginText: {
     color: COLORS.textLight,
@@ -241,6 +346,29 @@ const styles = StyleSheet.create({
   loginLinkText: {
     color: COLORS.primary,
     fontWeight: '600',
+  },
+  orText: {
+    color: COLORS.textLight,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  socialContainer: {
+    flexDirection: 'row',
+    gap: 20,
+    justifyContent: 'center',
+  },
+  socialButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  socialIcon: {
+    fontSize: 24,
   },
 });
 

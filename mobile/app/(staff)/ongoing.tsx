@@ -1,3 +1,5 @@
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
@@ -5,14 +7,18 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
+  TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/ui/Button';
 import { StatusBadge } from '../../src/components/ui/StatusBadge';
 import { getAssignedOrders, updateDeliveryStatus } from '../../src/services/staff.service';
 import { COLORS } from '../../src/utils/constants';
 
 export default function OngoingOrdersScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [ongoingOrders, setOngoingOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +30,7 @@ export default function OngoingOrdersScreen() {
     setIsLoading(true);
     try {
       const orders = await getAssignedOrders();
-      setOngoingOrders(orders.filter((o: any) => o.status !== 'pending'));
+      setOngoingOrders(orders.filter((o: any) => String(o.status).toLowerCase() !== 'pending'));
     } catch (error) {
       console.error(error);
     } finally {
@@ -43,13 +49,14 @@ export default function OngoingOrdersScreen() {
   };
 
   const getStatusButton = (order: any) => {
+    const id = order._id || order.id;
     switch (order.status) {
       case 'accepted':
         return (
           <Button
             title="Order Picked"
-            variant="warning" // Changed to match style (warning color)
-            onPress={() => handleStatusUpdate(order.id, 'picked')}
+            variant="primary"
+            onPress={() => handleStatusUpdate(id, 'picked')}
             style={styles.statusButton}
           />
         );
@@ -58,7 +65,7 @@ export default function OngoingOrdersScreen() {
           <Button
             title="In Transit"
             variant="primary"
-            onPress={() => handleStatusUpdate(order.id, 'transit')}
+            onPress={() => handleStatusUpdate(id, 'transit')}
             style={styles.statusButton}
           />
         );
@@ -68,7 +75,7 @@ export default function OngoingOrdersScreen() {
           <Button
             title="Mark Delivered"
             variant="success"
-            onPress={() => handleStatusUpdate(order.id, 'delivered')}
+            onPress={() => handleStatusUpdate(id, 'delivered')}
             style={styles.statusButton}
           />
         );
@@ -78,46 +85,50 @@ export default function OngoingOrdersScreen() {
   };
 
   const renderOrderCard = ({ item }: { item: any }) => (
-    <View style={styles.orderCard}>
-      <View style={styles.orderHeader}>
-        <Text style={styles.orderQuantity}>{item.quantity || 1} x 20L</Text>
+    <TouchableOpacity
+      style={styles.orderCard}
+      activeOpacity={0.85}
+      onPress={() => router.push(`/(staff)/order-details/${item._id || item.id}`)}
+    >
+      <View style={styles.cardHeader}>
         <StatusBadge status={item.status} />
+        <Text style={styles.metaText}>#{item._id || item.id}</Text>
       </View>
 
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Delivery Address:</Text>
-        <Text style={styles.value}>{item.deliveryAddress || 'Address not available'}</Text>
+      <Text style={styles.orderQuantity}>{item.quantity || 1} x 20L</Text>
+
+      <View style={styles.infoRow}>
+        <Feather name="map-pin" size={16} color="#94A3B8" />
+        <Text style={styles.value} numberOfLines={1}>
+          {item.deliveryAddress || 'Address not available'}
+        </Text>
       </View>
 
-      {item.price && (
-        <View style={styles.orderInfo}>
-          <Text style={styles.label}>Price:</Text>
-          <Text style={styles.value}>₹{item.price}</Text>
-        </View>
-      )}
-
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Payment:</Text>
-        <Text style={styles.value}>{item.paymentMethod?.toUpperCase() || 'OFFLINE'}</Text>
+      <View style={styles.infoRow}>
+        <Feather name="credit-card" size={16} color="#94A3B8" />
+        <Text style={styles.value}>
+          {String(item.paymentMethod || 'offline').toLowerCase() === 'online' ? 'UPI' : 'COD'}
+        </Text>
       </View>
 
       {getStatusButton(item)}
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerLeft} />
+        <Text style={styles.headerTitle}>Ongoing</Text>
+        <View style={styles.headerRight} />
+      </View>
+
       <FlatList
         data={ongoingOrders}
         renderItem={renderOrderCard}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item._id || item.id)}
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refreshOngoingOrders}
-          />
-        }
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOngoingOrders} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No ongoing orders</Text>
@@ -133,42 +144,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.accent,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: COLORS.accent,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerLeft: { width: 40 },
+  headerRight: { width: 40 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
   listContent: {
-    padding: 16,
+    padding: 20,
+    paddingBottom: 40,
   },
   orderCard: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
-  orderHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
+  metaText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   orderQuantity: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  orderInfo: {
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginBottom: 2,
+    color: 'white',
+    marginBottom: 12,
   },
   value: {
     fontSize: 14,
-    color: COLORS.text,
+    color: 'white',
+    flex: 1,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
   },
   statusButton: {
     marginTop: 12,

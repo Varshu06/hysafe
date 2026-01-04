@@ -198,8 +198,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
     marginRight: 12,
@@ -214,7 +219,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     paddingHorizontal: 16,
     paddingVertical: 5,
     borderRadius: 10,
@@ -255,7 +260,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    marginHorizontal: 16,
+    marginHorizontal: 20,
   },
   addNewRow: {
     flexDirection: 'row',
@@ -296,7 +301,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   addressItem: {
     flexDirection: 'row',

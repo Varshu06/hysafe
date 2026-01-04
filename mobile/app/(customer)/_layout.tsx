@@ -36,12 +36,78 @@ export default function CustomerLayout() {
         name="orders"
         options={{
           title: 'My Orders',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/edit"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/payment-methods"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/privacy-security"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/change-password"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/app-lock"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/login-activity"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/privacy-policy"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="profile/delete-account"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -49,6 +115,7 @@ export default function CustomerLayout() {
         options={{
           href: null, // Hide from tab bar
           title: 'Order Details',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -69,6 +136,14 @@ export default function CustomerLayout() {
       />
       <Tabs.Screen
         name="checkout/index"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="checkout/payment-methods"
         options={{
           href: null,
           tabBarStyle: { display: 'none' },

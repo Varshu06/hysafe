@@ -12,9 +12,18 @@ interface OrderContextType {
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  // Safely get auth context - it should be available since OrderProvider is inside AuthProvider
+  let isAuthenticated = false;
+  try {
+    const auth = useAuth();
+    isAuthenticated = auth?.isAuthenticated || false;
+  } catch (error) {
+    // This shouldn't happen, but handle gracefully
+    console.warn('Could not access auth context:', error);
+  }
 
   const refreshOrders = async (): Promise<void> => {
     if (!isAuthenticated) {
@@ -28,13 +37,18 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setOrders(data);
     } catch (error) {
       console.error('Failed to fetch orders:', error);
+      // Don't throw, just log
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    refreshOrders();
+    if (isAuthenticated) {
+      refreshOrders();
+    } else {
+      setOrders([]);
+    }
   }, [isAuthenticated]);
 
   return (

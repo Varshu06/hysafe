@@ -15,13 +15,6 @@ export default function StaffLayout() {
           paddingBottom: 10 + insets.bottom,
           paddingTop: 10,
         },
-        headerStyle: {
-          backgroundColor: COLORS.primary,
-        },
-        headerTintColor: COLORS.secondary,
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
       }}
     >
       <Tabs.Screen
@@ -29,6 +22,7 @@ export default function StaffLayout() {
         options={{
           title: 'New Orders',
           tabBarLabel: 'New Orders',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -36,6 +30,7 @@ export default function StaffLayout() {
         options={{
           title: 'Ongoing',
           tabBarLabel: 'Ongoing',
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -43,6 +38,15 @@ export default function StaffLayout() {
         options={{
           title: 'Profile',
           tabBarLabel: 'Profile',
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="order-details/[id]"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
         }}
       />
     </Tabs>

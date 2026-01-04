@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -28,12 +29,14 @@ export default function ProductsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-         </TouchableOpacity>
-         <Text style={styles.headerTitle}>Select Your Products</Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <TouchableOpacity onPress={() => router.push('/(customer)')} style={styles.backButton}>
+          <Feather name="arrow-left" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Select Your Products</Text>
+        <View style={styles.placeholder} />
       </View>
 
       <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
@@ -77,23 +80,31 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#F0F9FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
-    marginRight: 16,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: COLORS.text,
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
   },
+  placeholder: {
+    width: 40,
+  },
   grid: {
-    paddingHorizontal: 20,
+    padding: 20,
     paddingBottom: 100,
   },
   row: {

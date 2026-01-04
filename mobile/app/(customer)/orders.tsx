@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
     FlatList,
     RefreshControl,
@@ -16,11 +16,14 @@ import { useOrder } from '../../src/context/OrderContext';
 import { Order } from '../../src/types/order.types';
 import { COLORS } from '../../src/utils/constants';
 
+type TabType = 'active' | 'history';
+
 export default function OrdersScreen() {
   const { isAuthenticated } = useAuth();
   const { orders, isLoading, refreshOrders } = useOrder();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<TabType>('active');
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -58,6 +61,39 @@ export default function OrdersScreen() {
     return 'Delivery Partner'; // Fallback for assigned orders without name
   };
 
+  const getStatusIcon = (status: string) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower === 'pending') {
+      return <Feather name="clock" size={12} color={COLORS.warning} />;
+    }
+    if (statusLower === 'cancelled') {
+      return <Feather name="x" size={12} color={COLORS.textLight} />;
+    }
+    if (statusLower === 'delivered') {
+      return <Feather name="check" size={12} color={COLORS.success} />;
+    }
+    return <Feather name="check" size={12} color={COLORS.primary} />;
+  };
+
+  // Filter orders based on active tab
+  const getFilteredOrders = (): Order[] => {
+    if (activeTab === 'active') {
+      // Active orders: pending, accepted, out_for_delivery
+      return orders.filter(order => {
+        const status = order.status.toLowerCase();
+        return status === 'pending' || status === 'accepted' || status === 'out_for_delivery';
+      });
+    } else {
+      // Order history: delivered, cancelled
+      return orders.filter(order => {
+        const status = order.status.toLowerCase();
+        return status === 'delivered' || status === 'cancelled';
+      });
+    }
+  };
+
+  const filteredOrders = getFilteredOrders();
+
   const renderOrderCard = ({ item }: { item: Order }) => (
     <TouchableOpacity
       style={styles.orderCard}
@@ -66,7 +102,7 @@ export default function OrdersScreen() {
     >
       <View style={styles.cardHeader}>
         <View style={styles.statusBadge}>
-          <Text style={styles.check}>✓</Text>
+          {getStatusIcon(item.status)}
           <Text style={styles.statusText}>{item.status}</Text>
       </View>
         <Text style={styles.date}>
@@ -92,21 +128,57 @@ export default function OrdersScreen() {
     </TouchableOpacity>
   );
 
+  const getEmptyMessage = () => {
+    if (activeTab === 'active') {
+      return {
+        icon: '⏳',
+        title: 'No active orders',
+        subtitle: 'You don\'t have any active orders at the moment',
+      };
+    } else {
+      return {
+        icon: '📦',
+        title: 'No order history',
+        subtitle: 'Your completed orders will appear here',
+      };
+    }
+  };
+
+  const emptyMessage = getEmptyMessage();
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/(customer)')} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Orders</Text>
-        <TouchableOpacity onPress={() => router.push('/(customer)')} style={styles.homeButton}>
-          <Feather name="home" size={24} color={COLORS.text} />
+        <View style={styles.placeholder} />
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'active' && styles.activeTab]}
+          onPress={() => setActiveTab('active')}
+        >
+          <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
+            Active Orders
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
+            Order History
+          </Text>
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={orders}
+        data={filteredOrders}
         renderItem={renderOrderCard}
         keyExtractor={(item) => item._id}
         contentContainerStyle={styles.listContent}
@@ -115,9 +187,10 @@ export default function OrdersScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No orders yet</Text>
+            <Text style={styles.emptyIcon}>{emptyMessage.icon}</Text>
+            <Text style={styles.emptyText}>{emptyMessage.title}</Text>
             <Text style={styles.emptySubtext}>
-              Place your first order from the Home tab
+              {emptyMessage.subtitle}
             </Text>
           </View>
         }
@@ -140,6 +213,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
     padding: 8,
@@ -149,11 +227,46 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text,
   },
-  homeButton: {
-    padding: 8,
+  placeholder: {
+    width: 40,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderRadius: 8,
+    marginHorizontal: 4,
+    backgroundColor: 'transparent',
+  },
+  activeTab: {
+    backgroundColor: COLORS.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textLight,
+  },
+  activeTabText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
   listContent: {
-    padding: 16,
+    padding: 20,
   },
   orderCard: {
     backgroundColor: '#0F172A',
@@ -181,14 +294,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 4,
   },
-  check: {
-    fontSize: 12,
-    color: COLORS.primary,
-  },
   statusText: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#0F172A',
+    textTransform: 'capitalize',
   },
   date: {
     color: 'white',
@@ -243,17 +353,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    minHeight: 400,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.textLight,
     textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 22,
   },
   loginButton: {
     marginTop: 20,

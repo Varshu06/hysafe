@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Use setTimeout to ensure router is fully initialized
       setTimeout(() => {
         try {
-          navigateToRoleScreen(user.role);
+            navigateToRoleScreen(user.role);
         } catch (error) {
           console.error('Navigation error:', error);
         }
@@ -43,18 +43,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const navigateToRoleScreen = (role: UserRole) => {
     if (!router) return;
     try {
-      switch (role) {
-        case 'customer':
-          router.replace('/(customer)');
-          break;
-        case 'staff':
-          router.replace('/(staff)');
-          break;
-        case 'admin':
-          router.replace('/(admin)');
-          break;
-        default:
-          router.replace('/(auth)/login');
+    switch (role) {
+      case 'customer':
+        router.replace('/(customer)');
+        break;
+      case 'staff':
+        router.replace('/(staff)');
+        break;
+      case 'admin':
+        router.replace('/(admin)');
+        break;
+      default:
+        router.replace('/(auth)/login');
       }
     } catch (error) {
       console.error('Navigation error:', error);
@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await logoutService();
       setUser(null);
       if (router) {
-        router.replace('/(auth)/login');
+      router.replace('/(auth)/login');
       }
     } catch (error) {
       console.error('Logout error:', error);

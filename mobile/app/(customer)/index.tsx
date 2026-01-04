@@ -103,7 +103,15 @@ export default function CustomerHomeScreen() {
 
         {/* Order History */}
         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order History</Text>
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Order History</Text>
+                <TouchableOpacity 
+                    style={styles.seeAllBtn}
+                    onPress={() => router.push('/(customer)/orders')}
+                >
+                    <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+            </View>
             {PAST_ORDERS.map((order) => (
                 <OrderCard key={order.id} order={order} />
             ))}
@@ -132,11 +140,27 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
     color: COLORS.text,
+  },
+  seeAllBtn: {
+    backgroundColor: '#102841',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  seeAllText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
   productsScroll: {
     paddingRight: 20,

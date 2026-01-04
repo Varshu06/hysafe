@@ -1,4 +1,6 @@
 import * as Location from 'expo-location';
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
@@ -9,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/ui/Button';
 import { Loader } from '../../src/components/ui/Loader';
 import { StatusBadge } from '../../src/components/ui/StatusBadge';
@@ -18,6 +21,8 @@ import { COLORS } from '../../src/utils/constants';
 
 export default function NewOrdersScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   // Placeholder state until OrderContext is fully implemented for staff
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +38,7 @@ export default function NewOrdersScreen() {
     try {
       // Mock fetching available orders
       const orders = await getAssignedOrders();
-      setAvailableOrders(orders.filter((o: any) => o.status === 'pending')); // Filter mock data
+      setAvailableOrders(orders.filter((o: any) => String(o.status).toLowerCase() === 'pending'));
     } catch (error) {
       console.error(error);
     } finally {
@@ -101,77 +106,100 @@ export default function NewOrdersScreen() {
     );
   };
 
-  const renderOrderCard = ({ item }: { item: any }) => (
-    <View style={styles.orderCard}>
-      <View style={styles.orderHeader}>
-        <Text style={styles.orderQuantity}>{item.quantity} x 20L</Text>
-        <StatusBadge status={item.status} />
-      </View>
+  const renderOrderCard = ({ item }: { item: any }) => {
+    const id = item._id || item.id;
+    const paymentLabel = String(item.paymentMethod || 'offline').toLowerCase() === 'online' ? 'UPI' : 'COD';
+    const created = item.createdAt ? new Date(item.createdAt) : null;
+    const time = created
+      ? created.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : '';
 
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Pickup:</Text>
-        <Text style={styles.value}>{item.pickupAddress}</Text>
-      </View>
-
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Delivery:</Text>
-        <Text style={styles.value}>{item.deliveryAddress}</Text>
-      </View>
-
-      <View style={styles.orderInfo}>
-        <Text style={styles.label}>Payment:</Text>
-        <Text style={styles.value}>{item.paymentMethod?.toUpperCase()}</Text>
-      </View>
-
-      {item.notes && (
-        <View style={styles.orderInfo}>
-          <Text style={styles.label}>Notes:</Text>
-          <Text style={styles.value}>{item.notes}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.orderCard}
+        activeOpacity={0.85}
+        onPress={() => router.push(`/(staff)/order-details/${id}`)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.badgeRow}>
+            <StatusBadge status={item.status} />
+            <View style={styles.paymentChip}>
+              <Text style={styles.paymentChipText}>{paymentLabel}</Text>
+            </View>
+          </View>
+          <Text style={styles.metaText}>
+            #{id} {time ? `• ${time}` : ''}
+          </Text>
         </View>
-      )}
 
-      <View style={styles.buttonRow}>
-        <Button
-          title="REJECT"
-          variant="danger"
-          onPress={() => handleReject(item._id)}
-          style={styles.actionButton}
-        />
-        <Button
-          title="ACCEPT"
-          variant="success"
-          onPress={() => handleAccept(item._id)}
-          style={styles.actionButton}
-        />
-      </View>
-    </View>
-  );
+        <Text style={styles.orderQuantity}>{item.quantity || 1} x 20L</Text>
+
+        <View style={styles.infoRow}>
+          <Feather name="map-pin" size={16} color="#94A3B8" />
+          <Text style={styles.value} numberOfLines={1}>
+            {item.deliveryAddress || 'Address not available'}
+          </Text>
+        </View>
+
+        {item.pickupAddress ? (
+          <View style={styles.infoRow}>
+            <Feather name="package" size={16} color="#94A3B8" />
+            <Text style={styles.value} numberOfLines={1}>
+              {item.pickupAddress}
+            </Text>
+          </View>
+        ) : null}
+
+        {item.notes ? (
+          <View style={styles.notesRow}>
+            <Feather name="message-circle" size={14} color="#94A3B8" />
+            <Text style={styles.notesText} numberOfLines={2}>
+              {item.notes}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.buttonRow}>
+          <Button title="Reject" variant="danger" onPress={() => handleReject(id)} style={styles.actionButton} />
+          <Button title="Accept" variant="success" onPress={() => handleAccept(id)} style={styles.actionButton} />
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {/* Online/Offline Toggle */}
-      <View style={styles.toggleContainer}>
-        <Text style={styles.toggleLabel}>
-          Status: {isOnline ? 'ONLINE' : 'OFFLINE'}
-        </Text>
-        <TouchableOpacity
-          style={[
-            styles.toggleButton,
-            isOnline ? styles.toggleOnline : styles.toggleOffline,
-            isToggling && styles.toggleDisabled,
-          ]}
-          onPress={handleToggleStatus}
-          disabled={isToggling}
-        >
-          {isToggling ? (
-            <Loader size="small" color={COLORS.secondary} />
-          ) : (
-            <Text style={styles.toggleText}>
-              {isOnline ? 'Go Offline' : 'Go Online'}
-            </Text>
-          )}
-        </TouchableOpacity>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <View style={styles.headerLeft} />
+        <Text style={styles.headerTitle}>New Orders</Text>
+        <View style={styles.headerRight} />
       </View>
+
+      {/* Online/Offline Toggle */}
+      <View style={styles.content}>
+        <View style={styles.toggleCard}>
+          <View>
+            <Text style={styles.toggleLabel}>Status</Text>
+            <Text style={styles.toggleValue}>{isOnline ? 'ONLINE' : 'OFFLINE'}</Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.toggleButton,
+              isOnline ? styles.toggleOnline : styles.toggleOffline,
+              isToggling && styles.toggleDisabled,
+            ]}
+            onPress={handleToggleStatus}
+            disabled={isToggling}
+            activeOpacity={0.85}
+          >
+            {isToggling ? (
+              <Loader size="small" color={COLORS.secondary} />
+            ) : (
+              <Text style={styles.toggleText}>{isOnline ? 'Go Offline' : 'Go Online'}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
       {/* Orders List */}
       {!isOnline ? (
@@ -184,7 +212,7 @@ export default function NewOrdersScreen() {
         <FlatList
           data={availableOrders}
           renderItem={renderOrderCard}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item._id || item.id)}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -199,6 +227,7 @@ export default function NewOrdersScreen() {
           }
         />
       )}
+      </View>
     </View>
   );
 }
@@ -208,18 +237,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.accent,
   },
-  toggleContainer: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    backgroundColor: COLORS.accent,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerLeft: { width: 40 },
+  headerRight: { width: 40 },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+  },
+  toggleCard: {
     backgroundColor: COLORS.secondary,
     padding: 16,
-    margin: 16,
-    borderRadius: 8,
+    borderRadius: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    marginBottom: 16,
   },
   toggleLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textLight,
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
+  toggleValue: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '900',
     color: COLORS.text,
   },
   toggleButton: {
@@ -243,41 +310,76 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listContent: {
-    padding: 16,
+    paddingBottom: 20,
   },
   orderCard: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
   },
-  orderHeader: {
+  cardHeader: {
+    marginBottom: 12,
+  },
+  badgeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+  paymentChip: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  paymentChipText: {
+    color: 'white',
+    fontWeight: '800',
+    fontSize: 12,
+  },
+  metaText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
   },
   orderQuantity: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  orderInfo: {
-    marginBottom: 8,
-  },
-  label: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginBottom: 2,
+    color: 'white',
+    marginBottom: 12,
   },
   value: {
     fontSize: 14,
-    color: COLORS.text,
+    color: 'white',
+    flex: 1,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  notesRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: 2,
+    marginBottom: 12,
+  },
+  notesText: {
+    flex: 1,
+    color: '#94A3B8',
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   buttonRow: {
     flexDirection: 'row',

@@ -6,8 +6,54 @@ export const getAssignedOrders = async (): Promise<any[]> => {
     console.log('getAssignedOrders called');
     setTimeout(() => {
       resolve([
-        { id: '101', status: 'assigned', customer: 'John Doe' },
-        { id: '102', status: 'in-transit', customer: 'Jane Smith' },
+        {
+          _id: '101',
+          id: '101',
+          status: 'pending',
+          quantity: 2,
+          pickupAddress: 'Hy-Safe Plant, 12 Industrial Rd, Chennai',
+          deliveryAddress: '9/482, Btype, 50th street, Sidco Nagar, Chennai',
+          paymentMethod: 'offline',
+          notes: 'Call on arrival',
+          createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString(),
+          customer: 'John Doe',
+        },
+        {
+          _id: '102',
+          id: '102',
+          status: 'accepted',
+          quantity: 1,
+          pickupAddress: 'Hy-Safe Plant, 12 Industrial Rd, Chennai',
+          deliveryAddress: '24/11, 3rd Main Rd, Anna Nagar, Chennai',
+          paymentMethod: 'online',
+          notes: '',
+          createdAt: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
+          customer: 'Jane Smith',
+        },
+        {
+          _id: '103',
+          id: '103',
+          status: 'picked',
+          quantity: 3,
+          pickupAddress: 'Hy-Safe Plant, 12 Industrial Rd, Chennai',
+          deliveryAddress: '18/2, OMR, Sholinganallur, Chennai',
+          paymentMethod: 'offline',
+          notes: 'Leave with guard if not reachable',
+          createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+          customer: 'Arun Kumar',
+        },
+        {
+          _id: '104',
+          id: '104',
+          status: 'transit',
+          quantity: 1,
+          pickupAddress: 'Hy-Safe Plant, 12 Industrial Rd, Chennai',
+          deliveryAddress: '5/77, Velachery, Chennai',
+          paymentMethod: 'online',
+          notes: '',
+          createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+          customer: 'Meera',
+        },
       ]);
     }, 500);
   });
