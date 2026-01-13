@@ -150,6 +150,14 @@ export default function CustomerLayout() {
           headerShown: false,
         }}
       />
+      <Tabs.Screen
+        name="recurring-delivery/setup"
+        options={{
+          href: null,
+          tabBarStyle: { display: 'none' },
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

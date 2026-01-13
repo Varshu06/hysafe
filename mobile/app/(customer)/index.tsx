@@ -104,7 +104,7 @@ export default function CustomerHomeScreen() {
         {/* Order History */}
         <View style={styles.section}>
             <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Order History</Text>
+            <Text style={styles.sectionTitle}>Order History</Text>
                 <TouchableOpacity 
                     style={styles.seeAllBtn}
                     onPress={() => router.push('/(customer)/orders')}

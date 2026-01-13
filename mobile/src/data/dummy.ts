@@ -8,7 +8,8 @@ const ProductImages = {
   '500ml': require('../assets/500ml.png'),
 };
 
-export const PRODUCTS = [
+// Single Order Products
+export const SINGLE_PRODUCTS = [
   {
     id: '1',
     name: '20L Water Can',
@@ -59,18 +60,87 @@ export const PRODUCTS = [
   }
 ];
 
+// Bulk Order Products
+export const BULK_PRODUCTS = [
+  {
+    id: 'bulk-1',
+    name: '20L Water Can',
+    price: 250, // 10 cans for ₹250
+    bulkMinQuantity: 10,
+    deliveryCharge: 'Free',
+    image: ProductImages['20l'],
+    volume: '20L'
+  },
+  {
+    id: 'bulk-2',
+    name: '2L Bottle',
+    price: 180, // 10 bottles for ₹180
+    bulkMinQuantity: 10,
+    deliveryCharge: 'Free',
+    image: ProductImages['2l'],
+    volume: '2L'
+  },
+  {
+    id: 'bulk-3',
+    name: '1L Bottle',
+    price: 300, // 20 bottles for ₹300
+    bulkMinQuantity: 20,
+    deliveryCharge: 'Free',
+    image: ProductImages['1l'],
+    volume: '1L'
+  },
+  {
+    id: 'bulk-4',
+    name: '500ml Bottle',
+    price: 220, // 20 bottles for ₹220
+    bulkMinQuantity: 20,
+    deliveryCharge: 'Free',
+    image: ProductImages['500ml'],
+    volume: '500ml'
+  },
+  {
+    id: 'bulk-5',
+    name: '300ml Bottle',
+    price: 150, // 20 bottles for ₹150
+    bulkMinQuantity: 20,
+    deliveryCharge: 'Free',
+    image: ProductImages['300ml'],
+    volume: '300ml'
+  },
+  {
+    id: 'bulk-6',
+    name: '250ml Bottle',
+    price: 110, // 20 bottles for ₹110
+    bulkMinQuantity: 20,
+    deliveryCharge: 'Free',
+    image: ProductImages['250ml'],
+    volume: '250ml'
+  }
+];
+
+// Combined products for backward compatibility
+export const PRODUCTS = [...SINGLE_PRODUCTS, ...BULK_PRODUCTS];
+
 export const SAVED_ADDRESSES = [
   {
     id: '1',
     type: 'Home',
     address: '9/482, Btype, 50th street, sidco...',
-    fullAddress: '9/482, Btype, 50th street, sidco nagar, chennai-49'
+    fullAddress: '9/482, Btype, 50th street, sidco nagar, chennai-49',
+    location: {
+      lat: 13.0953,
+      lng: 80.2671,
+    },
   },
   {
     id: '2',
     type: 'Office',
     address: '9/482, Btype, 50th street, sidco...',
-    fullAddress: '9/482, Btype, 50th street, sidco nagar, chennai-49'
+    fullAddress: '9/482, Btype, 50th street, sidco nagar, chennai-49',
+    location: {
+      lat: 13.0878,
+      lng: 80.2102,
+    },
   }
 ];
 

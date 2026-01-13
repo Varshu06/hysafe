@@ -2,14 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../../utils/constants';
 
-interface ProductCardProps {
+interface BulkProductCardProps {
   item: {
     id: string;
     name: string;
     price: number;
-    bulkPrice?: number;
-    hasBulkPricing?: boolean;
-    bulkMinQuantity?: number;
+    bulkMinQuantity: number;
     deliveryCharge: string;
     image: ImageSourcePropType;
     volume: string;
@@ -18,13 +16,12 @@ interface ProductCardProps {
   onSelect?: () => void;
 }
 
-export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
+export const BulkProductCard = ({ item, selected, onSelect }: BulkProductCardProps) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const prevSelectedRef = useRef(selected);
 
   useEffect(() => {
-    // Only animate if item just changed from not selected to selected
     if (!prevSelectedRef.current && selected) {
       setShouldAnimate(true);
     }
@@ -33,7 +30,6 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
 
   useEffect(() => {
     if (shouldAnimate) {
-      // Animate when item is added
       Animated.sequence([
         Animated.spring(scaleAnim, {
           toValue: 1.3,
@@ -68,21 +64,25 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
             },
           ]}
         >
-           <Text style={styles.checkText}>✓</Text>
+          <Text style={styles.checkText}>✓</Text>
         </Animated.View>
       )}
+
       <View style={styles.imageContainer}>
-         <Image 
-            source={item.image} 
-            style={styles.productImage}
-            resizeMode="contain"
-         />
+        <Image 
+          source={item.image} 
+          style={styles.productImage}
+          resizeMode="contain"
+        />
       </View>
       
       <Text style={styles.name}>{item.name}</Text>
       
+      <View style={styles.bulkPriceContainer}>
+        <Text style={styles.bulkPriceText}>{item.bulkMinQuantity} cans for ₹{item.price}</Text>
+      </View>
+
       <View style={styles.priceRow}>
-        <Text style={styles.price}>₹ {item.price}</Text>
         <View style={styles.deliveryBadge}>
           <Text style={styles.deliveryText}>🚚 {item.deliveryCharge}</Text>
         </View>
@@ -106,6 +106,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     borderWidth: 1,
     borderColor: 'transparent',
+    position: 'relative',
   },
   selectedCard: {
     borderColor: COLORS.primary,
@@ -142,7 +143,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  bulkPriceContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  bulkPriceText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.text,
     textAlign: 'center',
   },
   priceRow: {
@@ -153,11 +165,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
   },
-  price: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   deliveryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,46 +172,6 @@ const styles = StyleSheet.create({
   deliveryText: {
     fontSize: 10,
     color: COLORS.textLight,
-  },
-  dualPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  priceOption: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  priceLabel: {
-    fontSize: 9,
-    color: COLORS.textLight,
-    marginBottom: 2,
-  },
-  priceDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: COLORS.border,
-  },
-  regularPrice: {
-    color: COLORS.textLight,
-    textDecorationLine: 'line-through',
-  },
-  bulkPrice: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  minQuantityText: {
-    fontSize: 8,
-    color: COLORS.textLight,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  savingsText: {
-    fontSize: 8,
-    color: COLORS.success,
-    fontWeight: '600',
-    marginTop: 2,
   },
 });
 

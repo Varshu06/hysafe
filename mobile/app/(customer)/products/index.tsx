@@ -34,8 +34,8 @@ export default function ProductsScreen() {
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity onPress={() => router.push('/(customer)')} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Your Products</Text>
+         </TouchableOpacity>
+         <Text style={styles.headerTitle}>Select Your Products</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingBottom: 16,
     backgroundColor: '#F0F9FF',
@@ -91,17 +91,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
   },
   backButton: {
     padding: 8,
+    position: 'absolute',
+    left: 16,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
+    textAlign: 'center',
   },
   placeholder: {
     width: 40,
+    position: 'absolute',
+    right: 16,
   },
   grid: {
     padding: 20,

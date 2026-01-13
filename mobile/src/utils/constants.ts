@@ -23,3 +23,13 @@ export const COLORS = {
   error: '#EF4444',
   border: '#BAE6FD', // Sky 200
 };
+
+// Factory/Pickup location coordinates (for 5km radius validation)
+// TODO: Update with actual factory location coordinates
+export const FACTORY_LOCATION = {
+  lat: 13.0827, // Example: Chennai coordinates
+  lng: 80.2707,
+};
+
+// Service radius in kilometers
+export const SERVICE_RADIUS_KM = 5;

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TOKEN_KEY = '@hysafe_token';
 const USER_KEY = '@hysafe_user';
+const STAFF_ONLINE_KEY = '@hysafe_staff_online';
 
 export const storage = {
   async setToken(token: string): Promise<void> {
@@ -30,7 +31,17 @@ export const storage = {
   },
 
   async clearAll(): Promise<void> {
-    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY, STAFF_ONLINE_KEY]);
+  },
+
+  async setStaffOnline(isOnline: boolean): Promise<void> {
+    await AsyncStorage.setItem(STAFF_ONLINE_KEY, isOnline ? '1' : '0');
+  },
+
+  async getStaffOnline(): Promise<boolean> {
+    const v = await AsyncStorage.getItem(STAFF_ONLINE_KEY);
+    if (v == null) return false;
+    return v === '1' || v.toLowerCase() === 'true';
   },
 };
 

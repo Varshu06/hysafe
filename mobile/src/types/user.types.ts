@@ -7,6 +7,7 @@ export interface User {
   phone: string;
   role: UserRole;
   name?: string;
+  customerType?: 'home' | 'shop' | 'hotel' | 'bank' | 'event';
 }
 
 export interface CustomerProfile {
@@ -18,8 +19,8 @@ export interface CustomerProfile {
     lat: number;
     lng: number;
   };
-  customerType: 'regular' | 'home' | 'shop' | 'hotel' | 'bank' | 'event';
-  paymentTerms: 'one-time' | 'monthly' | 'weekly' | 'custom';
+  customerType: 'home' | 'shop' | 'hotel' | 'bank' | 'event';
+  paymentTerms: 'one-time' | 'monthly' | 'weekly';
   defaultPaymentMethod: 'online' | 'offline';
 }
 

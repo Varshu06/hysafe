@@ -45,7 +45,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(() => {
     if (isAuthenticated) {
-      refreshOrders();
+    refreshOrders();
     } else {
       setOrders([]);
     }

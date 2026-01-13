@@ -16,6 +16,10 @@ export interface SavedAddressItem {
   type: string; // Home/Office/Work/etc.
   address: string; // short
   fullAddress?: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 interface AddressPickerModalProps {

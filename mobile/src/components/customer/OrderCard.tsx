@@ -41,17 +41,17 @@ export const OrderCard = ({ order }: OrderCardProps) => {
       <View style={styles.cardHeader}>
         <View style={styles.statusBadge}>
           {getStatusIcon(order.status)}
-          <Text style={styles.statusText}>{order.status}</Text>
+           <Text style={styles.statusText}>{order.status}</Text>
         </View>
         <Text style={styles.date}>{order.date}</Text>
         <Text style={styles.price}>₹ {order.price}</Text>
       </View>
-
+      
       <View style={styles.cardDetails}>
         <View style={styles.detailRow}>
           <Text style={styles.driverLabel}>{order.driver}</Text>
           <Text style={styles.addressText} numberOfLines={1}>{order.address}</Text>
-        </View>
+         </View>
       </View>
 
       <TouchableOpacity 
@@ -84,67 +84,67 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'white',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      gap: 4,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#0F172A',
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: '#0F172A',
     textTransform: 'capitalize',
   },
   date: {
-    color: 'white',
-    fontSize: 12,
+      color: 'white',
+      fontSize: 12,
     flex: 1,
     marginLeft: 12,
   },
   price: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
+      color: 'white',
+      fontSize: 14,
+      fontWeight: 'bold',
   },
   cardDetails: {
-    marginBottom: 16,
+      marginBottom: 16,
   },
   detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
   driverLabel: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginRight: 16,
+      color: 'white',
+      fontSize: 14,
+      fontWeight: 'bold',
+      marginRight: 16,
     flexShrink: 0,
   },
   addressText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    flex: 1,
-    textAlign: 'right',
+      color: '#94A3B8',
+      fontSize: 12,
+      flex: 1,
+      textAlign: 'right',
     lineHeight: 18,
   },
   viewDetailsBtn: {
-    backgroundColor: 'white',
-    alignSelf: 'flex-end',
+      backgroundColor: 'white',
+      alignSelf: 'flex-end',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
     borderRadius: 10,
     gap: 4,
   },
   viewDetailsText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#0F172A',
+      fontSize: 12,
+      fontWeight: 'bold',
+      color: '#0F172A',
   },
 });
 

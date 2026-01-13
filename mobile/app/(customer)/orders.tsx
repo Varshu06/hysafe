@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingBottom: 16,
     backgroundColor: COLORS.accent,
@@ -218,17 +218,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
   },
   backButton: {
     padding: 8,
+    position: 'absolute',
+    left: 16,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
+    textAlign: 'center',
   },
   placeholder: {
     width: 40,
+    position: 'absolute',
+    right: 16,
   },
   tabContainer: {
     flexDirection: 'row',

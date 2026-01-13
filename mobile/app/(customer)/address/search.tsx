@@ -198,6 +198,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
     shadowColor: '#000',
@@ -205,15 +206,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
   },
   backButton: {
     marginRight: 12,
+    position: 'absolute',
+    left: 20,
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
-    flex: 1,
+    textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',

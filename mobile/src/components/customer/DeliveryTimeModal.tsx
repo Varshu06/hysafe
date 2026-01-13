@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   ScrollView,
@@ -23,8 +23,9 @@ interface DeliveryTimeModalProps {
   visible: boolean;
   selectedDate: Date;
   selectedTime: DeliveryTimeValue;
+  isEventOrder?: boolean;
   onClose: () => void;
-  onConfirm: (payload: { date: Date; time: DeliveryTimeValue }) => void;
+  onConfirm: (payload: { date: Date; time: DeliveryTimeValue; isEvent: boolean }) => void;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -41,6 +42,7 @@ export const DeliveryTimeModal: React.FC<DeliveryTimeModalProps> = ({
   visible,
   selectedTime,
   selectedDate,
+  isEventOrder = false,
   onClose,
   onConfirm,
 }) => {
@@ -49,18 +51,20 @@ export const DeliveryTimeModal: React.FC<DeliveryTimeModalProps> = ({
   const [draftDate, setDraftDate] = useState<Date>(selectedDate);
   const [timeText, setTimeText] = useState(`${selectedTime.hour}:${selectedTime.minute}`);
   const [ampm, setAmpm] = useState<'AM' | 'PM'>(selectedTime.ampm);
+  const [isEvent, setIsEvent] = useState(isEventOrder);
 
   // Reset drafts when opening
-  useMemo(() => {
+  useEffect(() => {
     if (visible) {
       setShowCalendar(false);
       setCalendarMonth(startOfMonth(selectedDate));
       setDraftDate(selectedDate);
       setTimeText(`${selectedTime.hour}:${selectedTime.minute}`);
       setAmpm(selectedTime.ampm);
+      setIsEvent(isEventOrder);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, isEventOrder]);
 
   const quickDates = useMemo(() => {
     const base = new Date();
@@ -97,6 +101,7 @@ export const DeliveryTimeModal: React.FC<DeliveryTimeModalProps> = ({
     onConfirm({
       date: draftDate,
       time: { hour: parsed.hour, minute: parsed.minute, ampm },
+      isEvent,
     });
     onClose();
   };
@@ -120,13 +125,37 @@ export const DeliveryTimeModal: React.FC<DeliveryTimeModalProps> = ({
           <TouchableWithoutFeedback>
             <View style={styles.card}>
               <View style={styles.headerRow}>
-                <Text style={styles.title}>Set Delivery Time</Text>
+                <Text style={styles.title}>
+                  {isEvent ? 'Set Event/Wedding Delivery' : 'Set Delivery Time'}
+                </Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.85}>
                   <Feather name="x" size={18} color={COLORS.text} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Event/Wedding Toggle */}
+                <View style={styles.eventToggleContainer}>
+                  <TouchableOpacity
+                    onPress={() => setIsEvent(!isEvent)}
+                    style={styles.eventToggle}
+                    activeOpacity={0.85}
+                  >
+                    <View style={[styles.checkbox, isEvent && styles.checkboxChecked]}>
+                      {isEvent && <Feather name="check" size={12} color="white" />}
+                    </View>
+                    <Text style={styles.eventLabel}>This is an Event/Wedding order</Text>
+                  </TouchableOpacity>
+                  {isEvent && (
+                    <View style={styles.eventInfoBox}>
+                      <Feather name="info" size={14} color={COLORS.primary} />
+                      <Text style={styles.eventInfoText}>
+                        Event orders are prioritized and require specific delivery time
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
                 <Text style={styles.sectionLabel}>Select day</Text>
 
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateRow}>
@@ -506,6 +535,52 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '800',
+  },
+  eventToggleContainer: {
+    marginBottom: 16,
+  },
+  eventToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: COLORS.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  eventLabel: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  eventInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 4,
+  },
+  eventInfoText: {
+    flex: 1,
+    fontSize: 11,
+    color: COLORS.primaryDark,
+    fontWeight: '500',
+    lineHeight: 16,
   },
 });
 

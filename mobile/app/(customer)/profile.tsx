@@ -7,7 +7,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { COLORS } from '../../src/utils/constants';
 
 export default function ProfileScreen() {
-  const { user, logout, login } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -76,23 +76,6 @@ export default function ProfileScreen() {
       'Hy-Safe Water Delivery App\n\nVersion 1.0.0\n\nPure Water, Delivered Fast.\n\n© 2024 Hy-Safe. All rights reserved.',
       [{ text: 'OK' }]
     );
-  };
-
-  const handleSwitchToStaff = async () => {
-    try {
-      // MOCK_AUTH mode: role is derived from email containing "staff"
-      await login({ email: 'staff@hysafe.com', password: 'dev-switch' });
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Could not switch role');
-    }
-  };
-
-  const handleSwitchToCustomer = async () => {
-    try {
-      await login({ email: 'customer@hysafe.com', password: 'dev-switch' });
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Could not switch role');
-    }
   };
 
   if (!user) {
@@ -199,6 +182,14 @@ export default function ProfileScreen() {
             </View>
             <Feather name="chevron-right" size={20} color={COLORS.textLight} />
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(customer)/recurring-delivery/setup')}>
+            <View style={styles.menuItemLeft}>
+              <Feather name="repeat" size={20} color={COLORS.text} />
+              <Text style={styles.menuItemText}>Recurring Deliveries</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={COLORS.textLight} />
+          </TouchableOpacity>
         </View>
 
         {/* Settings Section */}
@@ -238,29 +229,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* DEV Tools */}
-        {__DEV__ && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Developer</Text>
-
-            <TouchableOpacity style={styles.menuItem} onPress={handleSwitchToStaff}>
-              <View style={styles.menuItemLeft}>
-                <Feather name="users" size={20} color={COLORS.text} />
-                <Text style={styles.menuItemText}>Switch to Staff</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color={COLORS.textLight} />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} onPress={handleSwitchToCustomer}>
-              <View style={styles.menuItemLeft}>
-                <Feather name="user" size={20} color={COLORS.text} />
-                <Text style={styles.menuItemText}>Switch to Customer</Text>
-              </View>
-              <Feather name="chevron-right" size={20} color={COLORS.textLight} />
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Logout Button */}
         <Button
           title="Logout"
@@ -283,7 +251,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: COLORS.accent,
@@ -294,17 +262,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
   },
   backButton: {
     padding: 8,
+    position: 'absolute',
+    left: 20,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
+    textAlign: 'center',
   },
   placeholder: {
     width: 40,
+    position: 'absolute',
+    right: 20,
   },
   content: {
     flex: 1,

@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../../src/utils/constants';
@@ -11,9 +12,16 @@ export default function StaffLayout() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textLight,
         tabBarStyle: {
-          height: 60 + insets.bottom,
+          height: 64 + insets.bottom,
           paddingBottom: 10 + insets.bottom,
-          paddingTop: 10,
+          paddingTop: 8,
+          backgroundColor: COLORS.secondary,
+          borderTopColor: '#E2E8F0',
+          borderTopWidth: 1,
+        },
+        tabBarLabelStyle: {
+          fontWeight: '800',
+          fontSize: 12,
         },
       }}
     >
@@ -23,6 +31,7 @@ export default function StaffLayout() {
           title: 'New Orders',
           tabBarLabel: 'New Orders',
           headerShown: false,
+          tabBarIcon: ({ color, size }) => <Feather name="inbox" color={color} size={size ?? 20} />,
         }}
       />
       <Tabs.Screen
@@ -31,6 +40,7 @@ export default function StaffLayout() {
           title: 'Ongoing',
           tabBarLabel: 'Ongoing',
           headerShown: false,
+          tabBarIcon: ({ color, size }) => <Feather name="truck" color={color} size={size ?? 20} />,
         }}
       />
       <Tabs.Screen
@@ -39,6 +49,7 @@ export default function StaffLayout() {
           title: 'Profile',
           tabBarLabel: 'Profile',
           headerShown: false,
+          tabBarIcon: ({ color, size }) => <Feather name="user" color={color} size={size ?? 20} />,
         }}
       />
       <Tabs.Screen

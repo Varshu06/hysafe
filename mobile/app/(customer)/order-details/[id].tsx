@@ -6,7 +6,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
+  TouchableOpacity,
     View,
     Linking,
     Clipboard,
@@ -162,9 +162,9 @@ export default function OrderDetailsScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Status Badge */}
-        <View style={styles.statusContainer}>
-          <StatusBadge status={order.status} style={styles.statusBadge} />
-        </View>
+      <View style={styles.statusContainer}>
+        <StatusBadge status={order.status} style={styles.statusBadge} />
+      </View>
 
         {/* Order ID Display */}
         <View style={styles.orderIdContainer}>
@@ -252,6 +252,28 @@ export default function OrderDetailsScreen() {
               </Text>
             </View>
           </View>
+
+          {(order as any).paymentTerms && (
+            <View style={styles.infoItem}>
+              <View style={styles.infoIconContainer}>
+                <Feather name="calendar" size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Payment Terms</Text>
+                <Text style={styles.infoValue}>
+                  {((order as any).paymentTerms === 'monthly' || (order as any).paymentTerms === 'weekly') 
+                    ? `${((order as any).paymentTerms as string).charAt(0).toUpperCase() + ((order as any).paymentTerms as string).slice(1)} Payment${(order as any).nextPaymentDue ? ` - Due on ${(order as any).nextPaymentDue}` : ''}`
+                    : ((order as any).paymentTerms as string).charAt(0).toUpperCase() + ((order as any).paymentTerms as string).slice(1).replace('-', ' ')
+                  }
+                </Text>
+                {(order as any).isRecurring && (
+                  <Text style={[styles.infoValue, { fontSize: 12, color: '#94A3B8', marginTop: 4 }]}>
+                    Part of recurring delivery schedule
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Delivery Info Card */}
@@ -348,10 +370,10 @@ export default function OrderDetailsScreen() {
                     hour: 'numeric', 
                     minute: '2-digit' 
                   })}
-                </Text>
+            </Text>
               </View>
-            </View>
-          )}
+          </View>
+        )}
 
         {order.deliveredAt && (
             <View style={styles.timelineItem}>
@@ -366,14 +388,14 @@ export default function OrderDetailsScreen() {
                     hour: 'numeric', 
                     minute: '2-digit' 
                   })}
-                </Text>
+            </Text>
               </View>
           </View>
         )}
       </View>
 
         <View style={{ height: 100 }} />
-      </ScrollView>
+    </ScrollView>
 
       {/* Action Buttons Footer */}
       <View style={[styles.actionFooter, { paddingBottom: insets.bottom + 16 }]}>
@@ -410,7 +432,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 16,
     paddingBottom: 16,
     backgroundColor: COLORS.accent,
@@ -421,14 +443,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    position: 'relative',
   },
   backButton: {
     padding: 8,
+    position: 'absolute',
+    left: 16,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
+    textAlign: 'center',
   },
   homeButton: {
     padding: 8,

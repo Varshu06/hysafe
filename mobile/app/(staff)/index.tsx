@@ -5,32 +5,44 @@ import { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Linking,
   RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../../src/components/ui/Button';
 import { Loader } from '../../src/components/ui/Loader';
-import { StatusBadge } from '../../src/components/ui/StatusBadge';
 import { useAuth } from '../../src/context/AuthContext';
 import { acceptOrder, getAssignedOrders, rejectOrder } from '../../src/services/staff.service';
 import { COLORS } from '../../src/utils/constants';
+import { StaffHeader } from '../../src/components/staff/StaffHeader';
+import { StaffOrderCard } from '../../src/components/staff/StaffOrderCard';
+import { Chip, ChipRow } from '../../src/components/staff/StaffChips';
+import { ReasonModal } from '../../src/components/staff/ReasonModal';
+import { haversineKm, etaMinutes } from '../../src/utils/geo';
+import { storage } from '../../src/utils/storage';
 
 export default function NewOrdersScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   // Placeholder state until OrderContext is fully implemented for staff
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
+  const [sortBy, setSortBy] = useState<'newest' | 'nearest' | 'quantity'>('newest');
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [staffLocation, setStaffLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    refreshAvailableOrders();
+    const load = async () => {
+      const online = await storage.getStaffOnline();
+      setIsOnline(online);
+      refreshAvailableOrders();
+    };
+    load();
   }, []);
 
   const refreshAvailableOrders = async () => {
@@ -60,11 +72,14 @@ export default function NewOrdersScreen() {
             lat: loc.coords.latitude,
             lng: loc.coords.longitude,
           };
+          setStaffLocation(location);
         }
       }
 
       // Toggle status API call here
-      setIsOnline(!isOnline);
+      const next = !isOnline;
+      setIsOnline(next);
+      await storage.setStaffOnline(next);
       // await toggleStatus(!staff?.isOnline, location);
       // await refreshProfile();
     } catch (error: any) {
@@ -72,6 +87,22 @@ export default function NewOrdersScreen() {
     } finally {
       setIsToggling(false);
     }
+  };
+
+  const handleCallCustomer = async (phone?: string) => {
+    if (!phone) return Alert.alert('No phone number', 'Customer phone number is not available.');
+    const url = `tel:${phone}`;
+    const can = await Linking.canOpenURL(url);
+    if (!can) return Alert.alert('Not supported', 'Calling is not supported on this device.');
+    await Linking.openURL(url);
+  };
+
+  const handleNavigate = async (coords?: { lat: number; lng: number }) => {
+    if (!coords) return Alert.alert('No location', 'Delivery location is not available.');
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
+    const can = await Linking.canOpenURL(url);
+    if (!can) return Alert.alert('Not supported', 'Maps is not supported on this device.');
+    await Linking.openURL(url);
   };
 
   const handleAccept = async (orderId: string) => {
@@ -84,97 +115,91 @@ export default function NewOrdersScreen() {
     }
   };
 
-  const handleReject = async (orderId: string) => {
-    Alert.alert(
-      'Reject Order',
-      'Are you sure you want to reject this order?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await rejectOrder(orderId);
-              refreshAvailableOrders();
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to reject order');
-            }
-          },
-        },
-      ]
-    );
+  const handleReject = async (orderId: string, reason: string) => {
+    try {
+      await rejectOrder(orderId);
+      console.log('reject reason:', reason);
+      refreshAvailableOrders();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to reject order');
+    }
   };
+
+  const sortedOrders = (() => {
+    const list = [...availableOrders];
+    if (sortBy === 'quantity') {
+      list.sort((a, b) => Number(b.quantity || 0) - Number(a.quantity || 0));
+      return list;
+    }
+    if (sortBy === 'nearest') {
+      list.sort((a, b) => {
+        const da = haversineKm(staffLocation || undefined, a.location);
+        const db = haversineKm(staffLocation || undefined, b.location);
+        if (da == null && db == null) return 0;
+        if (da == null) return 1;
+        if (db == null) return -1;
+        return da - db;
+      });
+      return list;
+    }
+    // newest
+    list.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+    return list;
+  })();
 
   const renderOrderCard = ({ item }: { item: any }) => {
     const id = item._id || item.id;
     const paymentLabel = String(item.paymentMethod || 'offline').toLowerCase() === 'online' ? 'UPI' : 'COD';
-    const created = item.createdAt ? new Date(item.createdAt) : null;
-    const time = created
-      ? created.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-      : '';
+    const dist = haversineKm(staffLocation || undefined, item.location);
+    const eta = etaMinutes(dist);
 
     return (
-      <TouchableOpacity
-        style={styles.orderCard}
-        activeOpacity={0.85}
+      <StaffOrderCard
+        status={item.status}
+        id={String(id)}
+        createdAt={item.createdAt}
+        quantity={item.quantity || 1}
+        deliveryAddress={item.deliveryAddress}
+        customer={item.customer}
+        paymentLabel={paymentLabel}
+        distanceKm={dist}
+        etaMin={eta}
+        compact
+        compactShowAddress
         onPress={() => router.push(`/(staff)/order-details/${id}`)}
-      >
-        <View style={styles.cardHeader}>
-          <View style={styles.badgeRow}>
-            <StatusBadge status={item.status} />
-            <View style={styles.paymentChip}>
-              <Text style={styles.paymentChipText}>{paymentLabel}</Text>
-            </View>
+        quickActions={
+          <>
+            <TouchableOpacity style={styles.quickBtn} onPress={() => handleCallCustomer(item.customerPhone)} activeOpacity={0.85}>
+              <Feather name="phone" size={16} color={COLORS.primary} />
+              <Text style={styles.quickBtnText}>Call</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickBtn} onPress={() => handleNavigate(item.location)} activeOpacity={0.85}>
+              <Feather name="map" size={16} color={COLORS.primary} />
+              <Text style={styles.quickBtnText}>Navigate</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.quickBtn} onPress={() => router.push(`/(staff)/order-details/${id}`)} activeOpacity={0.85}>
+              <Feather name="file-text" size={16} color={COLORS.primary} />
+              <Text style={styles.quickBtnText}>Details</Text>
+            </TouchableOpacity>
+          </>
+        }
+        actions={
+          <View style={styles.buttonRow}>
+            <Button title="Reject" variant="outline" onPress={() => setRejectingId(String(id))} style={styles.actionButton} />
+            <Button title="Accept" variant="primary" onPress={() => handleAccept(String(id))} style={styles.actionButton} />
           </View>
-          <Text style={styles.metaText}>
-            #{id} {time ? `• ${time}` : ''}
-          </Text>
-        </View>
-
-        <Text style={styles.orderQuantity}>{item.quantity || 1} x 20L</Text>
-
-        <View style={styles.infoRow}>
-          <Feather name="map-pin" size={16} color="#94A3B8" />
-          <Text style={styles.value} numberOfLines={1}>
-            {item.deliveryAddress || 'Address not available'}
-          </Text>
-        </View>
-
-        {item.pickupAddress ? (
-          <View style={styles.infoRow}>
-            <Feather name="package" size={16} color="#94A3B8" />
-            <Text style={styles.value} numberOfLines={1}>
-              {item.pickupAddress}
-            </Text>
-          </View>
-        ) : null}
-
-        {item.notes ? (
-          <View style={styles.notesRow}>
-            <Feather name="message-circle" size={14} color="#94A3B8" />
-            <Text style={styles.notesText} numberOfLines={2}>
-              {item.notes}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.buttonRow}>
-          <Button title="Reject" variant="danger" onPress={() => handleReject(id)} style={styles.actionButton} />
-          <Button title="Accept" variant="success" onPress={() => handleAccept(id)} style={styles.actionButton} />
-        </View>
-      </TouchableOpacity>
+        }
+      />
     );
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
-        <View style={styles.headerLeft} />
-        <Text style={styles.headerTitle}>New Orders</Text>
-        <View style={styles.headerRight} />
-      </View>
+      <StaffHeader title="New Orders" />
 
       {/* Online/Offline Toggle */}
       <View style={styles.content}>
@@ -201,16 +226,27 @@ export default function NewOrdersScreen() {
           </TouchableOpacity>
         </View>
 
+        {isOnline ? (
+          <View style={styles.sortCard}>
+            <Text style={styles.sortTitle}>Sort</Text>
+            <ChipRow>
+              <Chip label="Newest" active={sortBy === 'newest'} onPress={() => setSortBy('newest')} />
+              <Chip label="Nearest" active={sortBy === 'nearest'} onPress={() => setSortBy('nearest')} />
+              <Chip label="Quantity" active={sortBy === 'quantity'} onPress={() => setSortBy('quantity')} />
+            </ChipRow>
+          </View>
+        ) : null}
+
       {/* Orders List */}
       {!isOnline ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            Go online to receive new orders
-          </Text>
+          <Feather name="wifi-off" size={28} color={COLORS.textLight} />
+          <Text style={styles.emptyTitle}>You’re offline</Text>
+          <Text style={styles.emptyText}>Go online to receive new orders.</Text>
         </View>
       ) : (
         <FlatList
-          data={availableOrders}
+          data={sortedOrders}
           renderItem={renderOrderCard}
           keyExtractor={(item) => String(item._id || item.id)}
           contentContainerStyle={styles.listContent}
@@ -222,12 +258,27 @@ export default function NewOrdersScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No new orders available</Text>
+              <Feather name="inbox" size={28} color={COLORS.textLight} />
+              <Text style={styles.emptyTitle}>No new orders</Text>
+              <Text style={styles.emptyText}>Pull to refresh.</Text>
             </View>
           }
         />
       )}
       </View>
+
+      <ReasonModal
+        visible={!!rejectingId}
+        title="Reject order"
+        placeholder="Reason (e.g., too far / busy / out of stock)"
+        confirmText="Reject"
+        onClose={() => setRejectingId(null)}
+        onConfirm={(reason) => {
+          if (!rejectingId) return;
+          handleReject(rejectingId, reason);
+          setRejectingId(null);
+        }}
+      />
     </View>
   );
 }
@@ -237,44 +288,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.accent,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    backgroundColor: COLORS.accent,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  headerLeft: { width: 40 },
-  headerRight: { width: 40 },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
   content: {
     flex: 1,
     padding: 20,
   },
   toggleCard: {
     backgroundColor: COLORS.secondary,
-    padding: 16,
     borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     marginBottom: 16,
   },
   toggleLabel: {
@@ -292,113 +318,85 @@ const styles = StyleSheet.create({
   toggleButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 12,
     minWidth: 120,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   toggleOnline: {
-    backgroundColor: COLORS.success,
+    backgroundColor: '#FEE2E2',
   },
   toggleOffline: {
-    backgroundColor: COLORS.textLight,
+    backgroundColor: '#D1FAE5',
   },
   toggleDisabled: {
     opacity: 0.6,
   },
   toggleText: {
-    color: COLORS.secondary,
-    fontWeight: '600',
+    color: COLORS.text,
+    fontWeight: '800',
+  },
+  sortCard: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sortTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.textLight,
+    marginBottom: 10,
   },
   listContent: {
     paddingBottom: 20,
   },
-  orderCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  cardHeader: {
-    marginBottom: 12,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  paymentChip: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  paymentChipText: {
-    color: 'white',
-    fontWeight: '800',
-    fontSize: 12,
-  },
-  metaText: {
-    color: '#94A3B8',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  orderQuantity: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 12,
-  },
-  value: {
-    fontSize: 14,
-    color: 'white',
-    flex: 1,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  notesRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    marginTop: 2,
-    marginBottom: 12,
-  },
-  notesText: {
-    flex: 1,
-    color: '#94A3B8',
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '600',
-  },
   buttonRow: {
     flexDirection: 'row',
-    marginTop: 12,
+    marginTop: 0,
     gap: 12,
   },
   actionButton: {
     flex: 1,
+  },
+  quickBtn: {
+    flex: 1,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickBtnText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: COLORS.text,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: COLORS.text,
+    marginTop: 4,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 13,
     color: COLORS.textLight,
     textAlign: 'center',
+    fontWeight: '600',
   },
 });
 

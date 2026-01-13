@@ -17,6 +17,7 @@ export interface RegisterData {
   name: string;
   address?: string;
   role?: 'admin' | 'staff' | 'customer';
+  customerType?: 'home' | 'shop' | 'hotel' | 'bank' | 'event';
 }
 
 export interface AuthResponse {
@@ -85,6 +86,7 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
         email: data.email || 'new@example.com',
         phone: data.phone,
         role: data.role || 'customer',
+        customerType: data.customerType || 'home',
       }
     };
 
