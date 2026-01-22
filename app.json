@@ -24,6 +24,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.hysafe.mobile",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }
@@ -38,9 +39,12 @@
         {
           "icon": "./assets/icon.png",
           "color": "#ffffff",
-          "sounds": ["./assets/notification.wav"]
+          "sounds": [
+            "./assets/notification.wav"
+          ]
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "scheme": "hysafe"
   }

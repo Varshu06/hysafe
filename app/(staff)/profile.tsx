@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../src/components/ui/Button';
 import { useAuth } from '../../src/context/AuthContext';
-import { getAssignedOrders, getInventory } from '../../src/services/staff.service';
+import { getAssignedOrders } from '../../src/services/staff.service';
 import { COLORS } from '../../src/utils/constants';
 import { StaffHeader } from '../../src/components/staff/StaffHeader';
 import { storage } from '../../src/utils/storage';
@@ -23,12 +23,6 @@ export default function ProfileScreen() {
 
   const [isOnline, setIsOnline] = useState(false);
   const [stats, setStats] = useState({ pending: 0, ongoing: 0, delivered: 0, cod: 0 });
-  const [inventory, setInventory] = useState({
-    availableAtFactory: 0,
-    assignedToDeliveries: 0,
-    lowStockThreshold: 50,
-    isLowStock: false,
-  });
 
   useFocusEffect(
     useCallback(() => {
@@ -88,23 +82,6 @@ export default function ProfileScreen() {
     load();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      let mounted = true;
-      const loadInventory = async () => {
-        try {
-          const inv = await getInventory();
-          if (mounted) setInventory(inv);
-        } catch (e) {
-          // ignore for now
-        }
-      };
-      loadInventory();
-      return () => {
-        mounted = false;
-      };
-    }, [])
-  );
 
   const getInitials = (value?: string) => {
     const s = (value || '').trim();
@@ -125,8 +102,8 @@ export default function ProfileScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
+            // Logout function in AuthContext handles navigation
             await logout();
-            router.replace('/(auth)/login');
           },
         },
       ]
@@ -187,51 +164,6 @@ export default function ProfileScreen() {
               <Text style={styles.statValue}>₹{stats.cod}</Text>
               <Text style={styles.statLabel}>COD</Text>
             </View>
-          </View>
-        </View>
-
-        {/* Inventory Section */}
-        <View style={styles.inventoryCard}>
-          <View style={styles.inventoryHeader}>
-            <Text style={styles.inventoryTitle}>Inventory</Text>
-            <Ionicons name="cube-outline" size={20} color={COLORS.primary} />
-          </View>
-
-          {inventory.isLowStock && (
-            <View style={styles.lowStockWarning}>
-              <Ionicons name="warning" size={16} color={COLORS.warning} />
-              <Text style={styles.lowStockText}>
-                Low stock alert! Available stock is below threshold ({inventory.lowStockThreshold} cans)
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.inventoryRow}>
-            <View style={styles.inventoryItem}>
-              <View style={styles.inventoryIconContainer}>
-                <Ionicons name="business-outline" size={24} color={COLORS.primary} />
-              </View>
-              <View style={styles.inventoryInfo}>
-                <Text style={styles.inventoryLabel}>Available at Factory</Text>
-                <Text style={styles.inventoryValue}>{inventory.availableAtFactory} cans</Text>
-              </View>
-            </View>
-
-            <View style={styles.inventoryItem}>
-              <View style={[styles.inventoryIconContainer, styles.assignedIconContainer]}>
-                <Ionicons name="car-outline" size={24} color={COLORS.success} />
-              </View>
-              <View style={styles.inventoryInfo}>
-                <Text style={styles.inventoryLabel}>Assigned to Deliveries</Text>
-                <Text style={styles.inventoryValue}>{inventory.assignedToDeliveries} cans</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.inventoryFooter}>
-            <Text style={styles.inventoryFooterText}>
-              Total: {inventory.availableAtFactory + inventory.assignedToDeliveries} cans
-            </Text>
           </View>
         </View>
 
@@ -385,92 +317,6 @@ const styles = StyleSheet.create({
   logoutButton: {
     marginTop: 20,
     marginBottom: 20,
-  },
-  inventoryCard: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  inventoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  inventoryTitle: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: COLORS.text,
-  },
-  lowStockWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.warning,
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  lowStockText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#92400E',
-    fontWeight: '600',
-  },
-  inventoryRow: {
-    gap: 12,
-  },
-  inventoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  inventoryIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#E0F2FE',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  assignedIconContainer: {
-    backgroundColor: '#D1FAE5',
-  },
-  inventoryInfo: {
-    flex: 1,
-  },
-  inventoryLabel: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  inventoryValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: COLORS.text,
-  },
-  inventoryFooter: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  inventoryFooterText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
   },
 });
 

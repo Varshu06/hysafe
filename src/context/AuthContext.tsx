@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { getProfile, login, LoginCredentials, logout as logoutService, register, RegisterData } from '../services/auth.service';
 import { User, UserRole } from '../types/user.types';
 import { storage } from '../utils/storage';
@@ -28,6 +29,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Navigate based on role after authentication
   useEffect(() => {
     // Only navigate if loading is completely done and router is ready
+    // Don't navigate if user is null (logout scenario)
     if (!isLoading && user && router) {
       // Use setTimeout to ensure router is fully initialized
       setTimeout(() => {
@@ -37,12 +39,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.error('Navigation error:', error);
         }
       }, 100);
+    } else if (!isLoading && !user && router) {
+      // If user is null and not loading, navigate to login
+      try {
+        router.replace('/(auth)/login');
+      } catch (error) {
+        console.error('Navigation to login error:', error);
+      }
     }
   }, [user, isLoading]);
 
   const navigateToRoleScreen = (role: UserRole) => {
     if (!router) return;
     try {
+    // DEVELOPMENT MODE: Set to true to always open customer app (for testing)
+    // Set to false to allow role-based navigation
+    const FORCE_CUSTOMER_APP = false;
+    
+    if (FORCE_CUSTOMER_APP) {
+      router.replace('/(customer)');
+      return;
+    }
+    
     switch (role) {
       case 'customer':
         router.replace('/(customer)');
@@ -131,13 +149,51 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleLogout = async () => {
     try {
+      // Clear storage first
       await logoutService();
+      
+      // Clear user state immediately
       setUser(null);
+      
+      // Force navigation to login
       if (router) {
-      router.replace('/(auth)/login');
+        try {
+          // Use replace to prevent going back
+          await router.replace('/(auth)/login');
+          
+          // For web browsers only, check if navigation worked
+          if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
+            setTimeout(() => {
+              try {
+                const currentPath = window.location.pathname;
+                // If still not on login page after 200ms, try to force navigation
+                if (!currentPath.includes('/login') && !currentPath.includes('/signup') && !currentPath.includes('/auth')) {
+                  // Only use window.location.href if we're actually in a browser
+                  if (typeof window.location.href !== 'undefined') {
+                    window.location.href = '/';
+                  }
+                }
+              } catch (e) {
+                // Ignore errors with window.location - it's not supported in all environments
+                console.log('Could not use window.location for navigation');
+              }
+            }, 200);
+          }
+        } catch (navError) {
+          console.error('Navigation error during logout:', navError);
+          // Fallback: try router again
+          if (router) {
+            router.replace('/(auth)/login');
+          }
+        }
       }
     } catch (error) {
       console.error('Logout error:', error);
+      // Even if logout fails, try to navigate to login
+      setUser(null);
+      if (router) {
+        router.replace('/(auth)/login');
+      }
     }
   };
 

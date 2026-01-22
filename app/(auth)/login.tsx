@@ -19,7 +19,7 @@ import { COLORS } from '../../src/utils/constants';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, refreshProfile } = useAuth();
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -76,6 +76,7 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
 
   return (
     <KeyboardAvoidingView
@@ -164,17 +165,6 @@ export default function LoginScreen() {
               Don't have an account? <Text style={styles.signupLinkText}>Sign Up</Text>
             </Text>
         </TouchableOpacity>
-
-        <Text style={styles.orText}>or</Text>
-
-        <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton}>
-                 <Text style={styles.socialIcon}>G</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-                 <Text style={styles.socialIcon}>📧</Text>
-            </TouchableOpacity>
-        </View>
 
       </ScrollView>
     </KeyboardAvoidingView>
@@ -332,10 +322,6 @@ const styles = StyleSheet.create({
       fontSize: 18,
       fontWeight: 'bold',
   },
-  orText: {
-      color: COLORS.textLight,
-      marginBottom: 24,
-  },
   signupLink: {
       alignItems: 'center',
       marginBottom: 24,
@@ -348,21 +334,4 @@ const styles = StyleSheet.create({
       color: COLORS.primary,
       fontWeight: '600',
   },
-  socialContainer: {
-      flexDirection: 'row',
-      gap: 20,
-  },
-  socialButton: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      borderWidth: 1,
-      borderColor: COLORS.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'white',
-  },
-  socialIcon: {
-      fontSize: 24,
-  }
 });

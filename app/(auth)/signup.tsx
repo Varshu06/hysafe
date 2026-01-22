@@ -20,25 +20,23 @@ import { UserRole } from '../../src/types/user.types';
 
 type CustomerType = 'home' | 'shop' | 'hotel' | 'bank' | 'event';
 
-const ROLES: { value: UserRole; label: string; icon: string; description: string }[] = [
-  { value: 'customer', label: 'Customer', icon: '👤', description: 'Order water cans' },
-  { value: 'staff', label: 'Staff', icon: '🚚', description: 'Delivery staff' },
-  { value: 'admin', label: 'Admin', icon: '👔', description: 'Administrator' },
+const ROLES: { value: UserRole; label: string; icon: keyof typeof Feather.glyphMap; description: string }[] = [
+  { value: 'customer', label: 'Customer', icon: 'user', description: 'Order water cans' },
+  { value: 'staff', label: 'Staff', icon: 'truck', description: 'Delivery staff' },
 ];
 
-const CUSTOMER_TYPES: { value: CustomerType; label: string; icon: string; description: string }[] = [
-  { value: 'home', label: 'Home', icon: '🏠', description: 'Home delivery' },
-  { value: 'shop', label: 'Shop', icon: '🏪', description: 'Retail shop' },
-  { value: 'hotel', label: 'Hotel', icon: '🏨', description: 'Hotel/Restaurant' },
-  { value: 'bank', label: 'Bank', icon: '🏦', description: 'Bank/Office' },
-  { value: 'event', label: 'Event', icon: '🎉', description: 'Events/Weddings' },
+const CUSTOMER_TYPES: { value: CustomerType; label: string; icon: keyof typeof Feather.glyphMap; description: string }[] = [
+  { value: 'home', label: 'Home', icon: 'home', description: 'Home delivery' },
+  { value: 'shop', label: 'Shop', icon: 'shopping-bag', description: 'Retail shop' },
+  { value: 'hotel', label: 'Hotel', icon: 'users', description: 'Hotel/Restaurant' },
+  { value: 'bank', label: 'Bank', icon: 'briefcase', description: 'Bank/Office' },
+  { value: 'event', label: 'Event', icon: 'calendar', description: 'Events/Weddings' },
 ];
 
 export default function SignupScreen() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, refreshProfile } = useAuth();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -74,7 +72,6 @@ export default function SignupScreen() {
       setLoading(true);
       await register({
         name,
-        email: email || undefined,
         phone: phone || undefined,
         password,
         role: role,
@@ -89,6 +86,7 @@ export default function SignupScreen() {
       setLoading(false);
     }
   };
+
 
   return (
     <KeyboardAvoidingView
@@ -132,7 +130,16 @@ export default function SignupScreen() {
                   onPress={() => setRole(roleOption.value)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.roleIcon}>{roleOption.icon}</Text>
+                  <View style={[
+                    styles.roleIconContainer,
+                    role === roleOption.value && styles.roleIconContainerSelected
+                  ]}>
+                    <Feather
+                      name={roleOption.icon}
+                      size={24}
+                      color={role === roleOption.value ? COLORS.primary : COLORS.textLight}
+                    />
+                  </View>
                   <Text
                     style={[
                       styles.roleLabel,
@@ -151,7 +158,7 @@ export default function SignupScreen() {
                   </Text>
                   {role === roleOption.value && (
                     <View style={styles.selectedIndicator}>
-                      <Text style={styles.selectedCheck}>✓</Text>
+                      <Feather name="check" size={12} color="white" />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -159,27 +166,20 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name *"
-            placeholderTextColor={COLORS.textLight}
-            value={name}
-            onChangeText={setName}
-          />
-
-          <TextInput
-            style={styles.input}
-            placeholder="Email (optional)"
-            placeholderTextColor={COLORS.textLight}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <View style={styles.inputWrapper}>
+            <Feather name="user" size={18} color={COLORS.textLight} style={styles.inputIconLeft} />
+            <TextInput
+              style={styles.inputWithIcon}
+              placeholder="Full Name *"
+              placeholderTextColor={COLORS.textLight}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
 
           <View style={styles.inputContainer}>
             <View style={styles.countryCode}>
-              <Text style={styles.flag}>🇮🇳</Text>
+              <Feather name="phone" size={18} color={COLORS.textLight} style={styles.inputIcon} />
               <Text style={styles.code}>+91</Text>
             </View>
           <TextInput
@@ -193,15 +193,18 @@ export default function SignupScreen() {
           />
           </View>
 
-          <TextInput
-            style={[styles.input, styles.addressInput]}
-            placeholder="Address (optional)"
-            placeholderTextColor={COLORS.textLight}
-            value={address}
-            onChangeText={setAddress}
-            multiline
-            numberOfLines={3}
-          />
+          <View style={styles.inputWrapper}>
+            <Feather name="map-pin" size={18} color={COLORS.textLight} style={styles.inputIconLeft} />
+            <TextInput
+              style={[styles.inputWithIcon, styles.addressInput]}
+              placeholder="Address (optional)"
+              placeholderTextColor={COLORS.textLight}
+              value={address}
+              onChangeText={setAddress}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
 
           {/* Customer Type Selection - Only show for customers */}
           {role === 'customer' && (
@@ -219,7 +222,16 @@ export default function SignupScreen() {
                     onPress={() => setCustomerType(type.value)}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.customerTypeIcon}>{type.icon}</Text>
+                    <View style={[
+                      styles.customerTypeIconContainer,
+                      customerType === type.value && styles.customerTypeIconContainerSelected
+                    ]}>
+                      <Feather
+                        name={type.icon}
+                        size={20}
+                        color={customerType === type.value ? COLORS.primary : COLORS.textLight}
+                      />
+                    </View>
                     <Text
                       style={[
                         styles.customerTypeLabel,
@@ -238,7 +250,7 @@ export default function SignupScreen() {
                     </Text>
                     {customerType === type.value && (
                       <View style={styles.selectedIndicator}>
-                        <Text style={styles.selectedCheck}>✓</Text>
+                        <Feather name="check" size={10} color="white" />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -246,8 +258,9 @@ export default function SignupScreen() {
               </View>
               {(customerType === 'shop' || customerType === 'hotel' || customerType === 'event') && (
                 <View style={styles.wholesaleBanner}>
+                  <Feather name="tag" size={16} color="#166534" style={styles.wholesaleIcon} />
                   <Text style={styles.wholesaleBannerText}>
-                    🏪 You'll get wholesale pricing on all products!
+                    You'll get wholesale pricing on all products!
                   </Text>
                 </View>
               )}
@@ -318,17 +331,6 @@ export default function SignupScreen() {
               Already have an account? <Text style={styles.loginLinkText}>Login</Text>
             </Text>
           </TouchableOpacity>
-
-          <Text style={styles.orText}>or</Text>
-
-          <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.socialIcon}>G</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Text style={styles.socialIcon}>📧</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -415,6 +417,27 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     width: '100%',
   },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 16,
+    width: '100%',
+  },
+  inputIconLeft: {
+    marginLeft: 16,
+    marginRight: 12,
+  },
+  inputWithIcon: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingRight: 16,
+    fontSize: 16,
+    color: COLORS.text,
+  },
   passwordContainer: {
     position: 'relative',
     width: '100%',
@@ -456,8 +479,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 8,
     borderBottomLeftRadius: 8,
   },
-  flag: {
-    fontSize: 18,
+  inputIcon: {
     marginRight: 8,
   },
   code: {
@@ -510,29 +532,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
-  orText: {
-    color: COLORS.textLight,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  socialContainer: {
-    flexDirection: 'row',
-    gap: 20,
-    justifyContent: 'center',
-  },
-  socialButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  socialIcon: {
-    fontSize: 24,
-  },
   roleSection: {
     marginBottom: 20,
   },
@@ -556,9 +555,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0F2FE',
     borderColor: COLORS.primary,
   },
-  roleIcon: {
-    fontSize: 32,
+  roleIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  roleIconContainerSelected: {
+    backgroundColor: '#E0F2FE',
   },
   roleLabel: {
     fontSize: 14,
@@ -611,9 +618,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0F2FE',
     borderColor: COLORS.primary,
   },
-  customerTypeIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+  customerTypeIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  customerTypeIconContainerSelected: {
+    backgroundColor: '#E0F2FE',
   },
   customerTypeLabel: {
     fontSize: 12,
@@ -643,10 +658,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  selectedCheck: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+  wholesaleIcon: {
+    marginRight: 8,
   },
   wholesaleBanner: {
     backgroundColor: '#F0FDF4',
@@ -655,11 +668,14 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   wholesaleBannerText: {
     fontSize: 13,
     color: '#166534',
     fontWeight: '500',
+    flex: 1,
   },
 });
 

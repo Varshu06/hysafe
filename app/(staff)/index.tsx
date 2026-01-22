@@ -27,7 +27,7 @@ import { socketService } from '../../src/services/socket.service';
 import { registerForPushNotifications, setupNotificationListeners } from '../../src/services/notification.service';
 
 export default function NewOrdersScreen() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   // Placeholder state until OrderContext is fully implemented for staff
   const [availableOrders, setAvailableOrders] = useState<any[]>([]);
@@ -38,7 +38,30 @@ export default function NewOrdersScreen() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [staffLocation, setStaffLocation] = useState<{ lat: number; lng: number } | null>(null);
 
+  // Redirect to login if not authenticated
   useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/(auth)/login');
+      return;
+    }
+    // Check if user is staff
+    if (!authLoading && isAuthenticated && user?.role !== 'staff') {
+      // Redirect non-staff users to their appropriate screen
+      if (user?.role === 'customer') {
+        router.replace('/(customer)');
+      } else {
+        router.replace('/(auth)/login');
+      }
+      return;
+    }
+  }, [authLoading, isAuthenticated, user, router]);
+
+  useEffect(() => {
+    // Only load if authenticated and user is staff
+    if (!isAuthenticated || user?.role !== 'staff' || authLoading) {
+      return;
+    }
+
     const load = async () => {
       const online = await storage.getStaffOnline();
       setIsOnline(online);
@@ -91,8 +114,9 @@ export default function NewOrdersScreen() {
     };
     load();
 
-    // Setup notification listeners
-    const removeListeners = setupNotificationListeners(
+    // Setup notification listeners (async)
+    let removeListeners: (() => void) | null = null;
+    setupNotificationListeners(
       (notification) => {
         console.log('📬 New order notification received:', notification);
         // Refresh orders when notification is received
@@ -106,13 +130,19 @@ export default function NewOrdersScreen() {
           router.push(`/(staff)/order-details/${orderId}`);
         }
       }
-    );
+    ).then((cleanup) => {
+      removeListeners = cleanup;
+    }).catch((error) => {
+      console.warn('⚠️ Failed to setup notification listeners:', error);
+    });
 
     // Cleanup on unmount
     return () => {
       socketService.off('order-accepted');
       socketService.off('new-order');
-      removeListeners();
+      if (removeListeners) {
+        removeListeners();
+      }
     };
   }, []);
 
@@ -174,13 +204,19 @@ export default function NewOrdersScreen() {
   // Refresh orders when screen comes into focus (e.g., after login)
   useFocusEffect(
     useCallback(() => {
-      if (isOnline) {
+      // Only refresh if authenticated and user is staff
+      if (isAuthenticated && user?.role === 'staff' && isOnline) {
         refreshAvailableOrders();
       }
-    }, [isOnline])
+    }, [isAuthenticated, user, isOnline])
   );
 
   const refreshAvailableOrders = async () => {
+    // Don't make API calls if not authenticated
+    if (!isAuthenticated || user?.role !== 'staff') {
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Mock fetching available orders
@@ -194,6 +230,12 @@ export default function NewOrdersScreen() {
   };
 
   const handleToggleStatus = async () => {
+    // Don't allow if not authenticated
+    if (!isAuthenticated || user?.role !== 'staff') {
+      router.replace('/(auth)/login');
+      return;
+    }
+
     try {
       setIsToggling(true);
       let location = undefined;
@@ -305,6 +347,12 @@ export default function NewOrdersScreen() {
   };
 
   const handleAccept = async (orderId: string) => {
+    // Don't allow if not authenticated
+    if (!isAuthenticated || user?.role !== 'staff') {
+      router.replace('/(auth)/login');
+      return;
+    }
+
     try {
       await acceptOrder(orderId);
       // Immediately remove the order from available orders (optimistic update)
@@ -323,6 +371,12 @@ export default function NewOrdersScreen() {
   };
 
   const handleReject = async (orderId: string, reason: string) => {
+    // Don't allow if not authenticated
+    if (!isAuthenticated || user?.role !== 'staff') {
+      router.replace('/(auth)/login');
+      return;
+    }
+
     try {
       await rejectOrder(orderId);
       console.log('reject reason:', reason);
@@ -403,6 +457,11 @@ export default function NewOrdersScreen() {
       />
     );
   };
+
+  // Show loading or nothing while checking auth
+  if (authLoading || !isAuthenticated || user?.role !== 'staff') {
+    return <Loader />;
+  }
 
   return (
     <View style={styles.container}>

@@ -30,8 +30,8 @@ export default function ProfileScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: async () => {
+            // Logout function in AuthContext handles navigation
             await logout();
-            router.replace('/(auth)/login');
           },
         },
       ]
