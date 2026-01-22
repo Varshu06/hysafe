@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../utils/constants';
 
 export const FlashScreen = () => {
@@ -61,8 +61,12 @@ export const FlashScreen = () => {
       }]} />
 
       <Animated.View style={[styles.logoContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.logoCircle}>
-            <Text style={styles.logoIcon}>💧</Text>
+        <View style={styles.logoWrapper}>
+          <Image 
+            source={require('../assets/logo1.png')} 
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
         <Text style={styles.appName}>Hy-Safe</Text>
         <Text style={styles.tagline}>Pure Water. Pure Life.</Text>
@@ -91,22 +95,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
-  logoCircle: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: 'white',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 20,
-      elevation: 10,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 5,
+  logoWrapper: {
+    width: 120,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 8,
+    backgroundColor: 'transparent',
+    paddingTop: 4,
   },
-  logoIcon: {
-      fontSize: 50,
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'transparent',
+    alignSelf: 'center',
   },
   appName: {
     fontSize: 42,

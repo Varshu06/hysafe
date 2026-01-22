@@ -238,6 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
+    marginBottom: 12,
   },
   seeAllBtn: {
     backgroundColor: '#102841',

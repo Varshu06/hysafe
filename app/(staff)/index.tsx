@@ -24,7 +24,8 @@ import { ReasonModal } from '../../src/components/staff/ReasonModal';
 import { haversineKm, etaMinutes } from '../../src/utils/geo';
 import { storage } from '../../src/utils/storage';
 import { socketService } from '../../src/services/socket.service';
-import { registerForPushNotifications, setupNotificationListeners } from '../../src/services/notification.service';
+// Push notifications temporarily disabled
+// import { registerForPushNotifications, setupNotificationListeners } from '../../src/services/notification.service';
 
 export default function NewOrdersScreen() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -67,43 +68,10 @@ export default function NewOrdersScreen() {
       setIsOnline(online);
       refreshAvailableOrders();
       
-      // Register for push notifications (gracefully handle failures)
-      let fcmToken = await storage.getFCMToken();
-      if (!fcmToken) {
-        try {
-          fcmToken = await registerForPushNotifications();
-        } catch (error) {
-          console.warn('⚠️ Push notification registration failed, continuing without it:', error);
-        }
-      }
-      if (fcmToken) {
-        console.log('✅ FCM Token registered:', `${fcmToken.substring(0, 20)}...`);
-      } else {
-        console.log('ℹ️ Push notifications not available (normal in Expo Go without EAS)');
-      }
-      
-      // If staff is already online, ALWAYS update the FCM token in backend (even if already stored)
-      // This ensures the backend has the latest token
-      if (online && fcmToken) {
-        try {
-          await toggleStatus(true, undefined, fcmToken);
-          console.log('✅ FCM token sent to backend for already-online staff');
-        } catch (error) {
-          console.error('Failed to update FCM token:', error);
-        }
-      } else if (online && !fcmToken) {
-        // If online but no token, try to register again
-        console.log('⚠️ Staff is online but no FCM token. Attempting to register...');
-        try {
-          fcmToken = await registerForPushNotifications();
-          if (fcmToken) {
-            await toggleStatus(true, undefined, fcmToken);
-            console.log('✅ FCM token registered and sent to backend');
-          }
-        } catch (error) {
-          console.warn('⚠️ Failed to register FCM token for online staff:', error);
-        }
-      }
+      // Push notifications temporarily disabled
+      // if (online) {
+      //   await toggleStatus(true, undefined);
+      // }
       
       // Connect to Socket.io if online
       if (online) {
@@ -114,35 +82,18 @@ export default function NewOrdersScreen() {
     };
     load();
 
+    // Push notification listeners temporarily disabled
     // Setup notification listeners (async)
-    let removeListeners: (() => void) | null = null;
-    setupNotificationListeners(
-      (notification) => {
-        console.log('📬 New order notification received:', notification);
-        // Refresh orders when notification is received
-        refreshAvailableOrders();
-      },
-      (response) => {
-        console.log('👆 Notification tapped:', response);
-        // Navigate to order details if needed
-        const orderId = response.notification.request.content.data?.orderId;
-        if (orderId) {
-          router.push(`/(staff)/order-details/${orderId}`);
-        }
-      }
-    ).then((cleanup) => {
-      removeListeners = cleanup;
-    }).catch((error) => {
-      console.warn('⚠️ Failed to setup notification listeners:', error);
-    });
+    // let removeListeners: (() => void) | null = null;
+    // setupNotificationListeners(...)
 
     // Cleanup on unmount
     return () => {
       socketService.off('order-accepted');
       socketService.off('new-order');
-      if (removeListeners) {
-        removeListeners();
-      }
+      // if (removeListeners) {
+      //   removeListeners();
+      // }
     };
   }, []);
 
@@ -270,45 +221,12 @@ export default function NewOrdersScreen() {
         }
       }
 
-      // Get FCM token for notifications - always try to get fresh token when going online
-      let fcmToken = await storage.getFCMToken();
+      // Push notifications temporarily disabled
+      // Get FCM token for notifications - removed
       
-      // If going online, always try to register/get token
-      if (!isOnline) {
-        console.log('🔄 Going online - registering for push notifications...');
-        try {
-          fcmToken = await registerForPushNotifications();
-          if (!fcmToken) {
-            // Retry once if it fails
-            console.log('⚠️ First attempt failed, retrying...');
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-            fcmToken = await registerForPushNotifications();
-          }
-        } catch (error) {
-          console.warn('⚠️ Push notification registration failed, continuing without it:', error);
-        }
-      } else {
-        // If already online, still try to get/refresh token to ensure backend has it
-        if (!fcmToken) {
-          console.log('🔄 Already online but no token - attempting to register...');
-          try {
-            fcmToken = await registerForPushNotifications();
-          } catch (error) {
-            console.warn('⚠️ Failed to register token:', error);
-          }
-        }
-      }
-      
-      if (fcmToken) {
-        console.log('✅ FCM Token for status update:', `${fcmToken.substring(0, 20)}...`);
-      } else {
-        console.log('ℹ️ Push notifications not available (normal in Expo Go without EAS setup)');
-        // Don't show alert - this is expected in development
-      }
-      
-      // Toggle status API call - ALWAYS send token if available (even when going offline, send it for consistency)
+      // Toggle status API call - no FCM token
       const next = !isOnline;
-      await toggleStatus(next, location, fcmToken || undefined);
+      await toggleStatus(next, location);
       setIsOnline(next);
       await storage.setStaffOnline(next);
       

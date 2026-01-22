@@ -29,7 +29,7 @@ const CUSTOMER_TYPES: { value: CustomerType; label: string; icon: keyof typeof F
   { value: 'home', label: 'Home', icon: 'home', description: 'Home delivery' },
   { value: 'shop', label: 'Shop', icon: 'shopping-bag', description: 'Retail shop' },
   { value: 'hotel', label: 'Hotel', icon: 'users', description: 'Hotel/Restaurant' },
-  { value: 'bank', label: 'Bank', icon: 'briefcase', description: 'Bank/Office' },
+  { value: 'bank', label: 'Bank', icon: 'credit-card', description: 'Bank/Office' },
   { value: 'event', label: 'Event', icon: 'calendar', description: 'Events/Weddings' },
 ];
 

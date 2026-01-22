@@ -1,118 +1,22 @@
+import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { storage } from '../utils/storage';
 
-/**
- * NOTICE: expo-notifications Error in Expo Go
- * 
- * You may see an error in the console about expo-notifications not being supported
- * in Expo Go (SDK 53+). This is expected behavior and the app will continue to work.
- * 
- * The error occurs because:
- * 1. expo-notifications checks the environment during module bundling
- * 2. Android push notifications are not supported in Expo Go SDK 53+
- * 3. The module uses dynamic imports to prevent runtime errors
- * 
- * This does NOT affect app functionality - it will work normally without push notifications
- * in Expo Go. For production, use a development build or standalone build.
- */
-
-// Check if we're in Expo Go (where push notifications are not fully supported)
-const isExpoGo = Constants.executionEnvironment === 'storeClient';
-
-// Lazy import expo-notifications to avoid errors in Expo Go
-// Using dynamic imports prevents the module from loading in Expo Go
-let Notifications: any = null;
-let notificationsModuleLoaded = false;
-
-const loadNotificationsModule = async () => {
-  if (notificationsModuleLoaded) return;
-  
-  // Skip loading in Expo Go on Android to avoid errors
-  if (isExpoGo && Platform.OS === 'android') {
-    console.log('⚠️ Skipping expo-notifications import in Expo Go (Android push notifications not supported in SDK 53+)');
-    notificationsModuleLoaded = true;
-    Notifications = null;
-    return;
-  }
-  
-  try {
-    // Use dynamic import to avoid loading the module in Expo Go
-    const notificationsModule = await import('expo-notifications');
-    Notifications = notificationsModule;
-    notificationsModuleLoaded = true;
-  } catch (error: any) {
-    // Silently handle errors - this is expected in Expo Go
-    if (error.message?.includes('Expo Go') || error.message?.includes('SDK 53')) {
-      console.log('⚠️ expo-notifications not available in Expo Go (expected behavior)');
-    } else {
-      console.warn('⚠️ Failed to load expo-notifications module:', error.message);
-    }
-    notificationsModuleLoaded = true;
-    Notifications = null;
-  }
-};
-
-// Configure notification handler (only if not in Expo Go)
-let notificationHandlerSetup = false;
-
-const setupNotificationHandler = async () => {
-  if (notificationHandlerSetup) return;
-  
-  // Load the module first
-  await loadNotificationsModule();
-  
-  // Skip setup in Expo Go to avoid errors
-  if (isExpoGo && Platform.OS === 'android') {
-    console.log('⚠️ Skipping notification handler setup in Expo Go (Android push notifications not supported in SDK 53+)');
-    notificationHandlerSetup = true;
-    return;
-  }
-  
-  if (!Notifications) {
-    console.warn('⚠️ expo-notifications module not available');
-    notificationHandlerSetup = true;
-    return;
-  }
-  
-  try {
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
-    });
-    notificationHandlerSetup = true;
-  } catch (error: any) {
-    console.warn('⚠️ Failed to setup notification handler:', error.message);
-    // Mark as setup to avoid repeated attempts
-    notificationHandlerSetup = true;
-  }
-};
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 /**
  * Request notification permissions and get the Expo push token
  */
 export const registerForPushNotifications = async (): Promise<string | null> => {
   try {
-    // Load the module first
-    await loadNotificationsModule();
-    
-    // Check if we're in Expo Go on Android (not supported)
-    if (isExpoGo && Platform.OS === 'android') {
-      console.warn('⚠️ Android push notifications are not supported in Expo Go (SDK 53+). Use a development build instead.');
-      return null;
-    }
-    
-    if (!Notifications) {
-      console.warn('⚠️ expo-notifications module not available');
-      return null;
-    }
-    
-    // Setup notification handler first (if not already done)
-    await setupNotificationHandler();
-    
     console.log('🔔 Starting push notification registration...');
     
     // Request permissions
@@ -250,28 +154,10 @@ export const getStoredFCMToken = async (): Promise<string | null> => {
 /**
  * Setup notification listeners
  */
-export const setupNotificationListeners = async (
-  onNotificationReceived?: (notification: any) => void,
-  onNotificationTapped?: (response: any) => void
+export const setupNotificationListeners = (
+  onNotificationReceived?: (notification: Notifications.Notification) => void,
+  onNotificationTapped?: (response: Notifications.NotificationResponse) => void
 ) => {
-  // Load the module first
-  await loadNotificationsModule();
-  
-  // Check if we're in Expo Go on Android (not supported)
-  if (isExpoGo && Platform.OS === 'android') {
-    console.warn('⚠️ Android push notifications are not supported in Expo Go (SDK 53+). Listeners will not be set up.');
-    // Return a no-op cleanup function
-    return () => {};
-  }
-  
-  if (!Notifications) {
-    console.warn('⚠️ expo-notifications module not available');
-    return () => {};
-  }
-  
-  // Setup notification handler first (if not already done)
-  await setupNotificationHandler();
-  
   // Listener for notifications received while app is in foreground
   const receivedListener = Notifications.addNotificationReceivedListener((notification) => {
     console.log('📬 Notification received:', notification);
@@ -297,13 +183,7 @@ export const setupNotificationListeners = async (
 /**
  * Get the last notification response (when app opens from notification)
  */
-export const getLastNotificationResponse = async (): Promise<any | null> => {
-  await loadNotificationsModule();
-  
-  if (!Notifications) {
-    return null;
-  }
-  
+export const getLastNotificationResponse = async (): Promise<Notifications.NotificationResponse | null> => {
   return await Notifications.getLastNotificationResponseAsync();
 };
 
