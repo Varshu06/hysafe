@@ -6,6 +6,7 @@
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "seed:admin": "ts-node seed-admin.ts",
     "test-db": "ts-node test-connection.ts",
     "clear-db": "ts-node clear-db.ts"
   },
