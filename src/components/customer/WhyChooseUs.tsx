@@ -1,34 +1,35 @@
-import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, StyleSheet, Text, View } from 'react-native';
-import { COLORS } from '../../utils/constants';
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
+import { COLORS } from "../../utils/constants";
+import { t } from "i18next";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const FEATURES = [
   {
     id: 1,
-    icon: 'water',
-    title: 'Pure Water',
-    description: 'Purified and safe for drinking',
+    icon: "water",
+    title: "pureWater",
+    description: "pureWaterDescription",
   },
   {
     id: 2,
-    icon: 'truck-delivery',
-    title: 'Fast Delivery',
-    description: 'Within 2 hours of ordering',
+    icon: "truck-delivery",
+    title: "fastDelivery",
+    description: "fastDeliveryDescription",
   },
   {
     id: 3,
-    icon: 'heart-hands',
-    title: 'Great Service',
-    description: 'Friendly and professional staff',
+    icon: "heart-hands",
+    title: "greatService",
+    description: "greatServiceDescription",
   },
   {
     id: 4,
-    icon: 'credit-card',
-    title: 'Easy Payment',
-    description: 'Cash, online, or monthly',
+    icon: "credit-card",
+    title: "easyPayment",
+    description: "easyPaymentDescription",
   },
 ];
 
@@ -47,10 +48,10 @@ export const WhyChooseUs = () => {
       }).start(() => {
         // Update index
         setActiveIndex((prev) => (prev + 1) % FEATURES.length);
-        
+
         // Slide in from right
         slideAnim.setValue(50);
-        
+
         // Animate slide and fade in
         Animated.parallel([
           Animated.timing(slideAnim, {
@@ -72,14 +73,32 @@ export const WhyChooseUs = () => {
 
   const renderIcon = (iconName: string) => {
     switch (iconName) {
-      case 'water':
+      case "water":
         return <Ionicons name="water" size={24} color="#0F172A" />;
-      case 'truck-delivery':
-        return <MaterialCommunityIcons name="truck-delivery-outline" size={24} color="#0F172A" />;
-      case 'heart-hands':
-        return <MaterialCommunityIcons name="hand-heart-outline" size={24} color="#0F172A" />;
-      case 'credit-card':
-        return <MaterialCommunityIcons name="credit-card-outline" size={24} color="#0F172A" />;
+      case "truck-delivery":
+        return (
+          <MaterialCommunityIcons
+            name="truck-delivery-outline"
+            size={24}
+            color="#0F172A"
+          />
+        );
+      case "heart-hands":
+        return (
+          <MaterialCommunityIcons
+            name="hand-heart-outline"
+            size={24}
+            color="#0F172A"
+          />
+        );
+      case "credit-card":
+        return (
+          <MaterialCommunityIcons
+            name="credit-card-outline"
+            size={24}
+            color="#0F172A"
+          />
+        );
       default:
         return <Feather name="star" size={24} color="#0F172A" />;
     }
@@ -89,10 +108,10 @@ export const WhyChooseUs = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Why Choose us</Text>
-      
+      <Text style={styles.headerTitle}>{t("whyChooseUs")}</Text>
+
       <View style={styles.card}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.contentContainer,
             {
@@ -101,34 +120,31 @@ export const WhyChooseUs = () => {
             },
           ]}
         >
-        <View style={styles.iconContainer}>
+          <View style={styles.iconContainer}>
             {renderIcon(currentFeature.icon)}
-        </View>
+          </View>
           <View style={styles.textContainer}>
-            <Text style={styles.title}>{currentFeature.title}</Text>
-            <Text style={styles.desc}>{currentFeature.description}</Text>
-        </View>
+            <Text style={styles.title}>{t(currentFeature.title)}</Text>
+            <Text style={styles.desc}>{t(currentFeature.description)}</Text>
+          </View>
         </Animated.View>
-        
+
         <View style={styles.dots}>
           {FEATURES.map((_, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.dot, 
-                activeIndex === index && styles.activeDot
-              ]} 
+            <View
+              key={index}
+              style={[styles.dot, activeIndex === index && styles.activeDot]}
             />
           ))}
         </View>
       </View>
-      
+
       <View style={styles.promoContainer}>
-        <Text style={styles.promoTitle}>Pure Water,</Text>
-        <Text style={styles.promoTitle}>Prompt</Text>
+        <Text style={styles.promoTitle}>{t("pureWater")}</Text>
+        <Text style={styles.promoTitle}>{t("prompt")}</Text>
         <View style={styles.deliveryRow}>
-          <Text style={styles.promoTitle}>Delivery</Text>
-       <Text style={styles.promoIcon}>🚚</Text>
+          <Text style={styles.promoTitle}>{t("delivery")}</Text>
+          <Text style={styles.promoIcon}>🚚</Text>
         </View>
       </View>
     </View>
@@ -145,12 +161,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
     color: COLORS.text,
   },
   card: {
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -163,11 +179,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-      backgroundColor: 'white',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 16,
-    shadowColor: '#000',
+    backgroundColor: "white",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -177,44 +193,44 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-      color: 'white',
+    color: "white",
     fontSize: 20,
-      fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
   },
   desc: {
-    color: 'rgba(255,255,255,0.85)',
+    color: "rgba(255,255,255,0.85)",
     fontSize: 16,
   },
   dots: {
-      flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginTop: 8,
   },
   dot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
   activeDot: {
-      backgroundColor: 'white',
+    backgroundColor: "white",
     width: 24,
   },
   promoTitle: {
     fontSize: 62,
-      fontWeight: '900',
-    color: '#B8D4E8',
+    fontWeight: "900",
+    color: "#B8D4E8",
     opacity: 0.7,
     lineHeight: 76,
   },
   deliveryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   promoIcon: {
     fontSize: 62,
     opacity: 0.7,
     marginLeft: 14,
-  }
+  },
 });

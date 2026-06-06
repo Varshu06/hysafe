@@ -1,20 +1,29 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ActiveOrderCard } from '../../src/components/customer/ActiveOrderCard';
-import { CustomerHeader } from '../../src/components/customer/Header';
-import { OrderCard } from '../../src/components/customer/OrderCard';
-import { WhyChooseUs } from '../../src/components/customer/WhyChooseUs';
-import { FloatingAddButton } from '../../src/components/ui/FloatingAddButton';
-import { useCart } from '../../src/context/CartContext';
-import { useOrder } from '../../src/context/OrderContext';
-import { PRODUCTS } from '../../src/data/dummy';
-import { Order } from '../../src/types/order.types';
-import { COLORS } from '../../src/utils/constants';
+import { useRouter } from "expo-router";
+import React, { useEffect } from "react";
+import {
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { ActiveOrderCard } from "../../src/components/customer/ActiveOrderCard";
+import { CustomerHeader } from "../../src/components/customer/Header";
+import { OrderCard } from "../../src/components/customer/OrderCard";
+import { WhyChooseUs } from "../../src/components/customer/WhyChooseUs";
+import { FloatingAddButton } from "../../src/components/ui/FloatingAddButton";
+import { useCart } from "../../src/context/CartContext";
+import { useOrder } from "../../src/context/OrderContext";
+import { PRODUCTS } from "../../src/data/dummy";
+import { Order } from "../../src/types/order.types";
+import { COLORS } from "../../src/utils/constants";
+import { t } from "i18next";
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
-  const { addToCart, getQuantity, incrementQuantity, decrementQuantity } = useCart();
+  const { addToCart, getQuantity, incrementQuantity, decrementQuantity } =
+    useCart();
   const { orders, refreshOrders, isLoading } = useOrder();
 
   useEffect(() => {
@@ -22,16 +31,20 @@ export default function CustomerHomeScreen() {
   }, []);
 
   // Get active orders (pending, accepted, out_for_delivery)
-  const activeOrders = orders.filter(order => {
+  const activeOrders = orders.filter((order) => {
     const status = order.status?.toLowerCase();
-    return status === 'pending' || status === 'accepted' || status === 'out_for_delivery';
+    return (
+      status === "pending" ||
+      status === "accepted" ||
+      status === "out_for_delivery"
+    );
   });
 
   // Get past orders (delivered, cancelled) - show last 3
   const pastOrders = orders
-    .filter(order => {
+    .filter((order) => {
       const status = order.status?.toLowerCase();
-      return status === 'delivered' || status === 'cancelled';
+      return status === "delivered" || status === "cancelled";
     })
     .slice(0, 3);
 
@@ -40,24 +53,24 @@ export default function CustomerHomeScreen() {
     const status = order.status?.toLowerCase();
     let progress = 0;
     let timeline = [
-      { status: 'Picked UP', completed: false, current: false },
-      { status: 'On the Way', completed: false, current: false },
-      { status: 'Delivered', completed: false, current: false },
+      { status: "Picked UP", completed: false, current: false },
+      { status: "On the Way", completed: false, current: false },
+      { status: "Delivered", completed: false, current: false },
     ];
 
-    if (status === 'pending') {
+    if (status === "pending") {
       progress = 0;
       timeline[0].current = true;
-    } else if (status === 'accepted') {
+    } else if (status === "accepted") {
       progress = 0.33;
       timeline[0].completed = true;
       timeline[1].current = true;
-    } else if (status === 'out_for_delivery') {
+    } else if (status === "out_for_delivery") {
       progress = 0.66;
       timeline[0].completed = true;
       timeline[1].completed = true;
       timeline[2].current = true;
-    } else if (status === 'delivered') {
+    } else if (status === "delivered") {
       progress = 1;
       timeline[0].completed = true;
       timeline[1].completed = true;
@@ -66,8 +79,9 @@ export default function CustomerHomeScreen() {
 
     return {
       id: order._id,
-      status: order.status || 'pending',
-      driverName: order.driverName || order.assignedStaff?.name || 'Not Assigned',
+      status: order.status || "pending",
+      driverName:
+        order.driverName || order.assignedStaff?.name || "Not Assigned",
       progress,
       timeline,
     };
@@ -75,21 +89,24 @@ export default function CustomerHomeScreen() {
 
   // Transform order for OrderCard
   const transformOrderForCard = (order: Order) => {
-    const date = order.createdAt 
-      ? new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      : 'N/A';
-    
+    const date = order.createdAt
+      ? new Date(order.createdAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        })
+      : "N/A";
+
     return {
       id: order._id,
       date,
-      status: order.status || 'pending',
+      status: order.status || "pending",
       price: order.price || order.totalPrice || 0,
-      driver: order.driverName || order.assignedStaff?.name || 'Not Assigned',
-      address: order.deliveryAddress || 'Address not provided',
+      driver: order.driverName || order.assignedStaff?.name || "Not Assigned",
+      address: order.deliveryAddress || "Address not provided",
     };
   };
 
-  const handleAddProduct = (product: typeof PRODUCTS[0]) => {
+  const handleAddProduct = (product: (typeof PRODUCTS)[0]) => {
     addToCart({
       id: product.id,
       name: product.name,
@@ -111,106 +128,114 @@ export default function CustomerHomeScreen() {
   return (
     <View style={styles.container}>
       <CustomerHeader />
-      
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Products Horizontal Scroll */}
         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Products</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productsScroll}>
-                {PRODUCTS.map((product) => (
-                    <View 
-                        key={product.id} 
-                        style={styles.productCardSmall}
-                    >
-                        <View style={styles.productImageContainer}>
-                             <Image 
-                                source={product.image} 
-                                style={styles.productImage}
-                                resizeMode="contain"
-                             />
-                        </View>
-                        <Text style={styles.productName}>{product.name}</Text>
-                        <View style={styles.priceRow}>
-                            <Text style={styles.price}>₹ {product.price}</Text>
-                            {getQuantity(product.id) > 0 ? (
-                                <View style={styles.quantitySelector}>
-                                    <TouchableOpacity 
-                                        style={styles.qtyButton}
-                                        onPress={() => handleDecrement(product.id)}
-                                    >
-                                        <Text style={styles.qtyButtonText}>−</Text>
-                                    </TouchableOpacity>
-                                    <Text style={styles.qtyText}>{getQuantity(product.id)}</Text>
-                                    <TouchableOpacity 
-                                        style={styles.qtyButton}
-                                        onPress={() => handleIncrement(product.id)}
-                                    >
-                                        <Text style={styles.qtyButtonText}>+</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            ) : (
-                                <TouchableOpacity 
-                                    style={styles.addButton}
-                                    onPress={() => handleAddProduct(product)}
-                                >
-                                <Text style={styles.addButtonText}>ADD</Text>
-                                <Text style={styles.plusIcon}>+</Text>
-                            </TouchableOpacity>
-                            )}
-                        </View>
+          <Text style={styles.sectionTitle}>{t("products")}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.productsScroll}
+          >
+            {PRODUCTS.map((product) => (
+              <View key={product.id} style={styles.productCardSmall}>
+                <View style={styles.productImageContainer}>
+                  <Image
+                    source={product.image}
+                    style={styles.productImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.productName}>{product.name}</Text>
+                <View style={styles.priceRow}>
+                  <Text style={styles.price}>₹ {product.price}</Text>
+                  {getQuantity(product.id) > 0 ? (
+                    <View style={styles.quantitySelector}>
+                      <TouchableOpacity
+                        style={styles.qtyButton}
+                        onPress={() => handleDecrement(product.id)}
+                      >
+                        <Text style={styles.qtyButtonText}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.qtyText}>
+                        {getQuantity(product.id)}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.qtyButton}
+                        onPress={() => handleIncrement(product.id)}
+                      >
+                        <Text style={styles.qtyButtonText}>+</Text>
+                      </TouchableOpacity>
                     </View>
-                ))}
-            </ScrollView>
-                <TouchableOpacity 
-                style={styles.viewMoreBtn}
-                    onPress={() => router.push('/(customer)/products')}
-                >
-                <Text style={styles.viewMoreText}>View More</Text>
-                </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.addButton}
+                      onPress={() => handleAddProduct(product)}
+                    >
+                      <Text style={styles.addButtonText}>{t("add")}</Text>
+                      <Text style={styles.plusIcon}>+</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+          <TouchableOpacity
+            style={styles.viewMoreBtn}
+            onPress={() => router.push("/(customer)/products")}
+          >
+            <Text style={styles.viewMoreText}>{t("viewMore")}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Active Orders */}
         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Active Orders</Text>
-            {activeOrders.length > 0 ? (
-              activeOrders.slice(0, 1).map((order) => (
-                <ActiveOrderCard key={order._id} order={transformOrderForActiveCard(order)} />
+          <Text style={styles.sectionTitle}>{t("activeOrders")}</Text>
+          {activeOrders.length > 0 ? (
+            activeOrders
+              .slice(0, 1)
+              .map((order) => (
+                <ActiveOrderCard
+                  key={order._id}
+                  order={transformOrderForActiveCard(order)}
+                />
               ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No active orders</Text>
-              </View>
-            )}
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>{t("noActiveOrders")}</Text>
+            </View>
+          )}
         </View>
 
         {/* Order History */}
         <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Order History</Text>
-                <TouchableOpacity 
-                    style={styles.seeAllBtn}
-                    onPress={() => router.push('/(customer)/orders')}
-                >
-                    <Text style={styles.seeAllText}>See All</Text>
-                </TouchableOpacity>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{t("orderHistory")}</Text>
+            <TouchableOpacity
+              style={styles.seeAllBtn}
+              onPress={() => router.push("/(customer)/orders")}
+            >
+              <Text style={styles.seeAllText}>{t("seeAll")}</Text>
+            </TouchableOpacity>
+          </View>
+          {pastOrders.length > 0 ? (
+            pastOrders.map((order) => (
+              <OrderCard key={order._id} order={transformOrderForCard(order)} />
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>{t("noOrderHistory")}</Text>
             </View>
-            {pastOrders.length > 0 ? (
-              pastOrders.map((order) => (
-                <OrderCard key={order._id} order={transformOrderForCard(order)} />
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No order history</Text>
-              </View>
-            )}
+          )}
         </View>
 
         {/* Why Choose Us */}
         <WhyChooseUs />
-        
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
-      
+
       <FloatingAddButton />
     </View>
   );
@@ -219,7 +244,7 @@ export default function CustomerHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: "#F0F9FF",
   },
   content: {
     flex: 1,
@@ -229,140 +254,140 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 12,
   },
   seeAllBtn: {
-    backgroundColor: '#102841',
+    backgroundColor: "#102841",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
   },
   seeAllText: {
-    color: 'white',
-    fontWeight: '600',
+    color: "white",
+    fontWeight: "600",
     fontSize: 14,
   },
   productsScroll: {
     paddingRight: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   productCardSmall: {
-      backgroundColor: 'white',
-      borderRadius: 12,
-      padding: 12,
-      marginRight: 16,
-      width: 160,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: '#E2E8F0',
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 16,
+    width: 160,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   productImageContainer: {
-      width: 100, 
-      height: 100, 
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 12,
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   productImage: {
-      width: '100%',
-      height: '100%',
+    width: "100%",
+    height: "100%",
   },
   productName: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: COLORS.text,
-      marginBottom: 8,
-      textAlign: 'center',
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 8,
+    textAlign: "center",
   },
   priceRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      width: '100%',
-      paddingHorizontal: 4,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    paddingHorizontal: 4,
   },
   price: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "bold",
+    color: COLORS.text,
   },
   addButton: {
-      backgroundColor: '#102841',
-      paddingHorizontal: 16,
-      paddingVertical: 6,
-      borderRadius: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      height: 32,
+    backgroundColor: "#102841",
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 32,
   },
   addButtonText: {
-      color: 'white',
-      fontSize: 12,
-      fontWeight: 'bold',
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   plusIcon: {
-      color: 'white',
-      fontSize: 14,
-      fontWeight: 'bold',
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   quantitySelector: {
-      backgroundColor: '#102841',
-      borderRadius: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      height: 32,
-      gap: 8,
+    backgroundColor: "#102841",
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    height: 32,
+    gap: 8,
   },
   qtyButton: {
-      width: 20,
-      height: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
+    width: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   qtyButtonText: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: 'bold',
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   qtyText: {
-      color: 'white',
-      fontSize: 12,
-      fontWeight: 'bold',
-      minWidth: 14,
-      textAlign: 'center',
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+    minWidth: 14,
+    textAlign: "center",
   },
   viewMoreBtn: {
-      backgroundColor: '#102841',
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 10,
-      alignSelf: 'flex-end',
-      marginTop: 16,
+    backgroundColor: "#102841",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignSelf: "flex-end",
+    marginTop: 16,
   },
   viewMoreText: {
-      color: 'white',
-      fontWeight: 'bold',
-      fontSize: 14,
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 14,
   },
   bottomSpacer: {
-      height: 80,
+    height: 80,
   },
   emptyState: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
   },
   emptyText: {

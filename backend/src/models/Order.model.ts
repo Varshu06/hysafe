@@ -1,11 +1,11 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 export type OrderStatus =
-  | 'pending'
-  | 'accepted'
-  | 'out_for_delivery'
-  | 'delivered'
-  | 'cancelled';
+  | "pending"
+  | "accepted"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
 
 export interface IOrder extends Document {
   customerId: mongoose.Types.ObjectId;
@@ -14,8 +14,8 @@ export interface IOrder extends Document {
   totalPrice: number;
   price: number;
   status: OrderStatus;
-  paymentMethod: 'online' | 'offline';
-  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentMethod: "online" | "offline";
+  paymentStatus: "pending" | "paid" | "failed";
   deliveryAddress: string;
   pickupAddress?: string;
   location?: {
@@ -29,24 +29,25 @@ export interface IOrder extends Document {
   eventName?: string;
   receiverName?: string;
   receiverPhone?: string;
-  paymentTerms?: 'one-time' | 'weekly' | 'monthly';
+  paymentTerms?: "one-time" | "weekly" | "monthly";
   createdAt: Date;
   updatedAt: Date;
   acceptedAt?: Date;
   outForDeliveryAt?: Date;
   deliveredAt?: Date;
+  transactionId?: string;
 }
 
 const OrderSchema = new Schema<IOrder>(
   {
     customerId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     customerProfileId: {
       type: Schema.Types.ObjectId,
-      ref: 'CustomerProfile',
+      ref: "CustomerProfile",
     },
     quantity: {
       type: Number,
@@ -63,18 +64,24 @@ const OrderSchema = new Schema<IOrder>(
     },
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'out_for_delivery', 'delivered', 'cancelled'],
-      default: 'pending',
+      enum: [
+        "pending",
+        "accepted",
+        "out_for_delivery",
+        "delivered",
+        "cancelled",
+      ],
+      default: "pending",
     },
     paymentMethod: {
       type: String,
-      enum: ['online', 'offline'],
+      enum: ["online", "offline"],
       required: true,
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'failed'],
-      default: 'pending',
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
     },
     deliveryAddress: {
       type: String,
@@ -82,7 +89,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     pickupAddress: {
       type: String,
-      default: 'Hy-Safe Plant, 12 Industrial Rd, Chennai',
+      default: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
     },
     location: {
       lat: { type: Number },
@@ -93,7 +100,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     assignedStaffId: {
       type: Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
     },
     deliverySlot: {
       type: Date,
@@ -113,7 +120,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     paymentTerms: {
       type: String,
-      enum: ['one-time', 'weekly', 'monthly'],
+      enum: ["one-time", "weekly", "monthly"],
     },
     acceptedAt: {
       type: Date,
@@ -124,10 +131,13 @@ const OrderSchema = new Schema<IOrder>(
     deliveredAt: {
       type: Date,
     },
+    transactionId: {
+      type: String,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes for performance
@@ -135,8 +145,4 @@ OrderSchema.index({ customerId: 1, createdAt: -1 });
 OrderSchema.index({ assignedStaffId: 1, status: 1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
 
-export const Order = mongoose.model<IOrder>('Order', OrderSchema);
-
-
-
-
+export const Order = mongoose.model<IOrder>("Order", OrderSchema);

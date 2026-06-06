@@ -1,70 +1,111 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ImageBackground,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useAuth } from '../../src/context/AuthContext';
-import { COLORS } from '../../src/utils/constants';
-import { UserRole } from '../../src/types/user.types';
+  ActivityIndicator,
+  Alert,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useAuth } from "../../src/context/AuthContext";
+import { COLORS } from "../../src/utils/constants";
+import { UserRole } from "../../src/types/user.types";
+import { t } from "i18next";
 
-type CustomerType = 'home' | 'shop' | 'hotel' | 'bank' | 'event';
+type CustomerType = "home" | "shop" | "hotel" | "bank" | "event";
 
-const ROLES: { value: UserRole; label: string; icon: keyof typeof Feather.glyphMap; description: string }[] = [
-  { value: 'customer', label: 'Customer', icon: 'user', description: 'Order water cans' },
-  { value: 'staff', label: 'Staff', icon: 'truck', description: 'Delivery staff' },
+const ROLES: {
+  value: UserRole;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  description: string;
+}[] = [
+  {
+    value: "customer",
+    label: "Customer",
+    icon: "user",
+    description: "Order water cans",
+  },
+  {
+    value: "staff",
+    label: "Staff",
+    icon: "truck",
+    description: "Delivery staff",
+  },
 ];
 
-const CUSTOMER_TYPES: { value: CustomerType; label: string; icon: keyof typeof Feather.glyphMap; description: string }[] = [
-  { value: 'home', label: 'Home', icon: 'home', description: 'Home delivery' },
-  { value: 'shop', label: 'Shop', icon: 'shopping-bag', description: 'Retail shop' },
-  { value: 'hotel', label: 'Hotel', icon: 'users', description: 'Hotel/Restaurant' },
-  { value: 'bank', label: 'Bank', icon: 'credit-card', description: 'Bank/Office' },
-  { value: 'event', label: 'Event', icon: 'calendar', description: 'Events/Weddings' },
+const CUSTOMER_TYPES: {
+  value: CustomerType;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  description: string;
+}[] = [
+  { value: "home", label: "Home", icon: "home", description: "Home delivery" },
+  {
+    value: "shop",
+    label: "Shop",
+    icon: "shopping-bag",
+    description: "Retail shop",
+  },
+  {
+    value: "hotel",
+    label: "Hotel",
+    icon: "users",
+    description: "Hotel/Restaurant",
+  },
+  {
+    value: "bank",
+    label: "Bank",
+    icon: "credit-card",
+    description: "Bank/Office",
+  },
+  {
+    value: "event",
+    label: "Event",
+    icon: "calendar",
+    description: "Events/Weddings",
+  },
 ];
 
 export default function SignupScreen() {
   const router = useRouter();
   const { register, refreshProfile } = useAuth();
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [address, setAddress] = useState('');
-  const [role, setRole] = useState<UserRole>('customer');
-  const [customerType, setCustomerType] = useState<CustomerType>('home');
+  const [address, setAddress] = useState("");
+  const [role, setRole] = useState<UserRole>("customer");
+  const [customerType, setCustomerType] = useState<CustomerType>("home");
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
     if (!name || !phone || !password) {
-      Alert.alert('Error', 'Please fill all required fields');
+      Alert.alert(t("error"), t("pleaseFillAllRequiredFields"));
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert(t("error"), t("passwordsDoNotMatch"));
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      Alert.alert(t("error"), t("passwordMustBeAtLeast6Characters"));
       return;
     }
 
     if (phone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      Alert.alert(t("error"), t("phoneNumberMustBeAtLeast10Digits"));
       return;
     }
 
@@ -76,49 +117,50 @@ export default function SignupScreen() {
         password,
         role: role,
         address: address || undefined,
-        customerType: role === 'customer' ? customerType : undefined,
+        customerType: role === "customer" ? customerType : undefined,
       });
-      
+
       // Navigation will be handled by AuthContext based on role
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Registration failed');
+      Alert.alert(t("signupFailed"), error.message || t("signupFailedMessage"));
     } finally {
       setLoading(false);
     }
   };
 
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Water Theme Header */}
-      <ImageBackground 
-        source={require('../../src/assets/loginimage.png')} 
+      <ImageBackground
+        source={require("../../src/assets/loginimage.png")}
         style={styles.headerContainer}
         resizeMode="cover"
       >
-         <View style={styles.overlay} />
-         <View style={styles.headerWave} />
+        <View style={styles.overlay} />
+        <View style={styles.headerWave} />
       </ImageBackground>
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Hy-Safe</Text>
-        <Text style={styles.tagline}>Create Your Account</Text>
-        <Text style={styles.subtitle}>Join us to order fresh water cans anytime, anywhere.</Text>
-        
+        <Text style={styles.tagline}>{t("tagline")}</Text>
+        <Text style={styles.subtitle}>{t("signUpToGetStarted")}</Text>
+
         <View style={styles.dividerContainer}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>Sign up</Text>
-            <View style={styles.line} />
+          <View style={styles.line} />
+          <Text style={styles.dividerText}>{t("signup")}</Text>
+          <View style={styles.line} />
         </View>
 
         <View style={styles.form}>
           {/* Role Selection */}
           <View style={styles.roleSection}>
-            <Text style={styles.sectionLabel}>Select Your Role *</Text>
-            <Text style={styles.sectionSubtext}>Choose how you want to use the app</Text>
+            <Text style={styles.sectionLabel}>{t("selectYourRole")}</Text>
+            <Text style={styles.sectionSubtext}>
+              {t("selectRoleDescription")}
+            </Text>
             <View style={styles.roleContainer}>
               {ROLES.map((roleOption) => (
                 <TouchableOpacity
@@ -130,14 +172,21 @@ export default function SignupScreen() {
                   onPress={() => setRole(roleOption.value)}
                   activeOpacity={0.7}
                 >
-                  <View style={[
-                    styles.roleIconContainer,
-                    role === roleOption.value && styles.roleIconContainerSelected
-                  ]}>
+                  <View
+                    style={[
+                      styles.roleIconContainer,
+                      role === roleOption.value &&
+                        styles.roleIconContainerSelected,
+                    ]}
+                  >
                     <Feather
                       name={roleOption.icon}
                       size={24}
-                      color={role === roleOption.value ? COLORS.primary : COLORS.textLight}
+                      color={
+                        role === roleOption.value
+                          ? COLORS.primary
+                          : COLORS.textLight
+                      }
                     />
                   </View>
                   <Text
@@ -146,15 +195,16 @@ export default function SignupScreen() {
                       role === roleOption.value && styles.roleLabelSelected,
                     ]}
                   >
-                    {roleOption.label}
+                    {t(roleOption.label)}
                   </Text>
                   <Text
                     style={[
                       styles.roleDescription,
-                      role === roleOption.value && styles.roleDescriptionSelected,
+                      role === roleOption.value &&
+                        styles.roleDescriptionSelected,
                     ]}
                   >
-                    {roleOption.description}
+                    {t(roleOption.description)}
                   </Text>
                   {role === roleOption.value && (
                     <View style={styles.selectedIndicator}>
@@ -167,10 +217,15 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Feather name="user" size={18} color={COLORS.textLight} style={styles.inputIconLeft} />
+            <Feather
+              name="user"
+              size={18}
+              color={COLORS.textLight}
+              style={styles.inputIconLeft}
+            />
             <TextInput
               style={styles.inputWithIcon}
-              placeholder="Full Name *"
+              placeholder={t("namePlaceholder")}
               placeholderTextColor={COLORS.textLight}
               value={name}
               onChangeText={setName}
@@ -179,25 +234,35 @@ export default function SignupScreen() {
 
           <View style={styles.inputContainer}>
             <View style={styles.countryCode}>
-              <Feather name="phone" size={18} color={COLORS.textLight} style={styles.inputIcon} />
+              <Feather
+                name="phone"
+                size={18}
+                color={COLORS.textLight}
+                style={styles.inputIcon}
+              />
               <Text style={styles.code}>+91</Text>
             </View>
-          <TextInput
+            <TextInput
               style={styles.phoneInput}
-              placeholder="Enter Phone Number"
-            placeholderTextColor={COLORS.textLight}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
+              placeholder={t("phoneNumberPlaceholder")}
+              placeholderTextColor={COLORS.textLight}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
               maxLength={10}
-          />
+            />
           </View>
 
           <View style={styles.inputWrapper}>
-            <Feather name="map-pin" size={18} color={COLORS.textLight} style={styles.inputIconLeft} />
+            <Feather
+              name="map-pin"
+              size={18}
+              color={COLORS.textLight}
+              style={styles.inputIconLeft}
+            />
             <TextInput
               style={[styles.inputWithIcon, styles.addressInput]}
-              placeholder="Address (optional)"
+              placeholder={t("addressPlaceholder")}
               placeholderTextColor={COLORS.textLight}
               value={address}
               onChangeText={setAddress}
@@ -207,46 +272,58 @@ export default function SignupScreen() {
           </View>
 
           {/* Customer Type Selection - Only show for customers */}
-          {role === 'customer' && (
+          {role === "customer" && (
             <View style={styles.customerTypeSection}>
-              <Text style={styles.sectionLabel}>Account Type *</Text>
-              <Text style={styles.sectionSubtext}>Select your account type to get the best pricing</Text>
+              <Text style={styles.sectionLabel}>{t("selectAccountType")}</Text>
+              <Text style={styles.sectionSubtext}>
+                {t("selectAccountTypeDescription")}
+              </Text>
               <View style={styles.customerTypeGrid}>
                 {CUSTOMER_TYPES.map((type) => (
                   <TouchableOpacity
                     key={type.value}
                     style={[
                       styles.customerTypeCard,
-                      customerType === type.value && styles.customerTypeCardSelected,
+                      customerType === type.value &&
+                        styles.customerTypeCardSelected,
                     ]}
                     onPress={() => setCustomerType(type.value)}
                     activeOpacity={0.7}
                   >
-                    <View style={[
-                      styles.customerTypeIconContainer,
-                      customerType === type.value && styles.customerTypeIconContainerSelected
-                    ]}>
+                    <View
+                      style={[
+                        styles.customerTypeIconContainer,
+                        customerType === type.value &&
+                          styles.customerTypeIconContainerSelected,
+                      ]}
+                    >
                       <Feather
                         name={type.icon}
                         size={20}
-                        color={customerType === type.value ? COLORS.primary : COLORS.textLight}
+                        color={
+                          customerType === type.value
+                            ? COLORS.primary
+                            : COLORS.textLight
+                        }
                       />
                     </View>
                     <Text
                       style={[
                         styles.customerTypeLabel,
-                        customerType === type.value && styles.customerTypeLabelSelected,
+                        customerType === type.value &&
+                          styles.customerTypeLabelSelected,
                       ]}
                     >
-                      {type.label}
+                      {t(type.label)}
                     </Text>
                     <Text
                       style={[
                         styles.customerTypeDescription,
-                        customerType === type.value && styles.customerTypeDescriptionSelected,
+                        customerType === type.value &&
+                          styles.customerTypeDescriptionSelected,
                       ]}
                     >
-                      {type.description}
+                      {t(type.description)}
                     </Text>
                     {customerType === type.value && (
                       <View style={styles.selectedIndicator}>
@@ -256,11 +333,18 @@ export default function SignupScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {(customerType === 'shop' || customerType === 'hotel' || customerType === 'event') && (
+              {(customerType === "shop" ||
+                customerType === "hotel" ||
+                customerType === "event") && (
                 <View style={styles.wholesaleBanner}>
-                  <Feather name="tag" size={16} color="#166534" style={styles.wholesaleIcon} />
+                  <Feather
+                    name="tag"
+                    size={16}
+                    color="#166534"
+                    style={styles.wholesaleIcon}
+                  />
                   <Text style={styles.wholesaleBannerText}>
-                    You'll get wholesale pricing on all products!
+                    {t("wholesaleBenefits")}
                   </Text>
                 </View>
               )}
@@ -270,7 +354,7 @@ export default function SignupScreen() {
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
-              placeholder="Password *"
+              placeholder={t("passwordPlaceholderSignup")}
               placeholderTextColor={COLORS.textLight}
               value={password}
               onChangeText={setPassword}
@@ -282,7 +366,7 @@ export default function SignupScreen() {
               activeOpacity={0.7}
             >
               <Feather
-                name={showPassword ? 'eye-off' : 'eye'}
+                name={showPassword ? "eye-off" : "eye"}
                 size={20}
                 color={COLORS.textLight}
               />
@@ -292,7 +376,7 @@ export default function SignupScreen() {
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
-              placeholder="Confirm Password *"
+              placeholder={t("confirmPasswordPlaceholder")}
               placeholderTextColor={COLORS.textLight}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -304,7 +388,7 @@ export default function SignupScreen() {
               activeOpacity={0.7}
             >
               <Feather
-                name={showConfirmPassword ? 'eye-off' : 'eye'}
+                name={showConfirmPassword ? "eye-off" : "eye"}
                 size={20}
                 color={COLORS.textLight}
               />
@@ -319,16 +403,17 @@ export default function SignupScreen() {
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text style={styles.buttonText}>Sign Up</Text>
+              <Text style={styles.buttonText}>{t("signup")}</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.loginLink}
-            onPress={() => router.push('/(auth)/login')}
+            onPress={() => router.push("/(auth)/login")}
           >
             <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginLinkText}>Login</Text>
+              {t("alreadyHaveAccount")}
+              <Text style={styles.loginLinkText}>{t("login")}</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -340,59 +425,59 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   headerContainer: {
     height: 350,
-    width: '100%',
-    position: 'relative',
-    overflow: 'hidden',
-    justifyContent: 'flex-end',
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    justifyContent: "flex-end",
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(2, 132, 199, 0.3)',
+    backgroundColor: "rgba(2, 132, 199, 0.3)",
   },
   headerWave: {
-    position: 'absolute',
+    position: "absolute",
     bottom: -50,
-    width: '150%',
+    width: "150%",
     height: 100,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 200,
     borderTopRightRadius: 200,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   content: {
     flexGrow: 1,
     padding: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.primary,
     marginBottom: 4,
   },
   tagline: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontWeight: "600",
+    color: "#0F172A",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
     color: COLORS.textLight,
     marginBottom: 30,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
   dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
-    width: '100%',
+    width: "100%",
   },
   line: {
     flex: 1,
@@ -402,30 +487,30 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 10,
     color: COLORS.textLight,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   form: {
-    width: '100%',
+    width: "100%",
   },
   input: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    width: '100%',
+    width: "100%",
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
     marginBottom: 16,
-    width: '100%',
+    width: "100%",
   },
   inputIconLeft: {
     marginLeft: 16,
@@ -439,40 +524,40 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   passwordContainer: {
-    position: 'relative',
-    width: '100%',
+    position: "relative",
+    width: "100%",
     marginBottom: 16,
   },
   passwordInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     padding: 16,
     paddingRight: 50,
     fontSize: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    width: '100%',
+    width: "100%",
   },
   eyeIcon: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     top: 16,
     padding: 4,
   },
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 12,
     padding: 4,
-    width: '100%',
+    width: "100%",
     marginBottom: 16,
     height: 56,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   countryCode: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     borderRightWidth: 1,
     borderRightColor: COLORS.border,
@@ -485,7 +570,7 @@ const styles = StyleSheet.create({
   code: {
     fontSize: 16,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   phoneInput: {
     flex: 1,
@@ -495,15 +580,15 @@ const styles = StyleSheet.create({
   },
   addressInput: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
     paddingTop: 16,
   },
   button: {
     backgroundColor: COLORS.primary,
-    width: '100%',
+    width: "100%",
     paddingVertical: 16,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
     marginBottom: 16,
     elevation: 2,
@@ -516,12 +601,12 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   loginLink: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
   },
   loginText: {
@@ -530,46 +615,46 @@ const styles = StyleSheet.create({
   },
   loginLinkText: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   roleSection: {
     marginBottom: 20,
   },
   roleContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 8,
   },
   roleCard: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 2,
     borderColor: COLORS.border,
-    position: 'relative',
+    position: "relative",
     minHeight: 100,
   },
   roleCardSelected: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     borderColor: COLORS.primary,
   },
   roleIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   roleIconContainerSelected: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
   },
   roleLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -579,7 +664,7 @@ const styles = StyleSheet.create({
   roleDescription: {
     fontSize: 11,
     color: COLORS.textLight,
-    textAlign: 'center',
+    textAlign: "center",
   },
   roleDescriptionSelected: {
     color: COLORS.primary,
@@ -589,7 +674,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -599,40 +684,40 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   customerTypeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 8,
   },
   customerTypeCard: {
-    width: '31%',
-    backgroundColor: '#F8FAFC',
+    width: "31%",
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     padding: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 2,
     borderColor: COLORS.border,
-    position: 'relative',
+    position: "relative",
   },
   customerTypeCardSelected: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     borderColor: COLORS.primary,
   },
   customerTypeIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 6,
   },
   customerTypeIconContainerSelected: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
   },
   customerTypeLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 2,
   },
@@ -642,43 +727,39 @@ const styles = StyleSheet.create({
   customerTypeDescription: {
     fontSize: 10,
     color: COLORS.textLight,
-    textAlign: 'center',
+    textAlign: "center",
   },
   customerTypeDescriptionSelected: {
     color: COLORS.primary,
   },
   selectedIndicator: {
-    position: 'absolute',
+    position: "absolute",
     top: 4,
     right: 4,
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   wholesaleIcon: {
     marginRight: 8,
   },
   wholesaleBanner: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: "#F0FDF4",
     borderLeftWidth: 3,
     borderLeftColor: COLORS.success,
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   wholesaleBannerText: {
     fontSize: 13,
-    color: '#166534',
-    fontWeight: '500',
+    color: "#166534",
+    fontWeight: "500",
     flex: 1,
   },
 });
-
-
-
-

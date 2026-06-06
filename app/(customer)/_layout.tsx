@@ -1,48 +1,49 @@
-import { Tabs } from 'expo-router';
-import { CustomTabBar } from '../../src/components/ui/CustomTabBar';
-import { COLORS } from '../../src/utils/constants';
+import { Tabs } from "expo-router";
+import { CustomTabBar } from "../../src/components/ui/CustomTabBar";
+import { COLORS } from "../../src/utils/constants";
+import { t } from "i18next";
 
 export default function CustomerLayout() {
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: "#FFFFFF",
+        tabBarInactiveTintColor: "#94A3B8",
         headerStyle: {
           backgroundColor: COLORS.primary,
         },
         headerTintColor: COLORS.secondary,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: "Home",
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="products/index"
         options={{
-          title: 'Products',
+          title: "Products",
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'My Orders',
+          title: "My Orders",
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: "Profile",
           headerShown: false,
         }}
       />
@@ -50,7 +51,7 @@ export default function CustomerLayout() {
         name="profile/edit"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -58,7 +59,7 @@ export default function CustomerLayout() {
         name="profile/payment-methods"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -66,7 +67,7 @@ export default function CustomerLayout() {
         name="profile/privacy-security"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -74,7 +75,7 @@ export default function CustomerLayout() {
         name="profile/change-password"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -82,7 +83,7 @@ export default function CustomerLayout() {
         name="profile/app-lock"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -90,7 +91,7 @@ export default function CustomerLayout() {
         name="profile/login-activity"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -98,7 +99,7 @@ export default function CustomerLayout() {
         name="profile/privacy-policy"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -106,7 +107,7 @@ export default function CustomerLayout() {
         name="profile/delete-account"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -114,7 +115,7 @@ export default function CustomerLayout() {
         name="order-details/[id]"
         options={{
           href: null, // Hide from tab bar
-          title: 'Order Details',
+          title: "Order Details",
           headerShown: false,
         }}
       />
@@ -122,7 +123,7 @@ export default function CustomerLayout() {
         name="address/search"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -130,7 +131,7 @@ export default function CustomerLayout() {
         name="address/add"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -138,7 +139,7 @@ export default function CustomerLayout() {
         name="checkout/index"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -146,7 +147,7 @@ export default function CustomerLayout() {
         name="checkout/payment-methods"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -154,7 +155,7 @@ export default function CustomerLayout() {
         name="recurring-delivery/setup"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
@@ -162,13 +163,10 @@ export default function CustomerLayout() {
         name="recurring-deliveries/index"
         options={{
           href: null,
-          tabBarStyle: { display: 'none' },
+          tabBarStyle: { display: "none" },
           headerShown: false,
         }}
       />
     </Tabs>
   );
 }
-
-
-
