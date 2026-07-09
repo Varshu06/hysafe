@@ -1,10 +1,21 @@
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../../../src/utils/constants';
-import { getLoginActivity, LoginActivity } from '../../../src/services/customer.service';
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { COLORS } from "../../../src/utils/constants";
+import {
+  getLoginActivity,
+  LoginActivity,
+} from "../../../src/services/customer.service";
 
 export default function LoginActivityScreen() {
   const router = useRouter();
@@ -18,7 +29,7 @@ export default function LoginActivityScreen() {
       const response = await getLoginActivity();
       setActivities(response.activities);
     } catch (error: any) {
-      console.error('Error loading login activities:', error);
+      console.error("Error loading login activities:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -42,24 +53,29 @@ export default function LoginActivityScreen() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60)
+      return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
 
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.replace('/(customer)/profile/privacy-security')} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(customer)/profile/privacy-security")}
+          style={styles.backButton}
+        >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Login Activity</Text>
@@ -75,11 +91,18 @@ export default function LoginActivityScreen() {
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
           {activities.length === 0 ? (
             <View style={styles.card}>
-              <Feather name="shield" size={48} color={COLORS.textLight} style={styles.emptyIcon} />
+              <Feather
+                name="shield"
+                size={48}
+                color={COLORS.textLight}
+                style={styles.emptyIcon}
+              />
               <Text style={styles.title}>No login history</Text>
               <Text style={styles.subtitle}>
                 Your recent login sessions will appear here once you log in.
@@ -89,11 +112,14 @@ export default function LoginActivityScreen() {
             <>
               <Text style={styles.sectionTitle}>Recent Login Sessions</Text>
               {activities.map((activity, index) => (
-                <View key={activity.id} style={[styles.card, index === 0 && styles.currentSession]}>
+                <View
+                  key={activity.id}
+                  style={[styles.card, index === 0 && styles.currentSession]}
+                >
                   <View style={styles.activityHeader}>
                     <View style={styles.iconContainer}>
                       <Feather
-                        name={index === 0 ? 'check-circle' : 'log-in'}
+                        name={index === 0 ? "check-circle" : "log-in"}
                         size={20}
                         color={index === 0 ? COLORS.success : COLORS.primary}
                       />
@@ -101,19 +127,33 @@ export default function LoginActivityScreen() {
                     <View style={styles.activityInfo}>
                       <Text style={styles.activityTitle}>
                         {activity.deviceInfo}
-                        {index === 0 && <Text style={styles.currentBadge}> (Current)</Text>}
+                        {index === 0 && (
+                          <Text style={styles.currentBadge}> (Current)</Text>
+                        )}
                       </Text>
-                      <Text style={styles.activityTime}>{formatDate(activity.loginAt)}</Text>
+                      <Text style={styles.activityTime}>
+                        {formatDate(activity.loginAt)}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.activityDetails}>
                     <View style={styles.detailRow}>
-                      <Feather name="map-pin" size={14} color={COLORS.textLight} />
+                      <Feather
+                        name="map-pin"
+                        size={14}
+                        color={COLORS.textLight}
+                      />
                       <Text style={styles.detailText}>{activity.location}</Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Feather name="globe" size={14} color={COLORS.textLight} />
-                      <Text style={styles.detailText}>{activity.ipAddress}</Text>
+                      <Feather
+                        name="globe"
+                        size={14}
+                        color={COLORS.textLight}
+                      />
+                      <Text style={styles.detailText}>
+                        {activity.ipAddress}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -129,28 +169,39 @@ export default function LoginActivityScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.accent },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: COLORS.accent,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
-    position: 'relative',
+    position: "relative",
   },
-  backButton: { padding: 8, position: 'absolute', left: 20 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, textAlign: 'center' },
-  placeholder: { width: 40, position: 'absolute', right: 20 },
+
+  backButton: {
+    padding: 16,
+    top: 16,
+    position: "absolute",
+    left: 20,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.text,
+    textAlign: "center",
+  },
+  placeholder: { width: 40, position: "absolute", right: 20 },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 12,
   },
   loadingText: {
@@ -161,7 +212,7 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 20 },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 12,
   },
@@ -170,31 +221,31 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   currentSession: {
     borderColor: COLORS.success,
     borderWidth: 2,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: "#F0FDF4",
   },
   activityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   activityInfo: {
@@ -202,13 +253,13 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 4,
   },
   currentBadge: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.success,
   },
   activityTime: {
@@ -219,11 +270,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
   },
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   detailText: {
@@ -231,11 +282,20 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   emptyIcon: {
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 16,
   },
-  title: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'center' },
-  subtitle: { fontSize: 13, color: COLORS.textLight, lineHeight: 18, textAlign: 'center' },
+  title: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 13,
+    color: COLORS.textLight,
+    lineHeight: 18,
+    textAlign: "center",
+  },
 });
-
-

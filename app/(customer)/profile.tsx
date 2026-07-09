@@ -17,8 +17,6 @@ import { COLORS } from "../../src/utils/constants";
 import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
-import { model } from "mongoose";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -273,7 +271,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {/* language*/}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             onPress={() => setVisible(true)}
             style={styles.menuItem}
           >
@@ -290,10 +288,10 @@ export default function ProfileScreen() {
                 color={COLORS.textLight}
               />
             </View>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
           {/* language change */}
-          {/* <Modal visible={visible} transparent animationType="slide">
+          <Modal visible={visible} transparent animationType="slide">
             <Pressable
               onPress={() => setVisible(false)}
               style={styles.modalOverlay}
@@ -333,7 +331,7 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </Pressable>
             </Pressable>
-          </Modal> */}
+          </Modal>
         </View>
 
         {/* Logout Button */}
@@ -372,7 +370,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   backButton: {
-    padding: 8,
+    padding: 16,
+    top: 16,
     position: "absolute",
     left: 20,
   },

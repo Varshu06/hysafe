@@ -1,6 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import en from "./locales/en.json";
 import ta from "./locales/ta.json";
 
@@ -28,26 +28,13 @@ i18n.use(initReactI18next).init({
   },
 });
 
-export const loadSavedLanguage = async () => {
-  try {
-    const savedLanguage = await SecureStore.getItemAsync(LANGUAGE_KEY);
-    if (savedLanguage) {
-      await i18n.changeLanguage(savedLanguage);
-    } else {
-      await i18n.changeLanguage("ta");
-    }
-  } catch (error) {
-    console.log("Language load error:", error);
-  }
+export const getSavedLanguage = async () => {
+  return await AsyncStorage.getItem(LANGUAGE_KEY);
 };
 
 export const changeLanguage = async (language: "en" | "ta") => {
-  try {
-    await i18n.changeLanguage(language);
+  await i18n.changeLanguage(language);
 
-    await SecureStore.setItemAsync(LANGUAGE_KEY, language);
-  } catch (error) {
-    console.log(error);
-  }
+  await AsyncStorage.setItem(LANGUAGE_KEY, language);
 };
 export default i18n;

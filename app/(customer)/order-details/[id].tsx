@@ -10,6 +10,7 @@ import {
   View,
   Linking,
   Clipboard,
+  FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Loader } from "../../../src/components/ui/Loader";
@@ -30,14 +31,6 @@ export default function OrderDetailsScreen() {
   const { addToCart, updateQuantity, getQuantity } = useCart();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const getPaymentMethodLabel = (method?: string) => {
-    if (!method) return "N/A";
-    const methodLower = method.toLowerCase();
-    if (methodLower === "online") return "Card";
-    if (methodLower === "offline") return "Cash";
-    return method.charAt(0).toUpperCase() + method.slice(1);
-  };
 
   const getDriverName = (): string => {
     if (order?.driverName) return order.driverName;
@@ -117,6 +110,7 @@ export default function OrderDetailsScreen() {
           price: product.price,
           image: product.image,
           volume: product.volume,
+          deliveryCharge: product.deliveryCharge || 0,
         });
 
         // Update quantity to match order quantity
@@ -279,10 +273,19 @@ export default function OrderDetailsScreen() {
             <View style={styles.infoIconContainer}>
               <Ionicons name="water" size={20} color={COLORS.primary} />
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Quantity</Text>
-              <Text style={styles.infoValue}>{order.quantity} x 20L cans</Text>
-            </View>
+
+            <FlatList
+              data={order.items}
+              keyExtractor={(item) => item.productId}
+              scrollEnabled={false}
+              renderItem={({ item }) => (
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>
+                    {item.productName} ({item.quantity})
+                  </Text>
+                </View>
+              )}
+            />
           </View>
 
           {(order.price || order.totalPrice) && (
@@ -291,7 +294,7 @@ export default function OrderDetailsScreen() {
                 <Feather name="dollar-sign" size={20} color={COLORS.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Total Amount</Text>
+                <Text style={styles.infoLabel}>{t("totalAmount")}</Text>
                 <Text style={styles.infoValue}>
                   ₹{order.price || order.totalPrice}
                 </Text>
@@ -304,9 +307,9 @@ export default function OrderDetailsScreen() {
               <Feather name="credit-card" size={20} color={COLORS.primary} />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Payment Method</Text>
+              <Text style={styles.infoLabel}>{t("paymentMethod")}</Text>
               <Text style={styles.infoValue}>
-                Paid with {getPaymentMethodLabel(order.paymentMethod)}
+                {t(order.paymentMethod?.toLowerCase() || "offline")}
               </Text>
             </View>
           </View>
@@ -324,7 +327,7 @@ export default function OrderDetailsScreen() {
               />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Payment Status</Text>
+              <Text style={styles.infoLabel}>{t("paymentStatus")}</Text>
               <Text
                 style={[
                   styles.infoValue,
@@ -336,8 +339,7 @@ export default function OrderDetailsScreen() {
                   },
                 ]}
               >
-                {order.paymentStatus?.charAt(0).toUpperCase() +
-                  order.paymentStatus?.slice(1) || "Pending"}
+                {t(order.paymentStatus?.toLowerCase() || "pending")}
               </Text>
             </View>
           </View>
@@ -348,7 +350,7 @@ export default function OrderDetailsScreen() {
                 <Feather name="calendar" size={20} color={COLORS.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Payment Terms</Text>
+                <Text style={styles.infoLabel}>{t("paymentTerms")}</Text>
                 <Text style={styles.infoValue}>
                   {(order as any).paymentTerms === "monthly" ||
                   (order as any).paymentTerms === "weekly"
@@ -377,7 +379,7 @@ export default function OrderDetailsScreen() {
 
         {/* Delivery Info Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Delivery Information</Text>
+          <Text style={styles.cardTitle}>{t("deliveryInfo")}</Text>
 
           <View style={styles.infoItem}>
             <View style={styles.infoIconContainer}>
@@ -388,7 +390,7 @@ export default function OrderDetailsScreen() {
               />
             </View>
             <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Delivery Address</Text>
+              <Text style={styles.infoLabel}>{t("deliveryAddress")}</Text>
               <Text style={styles.infoValue}>{order.deliveryAddress}</Text>
             </View>
           </View>
@@ -399,7 +401,7 @@ export default function OrderDetailsScreen() {
                 <Feather name="calendar" size={20} color={COLORS.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Delivery Slot</Text>
+                <Text style={styles.infoLabel}>{t("deliverySlot")}</Text>
                 <Text style={styles.infoValue}>
                   {new Date(order.deliverySlot).toLocaleString("en-US", {
                     month: "short",
@@ -417,19 +419,19 @@ export default function OrderDetailsScreen() {
         {/* Notes Card */}
         {order.notes && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Special Instructions</Text>
+            <Text style={styles.cardTitle}>{t("specialInstructions")}</Text>
             <Text style={styles.notesText}>{order.notes}</Text>
           </View>
         )}
 
         {/* Timeline Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Order Timeline</Text>
+          <Text style={styles.cardTitle}>{t("orderTimeline")}</Text>
 
           <View style={styles.timelineItem}>
             <View style={styles.timelineDot} />
             <View style={styles.timelineContent}>
-              <Text style={styles.timelineLabel}>Order Placed</Text>
+              <Text style={styles.timelineLabel}>{t("orderPlaced")}</Text>
               <Text style={styles.timelineValue}>
                 {order.createdAt
                   ? new Date(order.createdAt).toLocaleString("en-US", {
@@ -448,7 +450,7 @@ export default function OrderDetailsScreen() {
             <View style={styles.timelineItem}>
               <View style={styles.timelineDot} />
               <View style={styles.timelineContent}>
-                <Text style={styles.timelineLabel}>Out for Delivery</Text>
+                <Text style={styles.timelineLabel}>{t("outForDelivery")}</Text>
                 <Text style={styles.timelineValue}>
                   {new Date(order.outForDeliveryAt).toLocaleString("en-US", {
                     month: "short",
@@ -476,7 +478,7 @@ export default function OrderDetailsScreen() {
             onPress={handleCancelOrder}
           >
             <Feather name="x-circle" size={20} color={COLORS.error} />
-            <Text style={styles.cancelButtonText}>Cancel Order</Text>
+            <Text style={styles.cancelButtonText}>{t("cancelOrder")}</Text>
           </TouchableOpacity>
         )}
 
@@ -486,7 +488,7 @@ export default function OrderDetailsScreen() {
             onPress={handleTrackOrder}
           >
             <Feather name="map-pin" size={20} color="white" />
-            <Text style={styles.trackButtonText}>Track Order</Text>
+            <Text style={styles.trackButtonText}>{t("trackOrder")}</Text>
           </TouchableOpacity>
         )}
 
@@ -496,7 +498,7 @@ export default function OrderDetailsScreen() {
             onPress={handleReorder}
           >
             <Feather name="refresh-cw" size={20} color="white" />
-            <Text style={styles.reorderButtonText}>Reorder</Text>
+            <Text style={styles.reorderButtonText}>{t("reorder")}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -512,10 +514,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: COLORS.accent,
+    backgroundColor: "#F0F9FF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     shadowColor: "#000",
@@ -524,11 +526,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     position: "relative",
+    gap: 16,
   },
   backButton: {
     padding: 8,
-    position: "absolute",
-    left: 16,
+    left: 0,
   },
   headerTitle: {
     fontSize: 18,

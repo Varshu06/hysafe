@@ -28,6 +28,7 @@ import {
   DeliveryConfirmModal,
   PaymentMethod,
 } from "../../src/components/staff/DeliveryConfirmModal";
+import { t } from "i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -265,7 +266,7 @@ export default function OngoingOrdersScreen() {
 
   return (
     <View style={styles.container}>
-      <StaffHeader title="Ongoing" />
+      <StaffHeader title={t("ongoing")} />
 
       <View style={styles.content}>
         {/* Swipeable Tab Bar */}
@@ -288,7 +289,7 @@ export default function OngoingOrdersScreen() {
                   ]}
                   numberOfLines={1}
                 >
-                  {filterItem.label}
+                  {t(filterItem.key)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -327,10 +328,8 @@ export default function OngoingOrdersScreen() {
                         size={28}
                         color={COLORS.textLight}
                       />
-                      <Text style={styles.emptyTitle}>
-                        No {filterItem.label.toLowerCase()} orders
-                      </Text>
-                      <Text style={styles.emptyText}>Pull to refresh.</Text>
+                      <Text style={styles.emptyTitle}>{t("noOrders")}</Text>
+                      <Text style={styles.emptyText}>{t("pullToRefresh")}</Text>
                     </View>
                   }
                 />

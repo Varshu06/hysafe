@@ -1,14 +1,28 @@
-export type OrderStatus = 'pending' | 'accepted' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type OrderStatus =
+  | "pending"
+  | "accepted"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
+
+export interface OrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  deliveryCharge: number;
+}
 
 export interface Order {
   _id: string;
   customer?: string;
   quantity: number;
+  items: OrderItem[];
   totalPrice?: number; // Backend uses totalPrice, frontend used price
   price?: number; // detailed UI uses price
   status: OrderStatus;
-  paymentMethod: 'online' | 'offline';
-  paymentStatus?: 'pending' | 'paid' | 'failed';
+  paymentMethod: "online" | "offline";
+  paymentStatus?: "pending" | "paid" | "failed";
   deliveryAddress: string;
   pickupAddress?: string; // Admin/Staff might see this, or derived from system
   location?: {
@@ -31,4 +45,3 @@ export interface Order {
     phone?: string;
   };
 }
-

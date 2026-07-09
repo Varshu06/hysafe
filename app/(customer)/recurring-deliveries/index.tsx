@@ -1,17 +1,32 @@
-import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../../../src/context/AuthContext';
-import { deleteRecurringDelivery, getRecurringDeliveries, RecurringDelivery } from '../../../src/services/recurring.service';
-import { COLORS } from '../../../src/utils/constants';
+import { Feather } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../../src/context/AuthContext";
+import {
+  deleteRecurringDelivery,
+  getRecurringDeliveries,
+  RecurringDelivery,
+} from "../../../src/services/recurring.service";
+import { COLORS } from "../../../src/utils/constants";
 
 export default function RecurringDeliveriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [recurringDeliveries, setRecurringDeliveries] = useState<RecurringDelivery[]>([]);
+  const [recurringDeliveries, setRecurringDeliveries] = useState<
+    RecurringDelivery[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -20,8 +35,11 @@ export default function RecurringDeliveriesScreen() {
       const response = await getRecurringDeliveries();
       setRecurringDeliveries(response.recurringDeliveries);
     } catch (error: any) {
-      console.error('Error loading recurring deliveries:', error);
-      Alert.alert('Error', error.message || 'Failed to load recurring deliveries');
+      console.error("Error loading recurring deliveries:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to load recurring deliveries",
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -31,7 +49,7 @@ export default function RecurringDeliveriesScreen() {
   useFocusEffect(
     useCallback(() => {
       loadRecurringDeliveries();
-    }, [loadRecurringDeliveries])
+    }, [loadRecurringDeliveries]),
   );
 
   const onRefresh = () => {
@@ -41,47 +59,53 @@ export default function RecurringDeliveriesScreen() {
 
   const handleDelete = async (id: string, productName: string) => {
     Alert.alert(
-      'Cancel Recurring Delivery',
+      "Cancel Recurring Delivery",
       `Are you sure you want to cancel the recurring delivery for ${productName}?`,
       [
-        { text: 'No', style: 'cancel' },
+        { text: "No", style: "cancel" },
         {
-          text: 'Yes, Cancel',
-          style: 'destructive',
+          text: "Yes, Cancel",
+          style: "destructive",
           onPress: async () => {
             try {
               await deleteRecurringDelivery(id);
-              Alert.alert('Success', 'Recurring delivery cancelled successfully');
+              Alert.alert(
+                "Success",
+                "Recurring delivery cancelled successfully",
+              );
               loadRecurringDeliveries();
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to cancel recurring delivery');
+              Alert.alert(
+                "Error",
+                error.message || "Failed to cancel recurring delivery",
+              );
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const formatFrequency = (frequency: string) => {
     switch (frequency) {
-      case 'daily':
-        return 'Daily';
-      case 'every-2-days':
-        return 'Every 2 Days';
-      case 'weekly':
-        return 'Weekly';
+      case "daily":
+        return "Daily";
+      case "every-2-days":
+        return "Every 2 Days";
+      case "weekly":
+        return "Weekly";
       default:
         return frequency;
     }
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Not scheduled';
+    if (!dateString) return "Not scheduled";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -89,7 +113,10 @@ export default function RecurringDeliveriesScreen() {
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
             <Feather name="arrow-left" size={24} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Recurring Deliveries</Text>
@@ -97,7 +124,9 @@ export default function RecurringDeliveriesScreen() {
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading recurring deliveries...</Text>
+          <Text style={styles.loadingText}>
+            Loading recurring deliveries...
+          </Text>
         </View>
       </View>
     );
@@ -106,7 +135,10 @@ export default function RecurringDeliveriesScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Recurring Deliveries</Text>
@@ -116,18 +148,21 @@ export default function RecurringDeliveriesScreen() {
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {recurringDeliveries.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Feather name="repeat" size={64} color={COLORS.textLight} />
             <Text style={styles.emptyTitle}>No Recurring Deliveries</Text>
             <Text style={styles.emptySubtitle}>
-              Set up recurring deliveries from the checkout page to automatically receive your orders
+              Set up recurring deliveries from the checkout page to
+              automatically receive your orders
             </Text>
             <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => router.push('/(customer)/products')}
+              onPress={() => router.push("/(customer)/products")}
             >
               <Text style={styles.browseButtonText}>Browse Products</Text>
             </TouchableOpacity>
@@ -138,50 +173,94 @@ export default function RecurringDeliveriesScreen() {
             {recurringDeliveries
               .filter((rd) => rd.isActive)
               .map((delivery) => (
-                <View key={delivery._id || delivery.id} style={styles.deliveryCard}>
+                <View
+                  key={delivery._id || delivery.id}
+                  style={styles.deliveryCard}
+                >
                   <View style={styles.deliveryHeader}>
                     <View style={styles.deliveryInfo}>
-                      <Text style={styles.productName}>{delivery.productName}</Text>
-                      <Text style={styles.quantity}>Quantity: {delivery.quantity}</Text>
+                      <Text style={styles.productName}>
+                        {delivery.productName}
+                      </Text>
+                      <Text style={styles.quantity}>
+                        Quantity: {delivery.quantity}
+                      </Text>
                     </View>
-                    <View style={[styles.statusBadge, delivery.isActive && styles.statusBadgeActive]}>
-                      <Text style={[styles.statusText, delivery.isActive && styles.statusTextActive]}>
-                        {delivery.isActive ? 'Active' : 'Inactive'}
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        delivery.isActive && styles.statusBadgeActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusText,
+                          delivery.isActive && styles.statusTextActive,
+                        ]}
+                      >
+                        {delivery.isActive ? "Active" : "Inactive"}
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.deliveryDetails}>
                     <View style={styles.detailRow}>
-                      <Feather name="repeat" size={16} color={COLORS.textLight} />
-                      <Text style={styles.detailText}>{formatFrequency(delivery.frequency)}</Text>
+                      <Feather
+                        name="repeat"
+                        size={16}
+                        color={COLORS.textLight}
+                      />
+                      <Text style={styles.detailText}>
+                        {formatFrequency(delivery.frequency)}
+                      </Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Feather name="calendar" size={16} color={COLORS.textLight} />
+                      <Feather
+                        name="calendar"
+                        size={16}
+                        color={COLORS.textLight}
+                      />
                       <Text style={styles.detailText}>
                         Next delivery: {formatDate(delivery.nextDeliveryDate)}
                       </Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Feather name="map-pin" size={16} color={COLORS.textLight} />
+                      <Feather
+                        name="map-pin"
+                        size={16}
+                        color={COLORS.textLight}
+                      />
                       <Text style={styles.detailText} numberOfLines={2}>
                         {delivery.deliveryAddress}
                       </Text>
                     </View>
                     <View style={styles.detailRow}>
-                      <Feather name="credit-card" size={16} color={COLORS.textLight} />
+                      <Feather
+                        name="credit-card"
+                        size={16}
+                        color={COLORS.textLight}
+                      />
                       <Text style={styles.detailText}>
-                        Payment: {delivery.paymentTerms.charAt(0).toUpperCase() + delivery.paymentTerms.slice(1)}
+                        Payment:{" "}
+                        {delivery.paymentTerms.charAt(0).toUpperCase() +
+                          delivery.paymentTerms.slice(1)}
                       </Text>
                     </View>
                   </View>
 
                   <TouchableOpacity
                     style={styles.cancelButton}
-                    onPress={() => handleDelete(delivery._id || delivery.id, delivery.productName)}
+                    onPress={() =>
+                      handleDelete(
+                        delivery._id || delivery.id,
+                        delivery.productName,
+                      )
+                    }
                   >
                     <Feather name="x-circle" size={18} color={COLORS.error} />
-                    <Text style={styles.cancelButtonText}>Cancel Recurring Delivery</Text>
+                    <Text style={styles.cancelButtonText}>
+                      Cancel Recurring Delivery
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -198,41 +277,42 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingBottom: 16,
     backgroundColor: COLORS.accent,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
-    position: 'relative',
+    position: "relative",
   },
   backButton: {
-    padding: 8,
-    position: 'absolute',
+    padding: 16,
+    top: 16,
+    position: "absolute",
     left: 20,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   placeholder: {
     width: 40,
-    position: 'absolute',
+    position: "absolute",
     right: 20,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     gap: 12,
   },
   loadingText: {
@@ -247,19 +327,19 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 16,
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 40,
     marginTop: 60,
   },
   emptyTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginTop: 16,
     marginBottom: 8,
@@ -267,7 +347,7 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 14,
     color: COLORS.textLight,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 24,
   },
@@ -280,25 +360,25 @@ const styles = StyleSheet.create({
   browseButtonText: {
     color: COLORS.secondary,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   deliveryCard: {
     backgroundColor: COLORS.secondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   deliveryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
   deliveryInfo: {
@@ -306,7 +386,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -318,14 +398,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
   },
   statusBadgeActive: {
-    backgroundColor: '#D1FAE5',
+    backgroundColor: "#D1FAE5",
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.textLight,
   },
   statusTextActive: {
@@ -336,11 +416,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
   },
   detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   detailText: {
@@ -349,22 +429,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: "#FECACA",
     gap: 6,
   },
   cancelButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.error,
   },
 });
-
-
-

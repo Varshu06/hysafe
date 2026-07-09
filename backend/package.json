@@ -7,6 +7,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed:admin": "ts-node seed-admin.ts",
+    "seed:inventory": "ts-node seed-inventory.ts",
     "test-db": "ts-node test-connection.ts",
     "clear-db": "ts-node clear-db.ts"
   },
@@ -31,4 +32,3 @@
     "typescript": "^5.2.2"
   }
 }
-

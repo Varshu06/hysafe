@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -15,19 +15,33 @@ import { WhyChooseUs } from "../../src/components/customer/WhyChooseUs";
 import { FloatingAddButton } from "../../src/components/ui/FloatingAddButton";
 import { useCart } from "../../src/context/CartContext";
 import { useOrder } from "../../src/context/OrderContext";
-import { PRODUCTS } from "../../src/data/dummy";
+// import { PRODUCTS } from "../../src/data/dummy";
 import { Order } from "../../src/types/order.types";
 import { COLORS } from "../../src/utils/constants";
 import { t } from "i18next";
+import { getProducts } from "@/services/product.service";
+import { Product } from "@/types/product.types";
+import { ProductImages } from "@/data/dummy";
+// import { Product } from "../types/product.types";
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
   const { addToCart, getQuantity, incrementQuantity, decrementQuantity } =
     useCart();
   const { orders, refreshOrders, isLoading } = useOrder();
+  const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     refreshOrders();
+  }, []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const fetchedProducts = await getProducts();
+      setProducts(fetchedProducts.data);
+      console.log("Fetching products...", fetchedProducts);
+    };
+    fetchProducts();
   }, []);
 
   // Get active orders (pending, accepted, out_for_delivery)
@@ -53,9 +67,9 @@ export default function CustomerHomeScreen() {
     const status = order.status?.toLowerCase();
     let progress = 0;
     let timeline = [
-      { status: "Picked UP", completed: false, current: false },
-      { status: "On the Way", completed: false, current: false },
-      { status: "Delivered", completed: false, current: false },
+      { status: "picked", completed: false, current: false },
+      { status: "on_the_way", completed: false, current: false },
+      { status: "delivered", completed: false, current: false },
     ];
 
     if (status === "pending") {
@@ -81,7 +95,7 @@ export default function CustomerHomeScreen() {
       id: order._id,
       status: order.status || "pending",
       driverName:
-        order.driverName || order.assignedStaff?.name || "Not Assigned",
+        order.driverName || order.assignedStaff?.name || "notAssigned",
       progress,
       timeline,
     };
@@ -106,13 +120,14 @@ export default function CustomerHomeScreen() {
     };
   };
 
-  const handleAddProduct = (product: (typeof PRODUCTS)[0]) => {
+  const handleAddProduct = (product: Product) => {
     addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.image,
       volume: product.volume,
+      deliveryCharge: product.deliveryCharge || 0,
     });
     // Don't redirect - let user add multiple items and go to checkout when ready
   };
@@ -138,15 +153,16 @@ export default function CustomerHomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.productsScroll}
           >
-            {PRODUCTS.map((product) => (
+            {products.map((product) => (
               <View key={product.id} style={styles.productCardSmall}>
                 <View style={styles.productImageContainer}>
                   <Image
-                    source={product.image}
+                    source={ProductImages[product.image]}
                     style={styles.productImage}
                     resizeMode="contain"
                   />
                 </View>
+                <Text style={styles.productName}>{product.id}</Text>
                 <Text style={styles.productName}>{product.name}</Text>
                 <View style={styles.priceRow}>
                   <Text style={styles.price}>₹ {product.price}</Text>

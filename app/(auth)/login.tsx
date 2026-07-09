@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,7 +16,9 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { COLORS } from "../../src/utils/constants";
-import { t } from "i18next";
+import { changeLanguage, t } from "i18next";
+import LanguageSelectionModal from "@/components/auth/LanguageSelectionModal";
+import { getSavedLanguage } from "@/i18n";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -25,6 +27,25 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    checkLanguage();
+  }, []);
+
+  const checkLanguage = async () => {
+    const lang = await getSavedLanguage();
+
+    if (!lang) {
+      setShowModal(true);
+    }
+  };
+
+  const handleLanguage = async (lang: string) => {
+    await changeLanguage(lang);
+
+    setShowModal(false);
+  };
 
   const handleLogin = async () => {
     // Validate phone number
@@ -95,6 +116,7 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <LanguageSelectionModal visible={showModal} onSelect={handleLanguage} />
       {/* Water Theme Header */}
       <ImageBackground
         source={require("../../src/assets/loginimage.png")}

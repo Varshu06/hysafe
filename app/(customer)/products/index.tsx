@@ -1,26 +1,84 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProductCard } from "../../../src/components/customer/ProductCard";
 import { useCart } from "../../../src/context/CartContext";
 import { PRODUCTS } from "../../../src/data/dummy";
 import { COLORS } from "../../../src/utils/constants";
+import { getProducts } from "@/services/product.service";
 import { t } from "i18next";
+import { Product } from "@/types/product.types";
+const PAGE_SIZE = 5;
 
 export default function ProductsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addToCart, removeFromCart, getQuantity, getTotalItems } = useCart();
 
-  const toggleSelection = (product: (typeof PRODUCTS)[0]) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
+
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasNext, setHasNext] = useState(true);
+
+  useEffect(() => {
+    fetchProducts(1, true);
+  }, []);
+
+  const fetchProducts = useCallback(
+    async (pageNumber: number, refresh = false) => {
+      if (loading) return;
+
+      if (!refresh && !hasNext) return;
+
+      setLoading(true);
+
+      try {
+        const res = await getProducts(pageNumber, PAGE_SIZE);
+
+        if (refresh) {
+          setProducts(res.data);
+        } else {
+          setProducts((prev) => [...prev, ...res.data]);
+        }
+
+        setPage(res.page);
+        setHasNext(res.hasNext);
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [loading, hasNext],
+  );
+
+  const loadMore = () => {
+    if (!loading && hasNext) {
+      fetchProducts(page + 1);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setHasNext(true);
+    fetchProducts(1, true);
+  };
+
+  const toggleSelection = (product: Product) => {
     const isInCart = getQuantity(product.id) > 0;
     if (isInCart) {
       removeFromCart(product.id);
@@ -31,6 +89,7 @@ export default function ProductsScreen() {
         price: product.price,
         image: product.image,
         volume: product.volume,
+        deliveryCharge: product.deliveryCharge || 0,
       });
     }
   };
@@ -49,7 +108,7 @@ export default function ProductsScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView
+      {/* <ScrollView
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
       >
@@ -66,7 +125,44 @@ export default function ProductsScreen() {
             );
           })}
         </View>
-      </ScrollView>
+      </ScrollView> */}
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <ProductCard
+            key={item.id}
+            item={item}
+            selected={getQuantity(item.id) > 0}
+            onSelect={() => toggleSelection(item)}
+          />
+        )}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.grid}
+        showsVerticalScrollIndicator={false}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        ListFooterComponent={
+          loading && page > 1 ? (
+            <ActivityIndicator size="large" style={{ marginVertical: 20 }} />
+          ) : null
+        }
+        ListEmptyComponent={
+          !loading ? (
+            <Text
+              style={{
+                textAlign: "center",
+                marginTop: 50,
+              }}
+            >
+              No Products Found
+            </Text>
+          ) : null
+        }
+      />
 
       {getTotalItems() > 0 && (
         <View style={styles.footer}>
@@ -109,7 +205,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   backButton: {
-    padding: 8,
+    padding: 16,
+    top: 16,
     position: "absolute",
     left: 16,
   },

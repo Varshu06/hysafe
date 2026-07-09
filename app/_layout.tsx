@@ -1,5 +1,4 @@
 import "../src/i18n";
-import { loadSavedLanguage } from "../src/i18n";
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { StatusBar } from "react-native";
@@ -27,10 +26,6 @@ function RootStack() {
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    loadSavedLanguage();
-  }, []);
-
   return (
     <SafeAreaProvider>
       <StatusBar

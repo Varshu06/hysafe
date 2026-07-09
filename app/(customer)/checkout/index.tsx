@@ -36,6 +36,7 @@ import {
   FACTORY_LOCATION,
   SERVICE_RADIUS_KM,
 } from "../../../src/utils/constants";
+import { t } from "i18next";
 
 type PaymentMethodValue = "online" | "offline";
 const CHECKOUT_PAYMENT_METHOD_KEY = "@hysafe_checkout_payment_method";
@@ -109,7 +110,7 @@ export default function CheckoutScreen() {
       setSelectedPaymentTerms(userPaymentTerms);
     }
   }, [userPaymentTerms, selectedPaymentTerms]);
-
+  const paymentTerm = selectedPaymentTerms || userPaymentTerms;
   // Load saved addresses
   const loadAddresses = useCallback(async () => {
     const addresses = await addressStorage.getAllAddresses(user);
@@ -203,6 +204,13 @@ export default function CheckoutScreen() {
       // Prepare order data
       const orderData = {
         quantity: totalQuantity,
+        items: items.map((item) => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          deliveryCharges: item.deliveryCharge || 0,
+        })),
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
         location: selectedAddress.location,
         paymentMethod: paymentMethod,
@@ -216,7 +224,7 @@ export default function CheckoutScreen() {
         eventName: isEventOrder ? eventName : undefined,
         receiverName: receiverName,
         receiverPhone: receiverPhone ? `+91${receiverPhone}` : undefined,
-        paymentTerms: selectedPaymentTerms || userPaymentTerms || "one-time",
+        paymentTerms: paymentTerm || "one-time",
       };
 
       const response = await createOrder(orderData);
@@ -234,8 +242,7 @@ export default function CheckoutScreen() {
               deliveryAddress:
                 selectedAddress.fullAddress || selectedAddress.address,
               deliveryAddressId: selectedAddress.id,
-              paymentTerms:
-                selectedPaymentTerms || userPaymentTerms || "one-time",
+              paymentTerms: paymentTerm || "one-time",
               specialInstructions: "", // Can be enhanced later
             };
 
@@ -286,7 +293,7 @@ export default function CheckoutScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
+        <Text style={styles.headerTitle}>{t("checkout")}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -297,12 +304,12 @@ export default function CheckoutScreen() {
         {/* Cart Items */}
         {items.length === 0 ? (
           <View style={styles.emptyCart}>
-            <Text style={styles.emptyCartText}>Your cart is empty</Text>
+            <Text style={styles.emptyCartText}>{t("emptyCart")}</Text>
             <TouchableOpacity
               style={styles.browseBtn}
               onPress={() => router.push("/(customer)/products")}
             >
-              <Text style={styles.browseBtnText}>Browse Products</Text>
+              <Text style={styles.browseBtnText}>{t("browseProducts")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -333,9 +340,6 @@ export default function CheckoutScreen() {
           ))
         )}
 
-        {/* Add Ons */}
-        <AddOns />
-
         {/* Delivery and Bill Details Card */}
         {items.length > 0 && (
           <View style={styles.detailsCard}>
@@ -345,8 +349,8 @@ export default function CheckoutScreen() {
               <View style={styles.detailContent}>
                 <Text style={styles.detailTitle}>
                   {isScheduledDelivery
-                    ? `Scheduled: ${getScheduledLabel()}`
-                    : "Delivery in 1hr - 2hrs"}
+                    ? `${t("scheduled")}: ${getScheduledLabel()}`
+                    : `${t("deliveryIn1hr2hrs")}`}
                 </Text>
                 <TouchableOpacity
                   onPress={() => setShowDeliveryTime(true)}
@@ -354,8 +358,8 @@ export default function CheckoutScreen() {
                 >
                   <Text style={styles.detailLink}>
                     {isScheduledDelivery
-                      ? "Change delivery time"
-                      : "Not Now? Set time for delivery"}
+                      ? `${t("changeDeliveryTime")}`
+                      : `${t("notNowSetDeliveryTime")}`}
                   </Text>
                 </TouchableOpacity>
                 {/* Event/Wedding Order Toggle */}
@@ -375,7 +379,7 @@ export default function CheckoutScreen() {
                     )}
                   </View>
                   <Text style={styles.eventLabel}>
-                    This is an Event/Wedding order
+                    {t("eventWeddingOrder")}
                   </Text>
                 </TouchableOpacity>
                 {/* Event Name Input - Shows when event toggle is ON */}
@@ -383,7 +387,7 @@ export default function CheckoutScreen() {
                   <View style={styles.eventNameContainer}>
                     <TextInput
                       style={styles.eventNameInput}
-                      placeholder="Event name (optional)"
+                      placeholder={t("eventNamePlaceholder")}
                       placeholderTextColor={COLORS.textLight}
                       value={eventName}
                       onChangeText={setEventName}
@@ -401,7 +405,7 @@ export default function CheckoutScreen() {
             >
               <Ionicons name="home-outline" size={20} color="#102841" />
               <View style={styles.detailContent}>
-                <Text style={styles.detailTitle}>Delivery at Home</Text>
+                <Text style={styles.detailTitle}>{t("deliveryAtHome")}</Text>
                 <Text style={styles.detailSubtext} numberOfLines={1}>
                   {selectedAddress?.address || "Select delivery address"}
                 </Text>
@@ -431,7 +435,7 @@ export default function CheckoutScreen() {
                 )}
                 <TouchableOpacity onPress={() => setShowInstructions(true)}>
                   <Text style={styles.detailLink}>
-                    Add instructions for delivery partner
+                    {t("addDeliveryInstructions")}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -458,15 +462,13 @@ export default function CheckoutScreen() {
             <View style={styles.detailRow}>
               <Ionicons name="repeat-outline" size={20} color="#102841" />
               <View style={styles.detailContent}>
-                <Text style={styles.detailTitle}>
-                  Make this a recurring delivery
-                </Text>
+                <Text style={styles.detailTitle}>{t("recurringDelivery")}</Text>
                 <Text style={styles.detailSubtext}>
-                  Automatically repeat this order based on your schedule
+                  {t("recurringDeliveryDescription")}
                 </Text>
                 {isRecurringDelivery && (
                   <View style={styles.frequencyOptions}>
-                    <Text style={styles.frequencyLabel}>Frequency:</Text>
+                    <Text style={styles.frequencyLabel}>{t("frequency")}</Text>
                     <View style={styles.frequencyButtons}>
                       {[
                         { value: "daily", label: "Daily" },
@@ -491,7 +493,7 @@ export default function CheckoutScreen() {
                                 styles.frequencyButtonTextSelected,
                             ]}
                           >
-                            {freq.label}
+                            {t(freq.label)}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -520,27 +522,25 @@ export default function CheckoutScreen() {
             </View>
 
             {/* Payment Terms */}
-            {selectedPaymentTerms || userPaymentTerms ? (
+            {paymentTerm ? (
               <View style={styles.detailRow}>
                 <Ionicons name="calendar-outline" size={20} color="#102841" />
                 <View style={styles.detailContent}>
                   <Text style={styles.detailTitle}>
-                    Payment Terms:{" "}
-                    {(selectedPaymentTerms || userPaymentTerms)
-                      ?.charAt(0)
-                      .toUpperCase() +
-                      (selectedPaymentTerms || userPaymentTerms)?.slice(1)}
+                    {t("paymentTerms")}:{" "}
+                    {paymentTerm?.charAt(0).toUpperCase() +
+                      paymentTerm?.slice(1)}
                   </Text>
-                  {((selectedPaymentTerms || userPaymentTerms) === "monthly" ||
-                    (selectedPaymentTerms || userPaymentTerms) === "weekly") &&
+                  {(paymentTerm === "monthly" || paymentTerm === "weekly") &&
                     nextPaymentDue && (
                       <Text style={styles.detailSubtext}>
                         Due on {nextPaymentDue}
                       </Text>
                     )}
-                  {(selectedPaymentTerms || userPaymentTerms) ===
-                    "one-time" && (
-                    <Text style={styles.detailSubtext}>Pay for each order</Text>
+                  {paymentTerm === "one-time" && (
+                    <Text style={styles.detailSubtext}>
+                      {t("payForEachOrder")}
+                    </Text>
                   )}
                 </View>
                 <TouchableOpacity
@@ -557,8 +557,10 @@ export default function CheckoutScreen() {
               >
                 <Ionicons name="calendar-outline" size={20} color="#102841" />
                 <View style={styles.detailContent}>
-                  <Text style={styles.detailTitle}>Payment Terms</Text>
-                  <Text style={styles.detailSubtext}>Select payment terms</Text>
+                  <Text style={styles.detailTitle}>{t("paymentTerms")}</Text>
+                  <Text style={styles.detailSubtext}>
+                    {t("selectPaymentTerm")}
+                  </Text>
                 </View>
                 <Feather name="chevron-right" size={20} color="#94A3B8" />
               </TouchableOpacity>
@@ -572,7 +574,9 @@ export default function CheckoutScreen() {
             >
               <Ionicons name="receipt-outline" size={20} color="#102841" />
               <View style={styles.detailContent}>
-                <Text style={styles.detailTitle}>Total Bill ₹{totalPrice}</Text>
+                <Text style={styles.detailTitle}>
+                  {t("totalBill")} ₹{totalPrice}
+                </Text>
               </View>
               <Feather name="chevron-right" size={20} color="#94A3B8" />
             </TouchableOpacity>
@@ -682,7 +686,7 @@ export default function CheckoutScreen() {
 
       <PaymentTermsModal
         visible={showPaymentTermsModal}
-        selectedTerms={selectedPaymentTerms || userPaymentTerms}
+        selectedTerms={paymentTerm}
         onClose={() => setShowPaymentTermsModal(false)}
         onSelect={(terms) => {
           setSelectedPaymentTerms(terms);
@@ -734,7 +738,8 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   backButton: {
-    padding: 8,
+    padding: 16,
+    top: 16,
     position: "absolute",
     left: 20,
   },
@@ -955,19 +960,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     color: COLORS.text,
   },
-  eventNameContainer: {
-    marginTop: 8,
-    width: "100%",
-  },
-  eventNameInput: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    color: COLORS.text,
-  },
   distanceInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -1026,6 +1018,7 @@ const styles = StyleSheet.create({
   frequencyButtons: {
     flexDirection: "row",
     gap: 8,
+    flexWrap: "wrap",
   },
   frequencyButton: {
     paddingHorizontal: 12,

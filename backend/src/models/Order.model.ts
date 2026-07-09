@@ -11,6 +11,12 @@ export interface IOrder extends Document {
   customerId: mongoose.Types.ObjectId;
   customerProfileId?: mongoose.Types.ObjectId;
   quantity: number;
+  items: {
+    productId: mongoose.Types.ObjectId;
+    productName: string;
+    quantity: number;
+    price: number;
+  }[];
   totalPrice: number;
   price: number;
   status: OrderStatus;
@@ -49,10 +55,30 @@ const OrderSchema = new Schema<IOrder>(
       type: Schema.Types.ObjectId,
       ref: "CustomerProfile",
     },
-    quantity: {
-      type: Number,
+    items: {
+      type: [
+        {
+          productId: {
+            type: Schema.Types.ObjectId,
+            ref: "Product",
+            required: true,
+          },
+          productName: {
+            type: String,
+            required: true,
+          },
+          quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+          },
+          price: {
+            type: Number,
+            required: true,
+          },
+        },
+      ],
       required: true,
-      min: 1,
     },
     totalPrice: {
       type: Number,

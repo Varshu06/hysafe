@@ -1,8 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, ImageSourcePropType, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useCart } from '../../context/CartContext';
-import { PRODUCTS } from '../../data/dummy';
-import { COLORS } from '../../utils/constants';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Image,
+  ImageSourcePropType,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useCart } from "../../context/CartContext";
+import { PRODUCTS } from "../../data/dummy";
+import { COLORS } from "../../utils/constants";
+import { Product } from "@/types/product.types";
+import { t } from "i18next";
 
 interface AddOnItemProps {
   item: {
@@ -57,7 +68,7 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
 
   return (
     <View style={styles.card}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.addButton}
         onPress={handlePress}
         activeOpacity={0.7}
@@ -70,22 +81,22 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
             },
           ]}
         >
-          <Text style={styles.addText}>{isInCart ? '✓' : '+'}</Text>
+          <Text style={styles.addText}>{isInCart ? "✓" : "+"}</Text>
         </Animated.View>
       </TouchableOpacity>
       <View style={styles.imageContainer}>
-         {item.image && (
-           <Image 
-              source={item.image} 
-              style={styles.productImage}
-              resizeMode="contain"
-           />
-         )}
+        {item.image && (
+          <Image
+            source={item.image}
+            style={styles.productImage}
+            resizeMode="contain"
+          />
+        )}
       </View>
       <Text style={styles.name}>{item.name}</Text>
       <View style={styles.priceRow}>
-         <Text style={styles.price}>₹{item.price}</Text>
-         <Text style={styles.free}>Free</Text>
+        <Text style={styles.price}>₹{item.price}</Text>
+        <Text style={styles.free}>Free</Text>
       </View>
     </View>
   );
@@ -94,13 +105,14 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
 export const AddOns = () => {
   const { addToCart, getQuantity } = useCart();
 
-  const handleAddItem = (item: typeof PRODUCTS[0]) => {
+  const handleAddItem = (item: Product) => {
     addToCart({
       id: item.id,
       name: item.name,
       price: item.price,
       image: item.image,
       volume: item.volume,
+      deliveryCharge: item.deliveryCharge,
     });
   };
 
@@ -114,8 +126,12 @@ export const AddOns = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Missed something? Add a few more bottles or cans!</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.title}>{t("missedSomething")}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {itemsNotInCart.map((item) => {
           return (
             <AddOnItem
@@ -137,9 +153,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
-    color: '#102841',
+    color: "#102841",
   },
   scrollContent: {
     paddingRight: 0,
@@ -147,68 +163,67 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 140,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     borderRadius: 12,
     padding: 12,
     marginRight: 12,
-    alignItems: 'center',
-    position: 'relative',
+    alignItems: "center",
+    position: "relative",
   },
   addButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#102841',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#102841",
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 10,
   },
   iconContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   addText: {
-    color: 'white',
+    color: "white",
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     lineHeight: 16,
   },
   imageContainer: {
     width: 80,
     height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
     marginTop: 8,
   },
   productImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   name: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: "500",
     marginBottom: 4,
-    color: '#102841',
-    textAlign: 'center',
+    color: "#102841",
+    textAlign: "center",
   },
   priceRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   price: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#102841',
+    fontWeight: "600",
+    color: "#102841",
   },
   free: {
     fontSize: 10,
-    color: '#102841',
+    color: "#102841",
   },
 });
-
