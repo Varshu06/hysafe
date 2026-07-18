@@ -88,7 +88,6 @@ export default function ProductsScreen() {
         name: product.name,
         price: product.price,
         image: product.image,
-        volume: product.volume,
         deliveryCharge: product.deliveryCharge || 0,
       });
     }

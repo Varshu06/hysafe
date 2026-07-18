@@ -1,23 +1,34 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../../utils/constants';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Image,
+  ImageSourcePropType,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { COLORS } from "../../utils/constants";
 
 interface BulkOrderCardProps {
   item: {
     id: string;
     name: string;
-    price: number;           // Single order price
-    bulkPrice: number;      // Bulk order price
+    price: number; // Single order price
+    bulkPrice: number; // Bulk order price
     bulkMinQuantity: number; // Minimum quantity for bulk
     deliveryCharge: string;
     image: ImageSourcePropType;
-    volume: string;
   };
   selected?: boolean;
   onSelect?: () => void;
 }
 
-export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) => {
+export const BulkOrderCard = ({
+  item,
+  selected,
+  onSelect,
+}: BulkOrderCardProps) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const prevSelectedRef = useRef(selected);
@@ -54,13 +65,13 @@ export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) 
   const savingsPercent = Math.round((savings / item.price) * 100);
 
   return (
-    <TouchableOpacity 
-      style={[styles.card, selected && styles.selectedCard]} 
+    <TouchableOpacity
+      style={[styles.card, selected && styles.selectedCard]}
       onPress={onSelect}
       activeOpacity={0.8}
     >
       {selected && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.checkIcon,
             {
@@ -78,16 +89,15 @@ export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) 
       </View>
 
       <View style={styles.imageContainer}>
-        <Image 
-          source={item.image} 
+        <Image
+          source={item.image}
           style={styles.productImage}
           resizeMode="contain"
         />
       </View>
-      
+
       <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.volume}>{item.volume}</Text>
-      
+
       {/* Price Comparison Section */}
       <View style={styles.priceContainer}>
         {/* Single Order Price */}
@@ -114,7 +124,7 @@ export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) 
       <View style={styles.minQuantityContainer}>
         <Text style={styles.minQuantityIcon}>📊</Text>
         <Text style={styles.minQuantityText}>
-          Minimum {item.bulkMinQuantity} {item.volume.includes('L') ? 'cans' : 'bottles'} for bulk pricing
+          Minimum {item.bulkMinQuantity} items for bulk pricing
         </Text>
       </View>
 
@@ -127,28 +137,28 @@ export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 12,
-    alignItems: 'center',
-    width: '48%',
+    alignItems: "center",
+    width: "48%",
     marginBottom: 16,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
     borderWidth: 2,
     borderColor: COLORS.primary,
-    position: 'relative',
+    position: "relative",
   },
   selectedCard: {
     borderColor: COLORS.primary,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     elevation: 5,
   },
   bulkBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     left: 8,
     backgroundColor: COLORS.primary,
@@ -158,63 +168,63 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   bulkBadgeText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   checkIcon: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
     width: 20,
     height: 20,
     borderRadius: 10,
     backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 2,
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: "white",
   },
   checkText: {
-    color: 'white',
+    color: "white",
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   imageContainer: {
     height: 100,
     width: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
     marginTop: 8,
   },
   productImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   name: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     marginBottom: 2,
-    textAlign: 'center',
+    textAlign: "center",
   },
   volume: {
     fontSize: 11,
     color: COLORS.textLight,
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   priceContainer: {
-    width: '100%',
-    backgroundColor: '#F8FAFC',
+    width: "100%",
+    backgroundColor: "#F8FAFC",
     borderRadius: 8,
     padding: 8,
     marginBottom: 8,
   },
   singlePriceSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 6,
   },
   singlePriceLabel: {
@@ -225,16 +235,16 @@ const styles = StyleSheet.create({
   singlePrice: {
     fontSize: 12,
     color: COLORS.textLight,
-    textDecorationLine: 'line-through',
+    textDecorationLine: "line-through",
   },
   divider: {
-    width: '100%',
+    width: "100%",
     height: 1,
     backgroundColor: COLORS.border,
     marginVertical: 6,
   },
   bulkPriceSection: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   bulkPriceLabel: {
     fontSize: 9,
@@ -243,32 +253,32 @@ const styles = StyleSheet.create({
   },
   bulkPrice: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.primary,
     marginBottom: 4,
   },
   savingsContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   savingsText: {
     fontSize: 10,
     color: COLORS.success,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   savingsPercent: {
     fontSize: 9,
     color: COLORS.success,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   minQuantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDF4',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDF4",
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
     marginBottom: 6,
-    width: '100%',
+    width: "100%",
     borderWidth: 1,
     borderColor: COLORS.success,
   },
@@ -278,21 +288,19 @@ const styles = StyleSheet.create({
   },
   minQuantityText: {
     fontSize: 9,
-    color: '#166534',
-    fontWeight: '600',
+    color: "#166534",
+    fontWeight: "600",
     flex: 1,
-    textAlign: 'center',
+    textAlign: "center",
   },
   deliveryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   deliveryText: {
     fontSize: 10,
     color: COLORS.textLight,
   },
 });
-
-

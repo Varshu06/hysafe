@@ -28,7 +28,6 @@ export interface CartItem {
   price: number;
   quantity: number;
   image: ImageSourcePropType;
-  volume: string;
 }
 
 // Storage-friendly cart item (without ImageSourcePropType)
@@ -37,7 +36,6 @@ interface StoredCartItem {
   name: string;
   price: number;
   quantity: number;
-  volume: string;
 }
 
 interface CartContextType {
@@ -47,7 +45,6 @@ interface CartContextType {
     name: string;
     price: number;
     image: string;
-    volume: string;
     deliveryCharge: number;
   }) => void;
   removeFromCart: (productId: string) => void;
@@ -75,23 +72,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         const cartJson = await AsyncStorage.getItem(CART_STORAGE_KEY);
         if (cartJson) {
           const storedItems: StoredCartItem[] = JSON.parse(cartJson);
-          // Reconstruct cart items with image from volume
+          // Reconstruct cart items and attach image from product lookup when possible
           const restoredItems: CartItem[] = storedItems.map((storedItem) => {
-            // Try to find product first for accurate image
             const product = PRODUCTS.find((p) => p.id === storedItem.id);
-            if (product) {
-              return {
-                ...storedItem,
-                image: product.image,
-              };
-            }
-            // Fallback: reconstruct image from volume
-            const volumeKey = storedItem.volume.toLowerCase().replace("l", "l");
-            const image = ProductImages[volumeKey] || ProductImages["20l"];
+            const image = product ? product.image : ProductImages["20l"];
             return {
               ...storedItem,
               image,
-            };
+            } as CartItem;
           });
           setItems(restoredItems);
         }
@@ -130,7 +118,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     name: string;
     price: number;
     image: string;
-    volume: string;
     deliveryCharge: number;
   }) => {
     setItems((prev) => {
@@ -142,7 +129,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
             : item,
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, quantity: 1 } as CartItem];
     });
   };
 

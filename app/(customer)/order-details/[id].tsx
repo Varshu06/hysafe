@@ -90,8 +90,9 @@ export default function OrderDetailsScreen() {
     }
 
     try {
-      // Find the 20L water can product (default product)
-      const product = PRODUCTS.find((p) => p.volume === "20L") || PRODUCTS[0];
+      // Find a suitable product variant (prefer 20L by name), fallback to first product
+      const product =
+        PRODUCTS.find((p) => p.name.includes("20L")) || PRODUCTS[0];
 
       // Add to cart with the order quantity
       const currentQuantity = order.quantity || 1;
@@ -109,7 +110,7 @@ export default function OrderDetailsScreen() {
           name: product.name,
           price: product.price,
           image: product.image,
-          volume: product.volume,
+          // volume removed
           deliveryCharge: product.deliveryCharge || 0,
         });
 

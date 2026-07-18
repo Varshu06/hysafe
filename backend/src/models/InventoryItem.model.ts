@@ -2,10 +2,9 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IInventoryItem extends Document {
   name: string;
-  volume: string;
+  description?: string;
   quantity: number;
   price: number;
-  deliveryCharge: number;
   image?: string;
   available: boolean;
   createdAt: Date;
@@ -20,9 +19,8 @@ const InventoryItemSchema = new Schema<IInventoryItem>(
       trim: true,
     },
 
-    volume: {
+    description: {
       type: String,
-      required: true,
       trim: true,
     },
 
@@ -39,11 +37,6 @@ const InventoryItemSchema = new Schema<IInventoryItem>(
       min: 0,
     },
 
-    deliveryCharge: {
-      type: Number,
-      default: 0,
-    },
-
     image: {
       type: String,
     },
@@ -58,7 +51,7 @@ const InventoryItemSchema = new Schema<IInventoryItem>(
   },
 );
 
-InventoryItemSchema.index({ volume: 1 }, { unique: true });
+// index on volume removed
 
 export const InventoryItem = mongoose.model<IInventoryItem>(
   "InventoryItem",

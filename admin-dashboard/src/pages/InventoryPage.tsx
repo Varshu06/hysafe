@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Card, CardBody, CardHeader } from '@components/Card';
-import { Button } from '@components/Button';
-import { Badge, Loading, EmptyState } from '@components/Common';
-import { inventoryService } from '@services/inventory.service';
-import { formatDate } from '@utils/formatting';
-import { AlertTriangle, Plus, Edit2, Trash2 } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { Card, CardBody, CardHeader } from "@components/Card";
+import { Button } from "@components/Button";
+import { Badge, Loading, EmptyState } from "@components/Common";
+import { inventoryService } from "@services/inventory.service";
+import { API_BASE_URL } from "@utils/api";
+import { Plus, Edit2, Trash2 } from "lucide-react";
+import { getImageUrl } from "@/utils/formatting";
 
 const emptyForm = {
-  name: '',
-  quantity: '',
-  unit: 'pcs',
-  minStock: '',
-  price: '',
+  name: "",
+  description: "",
+  quantity: "",
+  price: "",
+  available: true,
+  image: "",
 };
 
 export const InventoryPage: React.FC = () => {
@@ -20,8 +22,10 @@ export const InventoryPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
-  const [formError, setFormError] = useState('');
+  const [formError, setFormError] = useState("");
   const [formData, setFormData] = useState(emptyForm);
+  const [formFile, setFormFile] = useState<File | null>(null);
+  const [formAvailable, setFormAvailable] = useState(true);
 
   useEffect(() => {
     loadInventory();
@@ -34,7 +38,7 @@ export const InventoryPage: React.FC = () => {
       const itemsArray = Array.isArray(data) ? data : data?.data || [];
       setItems(itemsArray);
     } catch (error) {
-      console.error('Error loading inventory:', error);
+      console.error("Error loading inventory:", error);
     } finally {
       setIsLoading(false);
     }
@@ -43,20 +47,25 @@ export const InventoryPage: React.FC = () => {
   const openCreateForm = () => {
     setEditingItemId(null);
     setFormData(emptyForm);
-    setFormError('');
+    setFormFile(null);
+    setFormAvailable(true);
+    setFormError("");
     setShowForm(true);
   };
 
   const openEditForm = (item: any) => {
     setEditingItemId(item._id);
     setFormData({
-      name: item.name || '',
-      quantity: String(item.quantity ?? ''),
-      unit: item.unit || 'pcs',
-      minStock: String(item.minStock ?? ''),
-      price: String(item.price ?? ''),
+      name: item.name || "",
+      description: item.description || "",
+      quantity: String(item.quantity ?? ""),
+      price: String(item.price ?? ""),
+      available: item.available ?? true,
+      image: item.image || "",
     });
-    setFormError('');
+    setFormFile(null);
+    setFormAvailable(item.available ?? true);
+    setFormError("");
     setShowForm(true);
   };
 
@@ -64,28 +73,22 @@ export const InventoryPage: React.FC = () => {
     setShowForm(false);
     setEditingItemId(null);
     setFormData(emptyForm);
-    setFormError('');
+    setFormError("");
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setFormError('');
+    setFormError("");
 
     if (!formData.name.trim()) {
-      setFormError('Item name is required.');
+      setFormError("Item name is required.");
       return;
     }
 
     const quantity = Number(formData.quantity);
-    const minStock = Number(formData.minStock);
 
     if (Number.isNaN(quantity) || quantity < 0) {
-      setFormError('Quantity must be a valid non-negative number.');
-      return;
-    }
-
-    if (Number.isNaN(minStock) || minStock < 0) {
-      setFormError('Minimum stock must be a valid non-negative number.');
+      setFormError("Quantity must be a valid non-negative number.");
       return;
     }
 
@@ -94,11 +97,15 @@ export const InventoryPage: React.FC = () => {
     try {
       const payload = {
         name: formData.name.trim(),
+        description: formData.description.trim(),
         quantity,
-        unit: formData.unit.trim() || 'pcs',
-        minStock,
         price: formData.price.trim() ? Number(formData.price) : 0,
+        available: formAvailable,
       };
+
+      if (formFile) {
+        (payload as any).image = formFile;
+      }
 
       if (editingItemId) {
         await inventoryService.updateInventoryItem(editingItemId, payload);
@@ -112,16 +119,16 @@ export const InventoryPage: React.FC = () => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
-        'Failed to save inventory item.';
+        "Failed to save inventory item.";
       setFormError(message);
-      console.error('Save inventory item error:', error);
+      console.error("Save inventory item error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this inventory item?')) {
+    if (!confirm("Are you sure you want to delete this inventory item?")) {
       return;
     }
 
@@ -129,7 +136,7 @@ export const InventoryPage: React.FC = () => {
       await inventoryService.deleteInventoryItem(id);
       loadInventory();
     } catch (error) {
-      console.error('Delete inventory item error:', error);
+      console.error("Delete inventory item error:", error);
     }
   };
 
@@ -138,12 +145,11 @@ export const InventoryPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-text-primary">Inventory</h1>
-          <p className="text-text-secondary mt-1">Track and manage stock levels</p>
+          <p className="text-text-secondary mt-1">
+            Track and manage stock levels
+          </p>
         </div>
-        <Button
-          onClick={openCreateForm}
-          className="flex items-center gap-2"
-        >
+        <Button onClick={openCreateForm} className="flex items-center gap-2">
           <Plus size={20} />
           Add Item
         </Button>
@@ -154,7 +160,7 @@ export const InventoryPage: React.FC = () => {
         <Card>
           <CardHeader>
             <h3 className="text-lg font-semibold text-text-primary">
-              {editingItemId ? 'Edit Item' : 'Add New Item'}
+              {editingItemId ? "Edit Item" : "Add New Item"}
             </h3>
           </CardHeader>
           <CardBody>
@@ -164,83 +170,130 @@ export const InventoryPage: React.FC = () => {
                   {formError}
                 </div>
               )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Item Name"
-                value={formData.name}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Quantity"
-                value={formData.quantity}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    quantity: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                min={0}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Unit (kg, L, etc)"
-                value={formData.unit}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    unit: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Min Stock"
-                value={formData.minStock}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    minStock: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                min={0}
-                required
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={formData.price}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    price: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                min={0}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" isLoading={isSubmitting}>
-                {editingItemId ? 'Update Item' : 'Save'}
-              </Button>
-              <Button type="button" variant="secondary" onClick={closeForm}>
-                Cancel
-              </Button>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="block text-sm font-medium text-text-secondary">
+                    Item Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Item Name"
+                    value={formData.name}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="block text-sm font-medium text-text-secondary">
+                    Price
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Price"
+                    value={formData.price}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        price: event.target.value,
+                      }))
+                    }
+                    className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                    min={0}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="block text-sm font-medium text-text-secondary">
+                    Quantity
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="Quantity"
+                    value={formData.quantity}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        quantity: event.target.value,
+                      }))
+                    }
+                    className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                    min={0}
+                    required
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="block text-sm font-medium text-text-secondary">
+                    Available
+                  </label>
+                  <select
+                    value={formAvailable ? "true" : "false"}
+                    onChange={(event) =>
+                      setFormAvailable(event.target.value === "true")
+                    }
+                    className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="true">Available</option>
+                    <option value="false">Not Available</option>
+                  </select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="block text-sm font-medium text-text-secondary">
+                    Description
+                  </label>
+                  <textarea
+                    placeholder="Description"
+                    value={formData.description}
+                    onChange={(event) =>
+                      setFormData((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
+                    className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary min-h-[120px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">
+                    Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const f = e.target.files ? e.target.files[0] : null;
+                      setFormFile(f);
+                    }}
+                    className="border border-border rounded-lg px-2 py-1"
+                  />
+                  {formFile ? (
+                    <img
+                      src={URL.createObjectURL(formFile)}
+                      alt="Preview"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : formData.image ? (
+                    <img
+                      src={getImageUrl(formData.image)}
+                      alt="Current"
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : null}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" isLoading={isSubmitting}>
+                  {editingItemId ? "Update Item" : "Save"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={closeForm}>
+                  Cancel
+                </Button>
+              </div>
             </form>
           </CardBody>
         </Card>
@@ -264,19 +317,22 @@ export const InventoryPage: React.FC = () => {
                 <thead>
                   <tr className="bg-surface border-b border-border">
                     <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
-                      Item Name
+                      Item
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
+                      Image
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
+                      Description
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
                       Quantity
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
-                      Min Stock
+                      Price
                     </th>
                     <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
-                      Last Restocked
+                      Available
                     </th>
                     <th className="px-6 py-3 text-center text-sm font-semibold text-text-primary">
                       Actions
@@ -285,35 +341,36 @@ export const InventoryPage: React.FC = () => {
                 </thead>
                 <tbody>
                   {items.map((item) => {
-                    const isLowStock = item.quantity < item.minStock;
                     return (
                       <tr
                         key={item._id}
                         className="border-b border-border hover:bg-accent"
                       >
-                        <td className="px-6 py-4 text-sm font-medium text-text-primary">
-                          {item.name}
+                        <td className="px-6 py-4 text-sm font-medium text-text-primary flex items-center gap-3">
+                          <span>{item.name}</span>
                         </td>
-                        <td className="px-6 py-4 text-sm">
-                          {item.quantity} {item.unit}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {item.minStock} {item.unit}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          {isLowStock ? (
-                            <Badge variant="warning" className="flex items-center gap-1 w-fit">
-                              <AlertTriangle size={14} />
-                              Low Stock
-                            </Badge>
+                        <td className="px-6 py-4 text-sm text-text-secondary">
+                          {item.image ? (
+                            <img
+                              src={getImageUrl(item.image)}
+                              alt={item.name}
+                              className="h-12 w-12 rounded-lg object-cover"
+                            />
                           ) : (
-                            <Badge variant="success">In Stock</Badge>
+                            <div className="h-12 w-12 rounded-lg bg-surface" />
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-text-secondary">
-                          {item.lastRestocked
-                            ? formatDate(item.lastRestocked)
-                            : 'Never'}
+                          {item.description || "—"}
+                        </td>
+                        <td className="px-6 py-4 text-sm">{item.quantity}</td>
+                        <td className="px-6 py-4 text-sm">₹{item.price}</td>
+                        <td className="px-6 py-4 text-sm">
+                          {item.available ? (
+                            <Badge variant="success">Yes</Badge>
+                          ) : (
+                            <Badge variant="danger">No</Badge>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2">

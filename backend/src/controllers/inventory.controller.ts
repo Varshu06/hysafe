@@ -1,6 +1,22 @@
 import { Response } from "express";
+import path from "path";
+import fs from "fs";
 import { InventoryItem } from "../models/InventoryItem.model";
 import { AuthRequest } from "../middleware/auth.middleware";
+
+// Helpers for safe parsing
+const toNumber = (v: any, fallback?: number) => {
+  if (v === undefined || v === null || v === "") return fallback;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+};
+
+const toBoolean = (v: any, fallback?: boolean) => {
+  if (v === undefined || v === null || v === "") return fallback;
+  if (typeof v === "boolean") return v;
+  if (typeof v === "string") return v.toLowerCase() === "true" || v === "1";
+  return Boolean(v);
+};
 
 export const getInventoryItems = async (req: AuthRequest, res: Response) => {
   try {
@@ -55,22 +71,29 @@ export const getInventoryItemById = async (req: AuthRequest, res: Response) => {
 
 export const createInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, quantity, unit, minStock, price, lastRestocked } = req.body;
+    const { name, description, quantity, price, image, available } = req.body;
 
-    if (!name || quantity === undefined || minStock === undefined) {
+    if (!name || quantity === undefined || price === undefined) {
       return res.status(400).json({
         success: false,
-        message: "Name, quantity and minStock are required",
+        message: "Name, quantity and price are required",
       });
     }
 
+    const file = (req as any).file as Express.Multer.File | undefined;
+
     const item = await InventoryItem.create({
       name: String(name).trim(),
-      quantity: Number(quantity),
-      unit: unit ? String(unit).trim() : "pcs",
-      minStock: Number(minStock),
-      price: price !== undefined ? Number(price) : 0,
-      lastRestocked: lastRestocked ? new Date(lastRestocked) : new Date(),
+      description:
+        description !== undefined ? String(description).trim() : undefined,
+      quantity: toNumber(quantity, 0)!,
+      price: toNumber(price, 0)!,
+      image: file
+        ? `uploads/inventory/${file.filename}`
+        : image !== undefined && image !== null
+          ? String(image).trim()
+          : undefined,
+      available: toBoolean(available, true),
     });
 
     res.status(201).json({
@@ -90,17 +113,39 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
 export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, quantity, unit, minStock, price, lastRestocked } = req.body;
+    const { name, description, quantity, price, image, available } = req.body;
 
     const updateData: Record<string, unknown> = {};
 
+    const file = (req as any).file as Express.Multer.File | undefined;
+
     if (name !== undefined) updateData.name = String(name).trim();
-    if (quantity !== undefined) updateData.quantity = Number(quantity);
-    if (unit !== undefined) updateData.unit = String(unit).trim();
-    if (minStock !== undefined) updateData.minStock = Number(minStock);
-    if (price !== undefined) updateData.price = Number(price);
-    if (lastRestocked !== undefined) {
-      updateData.lastRestocked = lastRestocked ? new Date(lastRestocked) : null;
+    if (description !== undefined)
+      updateData.description =
+        description !== null ? String(description).trim() : undefined;
+    if (quantity !== undefined) updateData.quantity = toNumber(quantity, 0)!;
+    if (price !== undefined) updateData.price = toNumber(price, 0)!;
+    if (image !== undefined)
+      updateData.image = image !== null ? String(image).trim() : undefined;
+    if (available !== undefined)
+      updateData.available = toBoolean(available, false);
+
+    if (file) {
+      // remove previous image file if present
+      try {
+        const existing = await InventoryItem.findById(id).select("image");
+        if (existing && existing.image) {
+          const existingPath = path.join(
+            __dirname,
+            "../../",
+            existing.image as string,
+          );
+          if (fs.existsSync(existingPath)) fs.unlinkSync(existingPath);
+        }
+      } catch (e) {
+        console.warn("Failed to remove previous image:", e);
+      }
+      updateData.image = `uploads/inventory/${file.filename}`;
     }
 
     const item = await InventoryItem.findByIdAndUpdate(id, updateData, {
@@ -133,7 +178,8 @@ export const deleteInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const item = await InventoryItem.findByIdAndDelete(id);
+    // Find item first so we can remove associated image file
+    const item = await InventoryItem.findById(id);
 
     if (!item) {
       return res.status(404).json({
@@ -141,6 +187,17 @@ export const deleteInventoryItem = async (req: AuthRequest, res: Response) => {
         message: "Inventory item not found",
       });
     }
+
+    if (item.image) {
+      try {
+        const imagePath = path.join(__dirname, "../../", item.image as string);
+        if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
+      } catch (e) {
+        console.warn("Failed to remove image during delete:", e);
+      }
+    }
+
+    await InventoryItem.findByIdAndDelete(id);
 
     res.json({
       success: true,
@@ -168,10 +225,9 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
     const formattedProducts = products.map((product: any) => ({
       id: product._id.toString(),
       name: product.name,
-      volume: product.volume,
+      description: product.description,
       quantity: product.quantity,
       price: product.price,
-      deliveryCharge: product.deliveryCharge,
       image: product.image,
       available: product.available,
     }));

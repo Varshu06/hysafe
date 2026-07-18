@@ -1,5 +1,5 @@
 // User and Auth types
-export type UserRole = 'admin' | 'staff' | 'customer';
+export type UserRole = "admin" | "staff" | "customer";
 
 export interface User {
   id: string;
@@ -24,11 +24,11 @@ export interface LoginRequest {
 
 // Order types
 export type OrderStatus =
-  | 'pending'
-  | 'accepted'
-  | 'out_for_delivery'
-  | 'delivered'
-  | 'cancelled';
+  | "pending"
+  | "accepted"
+  | "out_for_delivery"
+  | "delivered"
+  | "cancelled";
 
 export interface Order {
   _id: string;
@@ -38,8 +38,8 @@ export interface Order {
   quantity: number;
   totalPrice: number;
   status: OrderStatus;
-  paymentMethod: 'online' | 'offline';
-  paymentStatus: 'pending' | 'paid' | 'failed';
+  paymentMethod: "online" | "offline";
+  paymentStatus: "pending" | "paid" | "failed";
   deliveryAddress: string;
   notes?: string;
   assignedStaffId?: string;
@@ -60,8 +60,8 @@ export interface CustomerProfile {
   email: string;
   phone: string;
   address: string;
-  customerType: 'home' | 'shop' | 'hotel' | 'bank' | 'event';
-  paymentTerms: 'one-time' | 'monthly' | 'weekly';
+  customerType: "home" | "shop" | "hotel" | "bank" | "event";
+  paymentTerms: "one-time" | "monthly" | "weekly";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,11 +85,11 @@ export interface InventoryItem {
   _id: string;
   id?: string;
   name: string;
+  description?: string;
   quantity: number;
-  unit: string;
-  minStock: number;
   price: number;
-  lastRestocked: Date;
+  image?: string;
+  available: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

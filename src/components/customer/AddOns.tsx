@@ -20,7 +20,6 @@ interface AddOnItemProps {
     id: string;
     name: string;
     price: number;
-    volume: string;
     image: ImageSourcePropType;
   };
   isInCart: boolean;
@@ -111,7 +110,6 @@ export const AddOns = () => {
       name: item.name,
       price: item.price,
       image: item.image,
-      volume: item.volume,
       deliveryCharge: item.deliveryCharge,
     });
   };

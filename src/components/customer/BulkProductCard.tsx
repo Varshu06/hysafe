@@ -1,6 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../../utils/constants';
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Image,
+  ImageSourcePropType,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { COLORS } from "../../utils/constants";
 
 interface BulkProductCardProps {
   item: {
@@ -10,13 +18,16 @@ interface BulkProductCardProps {
     bulkMinQuantity: number;
     deliveryCharge: string;
     image: ImageSourcePropType;
-    volume: string;
   };
   selected?: boolean;
   onSelect?: () => void;
 }
 
-export const BulkProductCard = ({ item, selected, onSelect }: BulkProductCardProps) => {
+export const BulkProductCard = ({
+  item,
+  selected,
+  onSelect,
+}: BulkProductCardProps) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const prevSelectedRef = useRef(selected);
@@ -50,13 +61,13 @@ export const BulkProductCard = ({ item, selected, onSelect }: BulkProductCardPro
   }, [shouldAnimate]);
 
   return (
-    <TouchableOpacity 
-      style={[styles.card, selected && styles.selectedCard]} 
+    <TouchableOpacity
+      style={[styles.card, selected && styles.selectedCard]}
       onPress={onSelect}
       activeOpacity={0.8}
     >
       {selected && (
-        <Animated.View 
+        <Animated.View
           style={[
             styles.checkIcon,
             {
@@ -69,17 +80,19 @@ export const BulkProductCard = ({ item, selected, onSelect }: BulkProductCardPro
       )}
 
       <View style={styles.imageContainer}>
-        <Image 
-          source={item.image} 
+        <Image
+          source={item.image}
           style={styles.productImage}
           resizeMode="contain"
         />
       </View>
-      
+
       <Text style={styles.name}>{item.name}</Text>
-      
+
       <View style={styles.bulkPriceContainer}>
-        <Text style={styles.bulkPriceText}>{item.bulkMinQuantity} cans for ₹{item.price}</Text>
+        <Text style={styles.bulkPriceText}>
+          {item.bulkMinQuantity} cans for ₹{item.price}
+        </Text>
       </View>
 
       <View style={styles.priceRow}>
@@ -93,85 +106,84 @@ export const BulkProductCard = ({ item, selected, onSelect }: BulkProductCardPro
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 12,
     padding: 12,
-    alignItems: 'center',
-    width: '48%',
+    alignItems: "center",
+    width: "48%",
     marginBottom: 16,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     borderWidth: 1,
-    borderColor: 'transparent',
-    position: 'relative',
+    borderColor: "transparent",
+    position: "relative",
   },
   selectedCard: {
     borderColor: COLORS.primary,
-    backgroundColor: '#F0F9FF',
+    backgroundColor: "#F0F9FF",
   },
   checkIcon: {
-    position: 'absolute',
+    position: "absolute",
     top: 8,
     right: 8,
     width: 18,
     height: 18,
     borderRadius: 9,
     backgroundColor: COLORS.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     zIndex: 1,
   },
   checkText: {
-    color: 'white',
+    color: "white",
     fontSize: 10,
   },
   imageContainer: {
     height: 100,
     width: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   productImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   name: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 6,
-    textAlign: 'center',
+    textAlign: "center",
   },
   bulkPriceContainer: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     marginBottom: 6,
   },
   bulkPriceText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    width: '100%',
-    justifyContent: 'center',
+    width: "100%",
+    justifyContent: "center",
     marginBottom: 4,
   },
   deliveryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   deliveryText: {
     fontSize: 10,
     color: COLORS.textLight,
   },
 });
-

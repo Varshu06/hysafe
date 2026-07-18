@@ -18,7 +18,6 @@ export const SINGLE_PRODUCTS = [
     price: 30,
     deliveryCharge: "Free",
     image: ProductImages["20l"],
-    volume: "20L",
   },
   {
     id: "2",
@@ -26,7 +25,6 @@ export const SINGLE_PRODUCTS = [
     price: 25,
     deliveryCharge: "Free",
     image: ProductImages["2l"],
-    volume: "2L",
   },
   {
     id: "3",
@@ -34,7 +32,6 @@ export const SINGLE_PRODUCTS = [
     price: 20,
     deliveryCharge: "Free",
     image: ProductImages["1l"],
-    volume: "1L",
   },
   {
     id: "4",
@@ -42,7 +39,6 @@ export const SINGLE_PRODUCTS = [
     price: 15,
     deliveryCharge: "Free",
     image: ProductImages["500ml"],
-    volume: "500ml",
   },
   {
     id: "5",
@@ -50,7 +46,6 @@ export const SINGLE_PRODUCTS = [
     price: 10,
     deliveryCharge: "Free",
     image: ProductImages["300ml"],
-    volume: "300ml",
   },
   {
     id: "6",
@@ -58,7 +53,6 @@ export const SINGLE_PRODUCTS = [
     price: 8,
     deliveryCharge: "Free",
     image: ProductImages["250ml"],
-    volume: "250ml",
   },
 ];
 
@@ -71,7 +65,6 @@ export const BULK_PRODUCTS = [
     bulkMinQuantity: 10,
     deliveryCharge: "Free",
     image: ProductImages["20l"],
-    volume: "20L",
   },
   {
     id: "bulk-2",
@@ -80,7 +73,6 @@ export const BULK_PRODUCTS = [
     bulkMinQuantity: 10,
     deliveryCharge: "Free",
     image: ProductImages["2l"],
-    volume: "2L",
   },
   {
     id: "bulk-3",
@@ -89,7 +81,6 @@ export const BULK_PRODUCTS = [
     bulkMinQuantity: 20,
     deliveryCharge: "Free",
     image: ProductImages["1l"],
-    volume: "1L",
   },
   {
     id: "bulk-4",
@@ -98,7 +89,6 @@ export const BULK_PRODUCTS = [
     bulkMinQuantity: 20,
     deliveryCharge: "Free",
     image: ProductImages["500ml"],
-    volume: "500ml",
   },
   {
     id: "bulk-5",
@@ -107,7 +97,6 @@ export const BULK_PRODUCTS = [
     bulkMinQuantity: 20,
     deliveryCharge: "Free",
     image: ProductImages["300ml"],
-    volume: "300ml",
   },
   {
     id: "bulk-6",
@@ -116,7 +105,6 @@ export const BULK_PRODUCTS = [
     bulkMinQuantity: 20,
     deliveryCharge: "Free",
     image: ProductImages["250ml"],
-    volume: "250ml",
   },
 ];
 

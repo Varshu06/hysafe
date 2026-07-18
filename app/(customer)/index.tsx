@@ -126,7 +126,6 @@ export default function CustomerHomeScreen() {
       name: product.name,
       price: product.price,
       image: product.image,
-      volume: product.volume,
       deliveryCharge: product.deliveryCharge || 0,
     });
     // Don't redirect - let user add multiple items and go to checkout when ready
