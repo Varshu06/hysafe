@@ -1,12 +1,22 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { addressStorage } from '../../../src/utils/addressStorage';
-import { COLORS, GOOGLE_MAPS_API_KEY } from '../../../src/utils/constants';
+import { Feather, Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { WebView } from "react-native-webview";
+import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { addressStorage } from "../../../src/utils/addressStorage";
+import { COLORS, GOOGLE_MAPS_API_KEY } from "../../../src/utils/constants";
 
 interface LocationData {
   latitude: number;
@@ -20,28 +30,31 @@ interface LocationData {
 }
 
 export default function AddAddressScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
-  
+
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
   const [locationData, setLocationData] = useState<LocationData | null>(null);
-  const [houseNumber, setHouseNumber] = useState('');
-  const [apartmentRoad, setApartmentRoad] = useState('');
-  const [saveAs, setSaveAs] = useState('Home');
-  const [saveAsName, setSaveAsName] = useState('');
-  const [receiverPhone, setReceiverPhone] = useState('');
+  const [houseNumber, setHouseNumber] = useState("");
+  const [apartmentRoad, setApartmentRoad] = useState("");
+  const [saveAs, setSaveAs] = useState("Home");
+  const [saveAsName, setSaveAsName] = useState("");
+  const [receiverPhone, setReceiverPhone] = useState("");
   const hasInitialized = useRef(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const webViewRef = useRef<WebView>(null);
-  
-  const fromCurrentLocation = params.fromCurrentLocation === 'true';
+
+  const fromCurrentLocation = params.fromCurrentLocation === "true";
+  const searchThisAreaText = t("searchThisArea");
+  const tapOrDragPinText = t("tapOrDragPin");
 
   // Initialize with params if coming from "Use my current location"
   useEffect(() => {
     if (hasInitialized.current) return;
-    
+
     if (params.latitude && params.longitude) {
       hasInitialized.current = true;
       const fullAddress = [
@@ -50,21 +63,23 @@ export default function AddAddressScreen() {
         params.city,
         params.region,
         params.postalCode,
-      ].filter(Boolean).join(', ');
-      
+      ]
+        .filter(Boolean)
+        .join(", ");
+
       const newLocationData = {
         latitude: parseFloat(params.latitude as string),
         longitude: parseFloat(params.longitude as string),
-        street: params.street as string || '',
-        city: params.city as string || '',
-        region: params.region as string || '',
-        postalCode: params.postalCode as string || '',
-        name: params.name as string || '',
+        street: (params.street as string) || "",
+        city: (params.city as string) || "",
+        region: (params.region as string) || "",
+        postalCode: (params.postalCode as string) || "",
+        name: (params.name as string) || "",
         fullAddress,
       };
-      
+
       setLocationData(newLocationData);
-      
+
       // Update map location
       updateMapLocation(newLocationData.latitude, newLocationData.longitude);
     } else {
@@ -78,12 +93,10 @@ export default function AddAddressScreen() {
     setIsLoadingLocation(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Denied',
-          'Please enable location permissions in your device settings.',
-          [{ text: 'OK' }]
-        );
+      if (status !== "granted") {
+        Alert.alert(t("permissionDenied"), t("enableLocationPermissions"), [
+          { text: t("ok") },
+        ]);
         setIsLoadingLocation(false);
         return;
       }
@@ -103,35 +116,38 @@ export default function AddAddressScreen() {
         address?.city,
         address?.region,
         address?.postalCode,
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(", ");
 
       const newLocationData = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        street: address?.street || '',
-        city: address?.city || '',
-        region: address?.region || '',
-        postalCode: address?.postalCode || '',
-        name: address?.name || '',
+        street: address?.street || "",
+        city: address?.city || "",
+        region: address?.region || "",
+        postalCode: address?.postalCode || "",
+        name: address?.name || "",
         fullAddress,
       };
-      
+
       setLocationData(newLocationData);
-      
+
       // Update map location
       updateMapLocation(newLocationData.latitude, newLocationData.longitude);
     } catch (error: any) {
       // Location unavailable - this is expected if location services are disabled
       // Only log if it's not a permission or availability issue
-      if (!error.message?.includes('location') && !error.message?.includes('permission')) {
-        console.warn('Location error:', error);
+      if (
+        !error.message?.includes("location") &&
+        !error.message?.includes("permission")
+      ) {
+        console.warn("Location error:", error);
       }
       // Show user-friendly error message
-      Alert.alert(
-        'Location Unavailable',
-        'Unable to get your current location. Please make sure location services are enabled, or manually select your address on the map.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert(t("locationUnavailable"), t("unableToGetCurrentLocation"), [
+        { text: t("ok") },
+      ]);
       // Don't set default location - let user manually select
     } finally {
       setIsLoadingLocation(false);
@@ -139,15 +155,15 @@ export default function AddAddressScreen() {
   };
 
   const getShortAddress = () => {
-    if (isLoadingLocation) return 'Getting location...';
-    if (!locationData) return 'Select Location';
-    return locationData.name || locationData.street || 'Selected Location';
+    if (isLoadingLocation) return t("gettingLocation");
+    if (!locationData) return t("selectLocation");
+    return locationData.name || locationData.street || t("selectedLocation");
   };
 
   const getFullAddress = () => {
-    if (isLoadingLocation) return 'Please wait while we detect your location';
-    if (!locationData) return 'Tap GPS button to get your location';
-    return locationData.fullAddress || 'Location detected';
+    if (isLoadingLocation) return t("pleaseWaitWhileDetectingLocation");
+    if (!locationData) return t("tapGpsToGetLocation");
+    return locationData.fullAddress || t("locationDetected");
   };
 
   const updateMapLocation = (lat: number, lng: number) => {
@@ -163,9 +179,12 @@ export default function AddAddressScreen() {
     }
   };
 
-  const handleMapRegionChangeComplete = async (region: { latitude: number; longitude: number }) => {
+  const handleMapRegionChangeComplete = async (region: {
+    latitude: number;
+    longitude: number;
+  }) => {
     if (isUpdatingLocation) return;
-    
+
     setIsUpdatingLocation(true);
     try {
       const [address] = await Location.reverseGeocodeAsync({
@@ -179,29 +198,33 @@ export default function AddAddressScreen() {
         address?.city,
         address?.region,
         address?.postalCode,
-      ].filter(Boolean).join(', ');
+      ]
+        .filter(Boolean)
+        .join(", ");
 
       setLocationData({
         latitude: region.latitude,
         longitude: region.longitude,
-        street: address?.street || '',
-        city: address?.city || '',
-        region: address?.region || '',
-        postalCode: address?.postalCode || '',
-        name: address?.name || '',
+        street: address?.street || "",
+        city: address?.city || "",
+        region: address?.region || "",
+        postalCode: address?.postalCode || "",
+        name: address?.name || "",
         fullAddress,
       });
     } catch (error) {
-      console.error('Location update error:', error);
+      console.error("Location update error:", error);
     } finally {
       setIsUpdatingLocation(false);
     }
   };
 
   const generateMapHTML = (initialLat: number, initialLng: number) => {
-    const apiKey = GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE' 
-      ? GOOGLE_MAPS_API_KEY 
-      : null;
+    const apiKey =
+      GOOGLE_MAPS_API_KEY &&
+      GOOGLE_MAPS_API_KEY !== "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        ? GOOGLE_MAPS_API_KEY
+        : null;
 
     if (!apiKey) {
       // Enhanced Google Maps-style interactive map with very realistic appearance
@@ -857,21 +880,21 @@ export default function AddAddressScreen() {
 
   const handleConfirm = async () => {
     if (!locationData) {
-      Alert.alert('Location Required', 'Please wait for location to be detected.');
-      return;
+      Alert.alert(t("locationRequired"), t("pleaseWaitForLocationDetected"));
     }
-    
+
     try {
       // Generate a unique ID for the address
       const addressId = `addr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Prepare address data
       const addressToSave = {
         id: addressId,
-        type: saveAsName || saveAs || 'Home',
-        address: locationData.fullAddress.length > 30 
-          ? locationData.fullAddress.substring(0, 30) + '...' 
-          : locationData.fullAddress,
+        type: saveAsName || saveAs || "Home",
+        address:
+          locationData.fullAddress.length > 30
+            ? locationData.fullAddress.substring(0, 30) + "..."
+            : locationData.fullAddress,
         fullAddress: locationData.fullAddress,
         location: {
           lat: locationData.latitude,
@@ -886,26 +909,34 @@ export default function AddAddressScreen() {
 
       if (fromCurrentLocation) {
         // Redirect directly to home page with updated location
-        router.push('/(customer)');
+        router.push("/(customer)");
       } else {
         // After saving, redirect back to enter your area page
-        Alert.alert('Success', 'Address saved successfully!', [
-          { text: 'OK', onPress: () => router.push('/(customer)/address/search') }
+        Alert.alert(t("success"), t("addressSaved"), [
+          {
+            text: t("ok"),
+            onPress: () => router.push("/(customer)/address/search"),
+          },
         ]);
       }
     } catch (error) {
-      console.error('Error saving address:', error);
-      Alert.alert('Error', 'Failed to save address. Please try again.');
+      console.error("Error saving address:", error);
+      Alert.alert(t("error"), t("failedToSaveAddress"));
     }
   };
 
   const getTagIcon = (tag: string) => {
     switch (tag) {
-      case 'Home': return '🏠';
-      case 'Work': return '💼';
-      case 'Friends and Family': return '👥';
-      case 'Others': return '📍';
-      default: return '📍';
+      case "Home":
+        return "🏠";
+      case "Work":
+        return "💼";
+      case "Friends and Family":
+        return "👥";
+      case "Others":
+        return "📍";
+      default:
+        return "📍";
     }
   };
 
@@ -922,71 +953,79 @@ export default function AddAddressScreen() {
         onMessage={(event) => {
           try {
             const data = JSON.parse(event.nativeEvent.data);
-            if (data.type === 'locationChange') {
+            if (data.type === "locationChange") {
               handleMapRegionChangeComplete({
                 latitude: data.latitude,
                 longitude: data.longitude,
               });
-            } else if (data.type === 'addressUpdate') {
+            } else if (data.type === "addressUpdate") {
               // Update address fields when location changes
-              const address = data.address || '';
+              const address = data.address || "";
               const components = data.components || [];
-              
+
               // Extract address components
-              let street = '';
-              let city = '';
-              let region = '';
-              let postalCode = '';
-              let name = '';
-              
+              let street = "";
+              let city = "";
+              let region = "";
+              let postalCode = "";
+              let name = "";
+
               components.forEach((component: any) => {
                 const types = component.types;
-                if (types.includes('street_number') || types.includes('route')) {
-                  street = (street + ' ' + component.long_name).trim();
+                if (
+                  types.includes("street_number") ||
+                  types.includes("route")
+                ) {
+                  street = (street + " " + component.long_name).trim();
                 }
-                if (types.includes('locality')) {
+                if (types.includes("locality")) {
                   city = component.long_name;
                 }
-                if (types.includes('administrative_area_level_1')) {
+                if (types.includes("administrative_area_level_1")) {
                   region = component.long_name;
                 }
-                if (types.includes('postal_code')) {
+                if (types.includes("postal_code")) {
                   postalCode = component.long_name;
                 }
-                if (types.includes('premise') || types.includes('subpremise')) {
+                if (types.includes("premise") || types.includes("subpremise")) {
                   name = component.long_name;
                 }
               });
-              
+
               // Update location data with new address
-              setLocationData(prev => prev ? {
-                ...prev,
-                street: street || prev.street,
-                city: city || prev.city,
-                region: region || prev.region,
-                postalCode: postalCode || prev.postalCode,
-                name: name || prev.name,
-                fullAddress: address || prev.fullAddress,
-              } : null);
-            } else if (data.type === 'error') {
-              console.error('Map error:', data.message);
+              setLocationData((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      street: street || prev.street,
+                      city: city || prev.city,
+                      region: region || prev.region,
+                      postalCode: postalCode || prev.postalCode,
+                      name: name || prev.name,
+                      fullAddress: address || prev.fullAddress,
+                    }
+                  : null,
+              );
+            } else if (data.type === "error") {
+              console.error("Map error:", data.message);
               Alert.alert(
-                'Map Loading Error',
-                data.message || 'Unable to load Google Maps. Please check your internet connection and try again.',
-                [{ text: 'OK' }]
+                "Map Loading Error",
+                data.message ||
+                  "Unable to load Google Maps. Please check your internet connection and try again.",
+                [{ text: "OK" }],
               );
             }
           } catch (error) {
-            console.error('Error parsing map message:', error);
+            console.error("Error parsing map message:", error);
           }
         }}
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
-          console.error('WebView error:', nativeEvent);
+          console.error("WebView error:", nativeEvent);
           Alert.alert(
-            'Map Error',
-            'Unable to load the map. Please check your internet connection and ensure Google Maps API key is configured.',
-            [{ text: 'OK' }]
+            "Map Error",
+            "Unable to load the map. Please check your internet connection and ensure Google Maps API key is configured.",
+            [{ text: "OK" }],
           );
         }}
         javaScriptEnabled={true}
@@ -996,7 +1035,7 @@ export default function AddAddressScreen() {
       {/* Top Bar Container */}
       <View style={[styles.topBarContainer, { top: insets.top + 10 }]}>
         {/* Back Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -1006,8 +1045,8 @@ export default function AddAddressScreen() {
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Feather name="search" size={18} color="#64748B" />
-          <TextInput 
-            placeholder="Try Jp nagar, siri gardeniam, etc." 
+          <TextInput
+            placeholder={t("addressSearchPlaceholder")}
             style={styles.searchInput}
             placeholderTextColor="#94A3B8"
             value={searchText}
@@ -1016,7 +1055,7 @@ export default function AddAddressScreen() {
         </View>
 
         {/* GPS Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.gpsButton}
           onPress={handleGetCurrentLocation}
           disabled={isLoadingLocation}
@@ -1030,8 +1069,13 @@ export default function AddAddressScreen() {
       </View>
 
       {/* Bottom Sheet */}
-      <View style={[styles.bottomSheet, { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 16 }]}>
-        <ScrollView 
+      <View
+        style={[
+          styles.bottomSheet,
+          { paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 16 },
+        ]}
+      >
+        <ScrollView
           style={styles.bottomSheetScrollView}
           contentContainerStyle={styles.bottomSheetContentContainer}
           showsVerticalScrollIndicator={false}
@@ -1046,62 +1090,73 @@ export default function AddAddressScreen() {
               <Text style={styles.locationTitle}>{getShortAddress()}</Text>
               <Text style={styles.locationAddress} numberOfLines={2}>
                 {getFullAddress()}
-                 </Text>
-             </View>
-         </View>
+              </Text>
+            </View>
+          </View>
 
           {/* Information Box - Hide for current location flow */}
           {!fromCurrentLocation && (
-         <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
                 The more accurate your address, the quicker we can reach you!
-            </Text>
-         </View>
+              </Text>
+            </View>
           )}
 
           {/* Form Inputs - Hide for current location flow */}
           {!fromCurrentLocation && (
             <>
-         <View style={styles.form}>
-            <TextInput 
-                placeholder="House / Flat / Block number."
-                style={styles.input}
-                placeholderTextColor="#94A3B8"
+              <View style={styles.form}>
+                <TextInput
+                  placeholder={t("houseFlatBlockPlaceholder")}
+                  style={styles.input}
+                  placeholderTextColor="#94A3B8"
                   value={houseNumber}
                   onChangeText={setHouseNumber}
-            />
-            <TextInput 
-                  placeholder="Apartment / Road / Area (Recommended)"
-                style={styles.input}
-                placeholderTextColor="#94A3B8"
+                />
+                <TextInput
+                  placeholder={t("apartmentRoadPlaceholder")}
+                  style={styles.input}
+                  placeholderTextColor="#94A3B8"
                   value={apartmentRoad}
                   onChangeText={setApartmentRoad}
-            />
-         </View>
+                />
+              </View>
 
               {/* Save As Section */}
-         <Text style={styles.saveAsLabel}>Save As</Text>
-              <View style={saveAs === 'Others' ? styles.tagsContainerWithOthers : styles.tagsContainer}>
-            {['Home', 'Work', 'Friends and Family', 'Others'].map((tag) => (
-                <TouchableOpacity 
-                    key={tag} 
+              <Text style={styles.saveAsLabel}>{t("saveAs")}</Text>
+              <View
+                style={
+                  saveAs === "Others"
+                    ? styles.tagsContainerWithOthers
+                    : styles.tagsContainer
+                }
+              >
+                {["Home", "Work", "Friends and Family", "Others"].map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
                     style={[styles.tag, saveAs === tag && styles.activeTag]}
                     onPress={() => setSaveAs(tag)}
-                >
+                  >
                     <Text style={styles.tagIcon}>{getTagIcon(tag)}</Text>
-                   <Text style={[styles.tagText, saveAs === tag && styles.activeTagText]}>
-                       {tag}
-                   </Text>
-                </TouchableOpacity>
-            ))}
-         </View>
+                    <Text
+                      style={[
+                        styles.tagText,
+                        saveAs === tag && styles.activeTagText,
+                      ]}
+                    >
+                      {t(tag)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
               {/* Save As Name Input - Only show for Others */}
-              {saveAs === 'Others' && (
+              {saveAs === "Others" && (
                 <View style={styles.saveAsNameSection}>
-                  <Text style={styles.saveAsNameLabel}>Save As</Text>
+                  <Text style={styles.saveAsNameLabel}>{t("saveAsName")}</Text>
                   <TextInput
-                    placeholder="Enter name"
+                    placeholder={t("enterName")}
                     style={styles.input}
                     placeholderTextColor="#94A3B8"
                     value={saveAsName}
@@ -1111,33 +1166,43 @@ export default function AddAddressScreen() {
               )}
 
               {/* Receiver's Phone Number Section - Show for Work, Friends and Family, or Others */}
-              {(saveAs === 'Work' || saveAs === 'Friends and Family' || saveAs === 'Others') && (
-                <View style={saveAs === 'Others' ? styles.receiverPhoneSectionOthers : styles.receiverPhoneSection}>
-                  <Text style={styles.receiverPhoneLabel}>Receiver's phone number(optional)</Text>
+              {(saveAs === "Work" ||
+                saveAs === "Friends and Family" ||
+                saveAs === "Others") && (
+                <View
+                  style={
+                    saveAs === "Others"
+                      ? styles.receiverPhoneSectionOthers
+                      : styles.receiverPhoneSection
+                  }
+                >
+                  <Text style={styles.receiverPhoneLabel}>
+                    {t("receiversPhoneNumberOptional")}
+                  </Text>
                   <Text style={styles.receiverPhoneHint}>
-                    we will call on 9342981843, if you are unavailable on this number
+                    {t("receiverPhoneHint")}
                   </Text>
                   <TextInput
-                    placeholder="Enter receiver's phone number"
+                    placeholder={t("enterReceiversPhoneNumber")}
                     style={styles.input}
                     placeholderTextColor="#94A3B8"
                     value={receiverPhone}
                     onChangeText={setReceiverPhone}
                     keyboardType="phone-pad"
-            />
-         </View>
+                  />
+                </View>
               )}
             </>
           )}
 
           {/* Confirm/Proceed Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.confirmButton}
             onPress={handleConfirm}
             disabled={isUpdatingLocation}
           >
             <Text style={styles.confirmButtonText}>
-              {fromCurrentLocation ? 'Confirm/Proceed' : 'Save Address'}
+              {fromCurrentLocation ? t("confirmProceed") : t("saveAddress")}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -1149,16 +1214,16 @@ export default function AddAddressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: "#1E293B",
   },
   mapContainer: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   customMarker: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   markerPin: {
     width: 30,
@@ -1166,37 +1231,37 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: COLORS.primary,
     borderWidth: 3,
-    borderColor: 'white',
-    shadowColor: '#000',
+    borderColor: "white",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   topBarContainer: {
-    position: 'absolute',
+    position: "absolute",
     left: 16,
     right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     zIndex: 20,
   },
   backButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 8,
     marginRight: 8,
   },
   searchContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 10,
     marginRight: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1213,26 +1278,26 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-      backgroundColor: 'white',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10,
-    shadowColor: '#000',
+    backgroundColor: "white",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-      elevation: 5,
+    elevation: 5,
   },
   bottomSheet: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#F0F9FF',
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-    maxHeight: '55%',
-    shadowColor: '#000',
+    backgroundColor: "#F0F9FF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "55%",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1247,9 +1312,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   locationInfo: {
-      flexDirection: 'row',
-      marginBottom: 20,
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    marginBottom: 20,
+    alignItems: "flex-start",
   },
   locationIconContainer: {
     marginRight: 12,
@@ -1260,96 +1325,96 @@ const styles = StyleSheet.create({
   },
   locationTitle: {
     fontSize: 20,
-      fontWeight: 'bold',
-    color: '#102841',
-      marginBottom: 4,
+    fontWeight: "bold",
+    color: "#102841",
+    marginBottom: 4,
   },
   locationAddress: {
-      fontSize: 14,
-    color: '#102841',
-      lineHeight: 20,
+    fontSize: 14,
+    color: "#102841",
+    lineHeight: 20,
   },
   infoBox: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     paddingHorizontal: 16,
     paddingVertical: 12,
-      borderRadius: 8,
+    borderRadius: 8,
     marginBottom: 20,
   },
   infoText: {
     fontSize: 14,
-      color: '#0C4A6E',
+    color: "#0C4A6E",
     lineHeight: 20,
   },
   form: {
     marginBottom: 20,
   },
   input: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: '#102841',
+    color: "#102841",
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   saveAsLabel: {
-      fontSize: 16,
-      fontWeight: 'bold',
-    color: '#102841',
-      marginBottom: 12,
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#102841",
+    marginBottom: 12,
   },
   tagsContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 24,
     gap: 8,
   },
   tagsContainerWithOthers: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 12,
     gap: 8,
   },
   tag: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-      borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
     marginRight: 8,
     marginBottom: 8,
   },
   activeTag: {
-    backgroundColor: '#102841',
-    borderColor: '#102841',
+    backgroundColor: "#102841",
+    borderColor: "#102841",
   },
   tagIcon: {
     fontSize: 16,
     marginRight: 6,
   },
   tagText: {
-      fontSize: 14,
-    color: '#102841',
-      fontWeight: '500',
+    fontSize: 14,
+    color: "#102841",
+    fontWeight: "500",
   },
   activeTagText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   saveAsNameSection: {
     marginBottom: 12,
   },
   saveAsNameLabel: {
     fontSize: 15,
-    color: '#102841',
+    color: "#102841",
     marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   receiverPhoneSection: {
     marginBottom: 24,
@@ -1359,27 +1424,27 @@ const styles = StyleSheet.create({
   },
   receiverPhoneLabel: {
     fontSize: 15,
-    color: '#102841',
+    color: "#102841",
     marginBottom: 6,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   receiverPhoneHint: {
     fontSize: 12,
-    color: '#102841',
+    color: "#102841",
     marginBottom: 12,
     lineHeight: 16,
   },
   confirmButton: {
-    backgroundColor: '#102841',
+    backgroundColor: "#102841",
     paddingVertical: 16,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 0,
     marginTop: 8,
   },
   confirmButtonText: {
-    color: 'white',
-      fontSize: 16,
-    fontWeight: '600',
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

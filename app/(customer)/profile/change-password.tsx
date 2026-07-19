@@ -10,12 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../../src/components/ui/Button";
 import { COLORS } from "../../../src/utils/constants";
 import { changePassword } from "../../../src/services/auth.service";
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -29,30 +31,24 @@ export default function ChangePasswordScreen() {
 
   const handleSave = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Missing fields", "Please fill all fields.");
+      Alert.alert(t("missingFields"), t("pleaseFillAllFields"));
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert(
-        "Weak password",
-        "New password must be at least 6 characters.",
-      );
+      Alert.alert(t("weakPassword"), t("newPasswordMin6"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert(
-        "Mismatch",
-        "New password and confirm password do not match.",
-      );
+      Alert.alert(t("mismatch"), t("passwordsDoNotMatch"));
       return;
     }
 
     setSaving(true);
     try {
       await changePassword(currentPassword, newPassword);
-      Alert.alert("Success", "Your password has been changed successfully.", [
+      Alert.alert(t("success"), t("passwordChangedSuccess"), [
         {
-          text: "OK",
+          text: t("ok"),
           onPress: () => {
             setCurrentPassword("");
             setNewPassword("");
@@ -62,10 +58,7 @@ export default function ChangePasswordScreen() {
         },
       ]);
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.message || "Failed to change password. Please try again.",
-      );
+      Alert.alert(t("error"), error.message || t("failedToChangePassword"));
     } finally {
       setSaving(false);
     }
@@ -80,7 +73,7 @@ export default function ChangePasswordScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Change Password</Text>
+        <Text style={styles.headerTitle}>{t("changePassword")}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -90,11 +83,11 @@ export default function ChangePasswordScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.label}>Current Password</Text>
+          <Text style={styles.label}>{t("currentPassword")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Enter current password"
+              placeholder={t("currentPasswordPlaceholder")}
               placeholderTextColor={COLORS.textLight}
               secureTextEntry={!currentPasswordVisible}
               value={currentPassword}
@@ -113,11 +106,11 @@ export default function ChangePasswordScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.label}>New Password</Text>
+          <Text style={styles.label}>{t("newPassword")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Enter new password"
+              placeholder={t("newPasswordPlaceholder")}
               placeholderTextColor={COLORS.textLight}
               secureTextEntry={!newPasswordVisible}
               value={newPassword}
@@ -136,11 +129,11 @@ export default function ChangePasswordScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.label}>Confirm New Password</Text>
+          <Text style={styles.label}>{t("confirmNewPassword")}</Text>
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Confirm new password"
+              placeholder={t("confirmNewPasswordPlaceholder")}
               placeholderTextColor={COLORS.textLight}
               secureTextEntry={!confirmPasswordVisible}
               value={confirmPassword}
@@ -160,7 +153,7 @@ export default function ChangePasswordScreen() {
           </View>
 
           <Button
-            title={saving ? "Saving..." : "Update Password"}
+            title={saving ? t("saving") : t("updatePassword")}
             onPress={handleSave}
             disabled={saving}
             style={styles.saveButton}

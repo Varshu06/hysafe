@@ -49,8 +49,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const profile = await CustomerProfile.findOne({ userId: customerId });
 
     const totalPrice = items.reduce(
-      (total: number, item: OrderItem) =>
-        total + (item.price + item.deliveryCharge) * item.quantity,
+      (total: number, item: OrderItem) => total + item.price * item.quantity,
       0,
     );
 
@@ -96,9 +95,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error("Create order error:", error);
-    res
-      .status(500)
-      .json({ message: error.message || "Failed to create order" });
+    res.status(500).json({ message: "Failed to create order" });
   }
 };
 

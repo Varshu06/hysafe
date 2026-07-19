@@ -21,8 +21,7 @@ import { COLORS } from "../../src/utils/constants";
 import { t } from "i18next";
 import { getProducts } from "@/services/product.service";
 import { Product } from "@/types/product.types";
-import { ProductImages } from "@/data/dummy";
-// import { Product } from "../types/product.types";
+import { getImageUrl } from "@/utils/formatting";
 
 export default function CustomerHomeScreen() {
   const router = useRouter();
@@ -156,12 +155,11 @@ export default function CustomerHomeScreen() {
               <View key={product.id} style={styles.productCardSmall}>
                 <View style={styles.productImageContainer}>
                   <Image
-                    source={ProductImages[product.image]}
+                    source={{ uri: getImageUrl(product.image) }}
                     style={styles.productImage}
                     resizeMode="contain"
                   />
                 </View>
-                <Text style={styles.productName}>{product.id}</Text>
                 <Text style={styles.productName}>{product.name}</Text>
                 <View style={styles.priceRow}>
                   <Text style={styles.price}>₹ {product.price}</Text>

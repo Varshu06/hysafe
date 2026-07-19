@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { COLORS } from "../../utils/constants";
 import { Product } from "@/types/product.types";
-import { ProductImages } from "@/data/dummy";
+import { getImageUrl } from "@/utils/formatting";
 
 interface ProductCardProps {
   item: Product;
@@ -72,7 +72,7 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       )}
       <View style={styles.imageContainer}>
         <Image
-          source={ProductImages[item.image]}
+          source={{ uri: getImageUrl(item.image) }}
           style={styles.productImage}
           resizeMode="contain"
         />

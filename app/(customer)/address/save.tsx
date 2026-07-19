@@ -1,8 +1,17 @@
-import { Feather, Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface LocationData {
   latitude: number;
@@ -16,60 +25,69 @@ interface LocationData {
 }
 
 export default function SaveAddressScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
-  
+
   const [locationData, setLocationData] = useState<LocationData | null>(null);
-  const [houseNumber, setHouseNumber] = useState('');
-  const [apartmentRoad, setApartmentRoad] = useState('');
-  const [saveAs, setSaveAs] = useState('Home');
-  const [receiverPhone, setReceiverPhone] = useState('');
+  const [houseNumber, setHouseNumber] = useState("");
+  const [apartmentRoad, setApartmentRoad] = useState("");
+  const [saveAs, setSaveAs] = useState("Home");
+  const [receiverPhone, setReceiverPhone] = useState("");
 
   useEffect(() => {
     if (params.latitude && params.longitude) {
       setLocationData({
         latitude: parseFloat(params.latitude as string),
         longitude: parseFloat(params.longitude as string),
-        street: params.street as string || '',
-        city: params.city as string || '',
-        region: params.region as string || '',
-        postalCode: params.postalCode as string || '',
-        name: params.name as string || '',
-        fullAddress: params.fullAddress as string || '',
+        street: (params.street as string) || "",
+        city: (params.city as string) || "",
+        region: (params.region as string) || "",
+        postalCode: (params.postalCode as string) || "",
+        name: (params.name as string) || "",
+        fullAddress: (params.fullAddress as string) || "",
       });
     }
   }, [params]);
 
   const getShortAddress = () => {
-    if (!locationData) return 'Select Location';
-    return locationData.name || locationData.street || 'Selected Location';
+    if (!locationData) return t("selectLocation");
+    return locationData.name || locationData.street || t("selectedLocation");
   };
 
   const getFullAddress = () => {
-    if (!locationData) return 'Location not available';
-    return locationData.fullAddress || 'Location detected';
+    if (!locationData) return t("locationNotAvailable");
+    return locationData.fullAddress || t("locationDetected");
   };
 
   const handleSave = () => {
     if (!locationData) {
-      Alert.alert('Error', 'Location data is missing.');
+      Alert.alert(t("error"), t("locationDataMissing"));
       return;
     }
-    
+
     // Here you would save the address with houseNumber, apartmentRoad, and saveAs
-    Alert.alert('Success', 'Address saved successfully!', [
-      { text: 'OK', onPress: () => router.push('/(customer)/address/search') }
+    Alert.alert(t("success"), t("addressSaved"), [
+      {
+        text: t("ok"),
+        onPress: () => router.push("/(customer)/address/search"),
+      },
     ]);
   };
 
   const getTagIcon = (tag: string) => {
     switch (tag) {
-      case 'Home': return '🏠';
-      case 'Work': return '💼';
-      case 'Friends and Family': return '👥';
-      case 'Others': return '📍';
-      default: return '📍';
+      case "Home":
+        return "🏠";
+      case "Work":
+        return "💼";
+      case "Friends and Family":
+        return "👥";
+      case "Others":
+        return "📍";
+      default:
+        return "📍";
     }
   };
 
@@ -77,19 +95,22 @@ export default function SaveAddressScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Feather name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Save Address</Text>
+        <Text style={styles.headerTitle}>{t("saveAddress")}</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.content}
-        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + 20 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Location Info */}
@@ -107,22 +128,20 @@ export default function SaveAddressScreen() {
 
         {/* Information Box */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            The more accurate your address, the quicker we can reach you!
-          </Text>
+          <Text style={styles.infoText}>{t("accurateAddressInfo")}</Text>
         </View>
 
         {/* Form Inputs */}
         <View style={styles.form}>
-          <TextInput 
-            placeholder="House / Flat / Block number."
+          <TextInput
+            placeholder={t("houseFlatBlockPlaceholder")}
             style={styles.input}
             placeholderTextColor="#94A3B8"
             value={houseNumber}
             onChangeText={setHouseNumber}
           />
-          <TextInput 
-            placeholder="Apartment / Road / Area (Recommended)"
+          <TextInput
+            placeholder={t("apartmentRoadAreaPlaceholder")}
             style={styles.input}
             placeholderTextColor="#94A3B8"
             value={apartmentRoad}
@@ -131,16 +150,18 @@ export default function SaveAddressScreen() {
         </View>
 
         {/* Save As Section */}
-        <Text style={styles.saveAsLabel}>Save As</Text>
+        <Text style={styles.saveAsLabel}>{t("saveAs")}</Text>
         <View style={styles.tagsContainer}>
-          {['Home', 'Work', 'Friends and Family', 'Others'].map((tag) => (
-            <TouchableOpacity 
-              key={tag} 
+          {["Home", "Work", "Friends and Family", "Others"].map((tag) => (
+            <TouchableOpacity
+              key={tag}
               style={[styles.tag, saveAs === tag && styles.activeTag]}
               onPress={() => setSaveAs(tag)}
             >
               <Text style={styles.tagIcon}>{getTagIcon(tag)}</Text>
-              <Text style={[styles.tagText, saveAs === tag && styles.activeTagText]}>
+              <Text
+                style={[styles.tagText, saveAs === tag && styles.activeTagText]}
+              >
                 {tag}
               </Text>
             </TouchableOpacity>
@@ -148,14 +169,16 @@ export default function SaveAddressScreen() {
         </View>
 
         {/* Receiver's Phone Number Section - Only show for Work or Friends and Family */}
-        {(saveAs === 'Work' || saveAs === 'Friends and Family') && (
+        {(saveAs === "Work" || saveAs === "Friends and Family") && (
           <View style={styles.receiverPhoneSection}>
-            <Text style={styles.receiverPhoneLabel}>Receiver's phone number(optional)</Text>
+            <Text style={styles.receiverPhoneLabel}>
+              {t("receiverPhoneNumberOptional")}
+            </Text>
             <Text style={styles.receiverPhoneHint}>
-              we will call on 9342981843, if you are unavailable on this number
+              {t("receiverPhoneHint")}
             </Text>
             <TextInput
-              placeholder="Enter receiver's phone number"
+              placeholder={t("enterReceiverPhoneNumber")}
               style={styles.input}
               placeholderTextColor="#94A3B8"
               value={receiverPhone}
@@ -166,11 +189,8 @@ export default function SaveAddressScreen() {
         )}
 
         {/* Save Address Button */}
-        <TouchableOpacity 
-          style={styles.saveButton}
-          onPress={handleSave}
-        >
-          <Text style={styles.saveButtonText}>Save Address</Text>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+          <Text style={styles.saveButtonText}>{t("saveAddress")}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -180,38 +200,38 @@ export default function SaveAddressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: '#0F172A',
-    shadowColor: '#000',
+    backgroundColor: "#0F172A",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
-    position: 'relative',
+    position: "relative",
   },
   backButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 8,
-    position: 'absolute',
+    position: "absolute",
     left: 16,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    textAlign: "center",
   },
   placeholder: {
     width: 40,
-    position: 'absolute',
+    position: "absolute",
     right: 16,
   },
   content: {
@@ -222,7 +242,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   locationInfo: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 16,
   },
   locationIconContainer: {
@@ -234,17 +254,17 @@ const styles = StyleSheet.create({
   },
   locationTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 4,
   },
   locationAddress: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: "#94A3B8",
     lineHeight: 20,
   },
   infoBox: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -252,50 +272,50 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: '#0C4A6E',
+    color: "#0C4A6E",
     lineHeight: 20,
   },
   form: {
     marginBottom: 20,
   },
   input: {
-    backgroundColor: '#1E293B',
+    backgroundColor: "#1E293B",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: 'white',
+    color: "white",
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: "#334155",
   },
   saveAsLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 12,
   },
   tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 24,
     gap: 8,
   },
   tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#1E293B',
+    backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: "#475569",
     marginRight: 8,
     marginBottom: 8,
   },
   activeTag: {
-    backgroundColor: 'white',
-    borderColor: '#0F172A',
+    backgroundColor: "white",
+    borderColor: "#0F172A",
   },
   tagIcon: {
     fontSize: 16,
@@ -303,48 +323,38 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: "#94A3B8",
+    fontWeight: "500",
   },
   activeTagText: {
-    color: '#0F172A',
-    fontWeight: '600',
+    color: "#0F172A",
+    fontWeight: "600",
   },
   receiverPhoneSection: {
     marginBottom: 24,
   },
   receiverPhoneLabel: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: "#94A3B8",
     marginBottom: 6,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   receiverPhoneHint: {
     fontSize: 12,
-    color: '#64748B',
+    color: "#64748B",
     marginBottom: 12,
     lineHeight: 16,
   },
   saveButton: {
-    backgroundColor: '#0EA5E9',
+    backgroundColor: "#0EA5E9",
     paddingVertical: 16,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 0,
   },
   saveButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
-
-
-
-
-
-
-
-
-
-

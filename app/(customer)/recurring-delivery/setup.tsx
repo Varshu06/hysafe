@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddressPickerModal } from "../../../src/components/customer/AddressPickerModal";
 import { useAuth } from "../../../src/context/AuthContext";
@@ -52,6 +53,7 @@ const PAYMENT_TERMS_OPTIONS: {
 ];
 
 export default function RecurringDeliverySetupScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -90,32 +92,33 @@ export default function RecurringDeliverySetupScreen() {
     (addr) => addr.id === selectedAddressId,
   );
 
+  const paymentInfoText =
+    paymentTerms === "monthly"
+      ? t("paymentInfoBannerMonthly")
+      : t("paymentInfoBannerWeekly");
+
   const handleSave = async () => {
     if (!quantity || parseInt(quantity) <= 0) {
-      Alert.alert("Error", "Please enter a valid quantity");
+      Alert.alert(t("error"), t("pleaseEnterValidQuantity"));
       return;
     }
 
     if (!selectedAddressId) {
-      Alert.alert("Error", "Please select a delivery address");
+      Alert.alert(t("error"), t("pleaseSelectDeliveryAddress"));
       return;
     }
 
     setSaving(true);
     try {
       // TODO: Integrate with API to save recurring delivery
-      Alert.alert(
-        "Success",
-        `Recurring delivery set up successfully!\n\n${quantity} cans will be delivered ${frequency === "daily" ? "daily" : frequency === "every-2-days" ? "every 2 days" : "weekly"}.\nPayment: ${paymentTerms === "monthly" ? "Monthly" : paymentTerms === "weekly" ? "Weekly" : "Pay per order"}`,
-        [
-          {
-            text: "OK",
-            onPress: () => router.back(),
-          },
-        ],
-      );
+      Alert.alert(t("success"), t("recurringDeliverySetUpSuccess"), [
+        {
+          text: t("ok"),
+          onPress: () => router.back(),
+        },
+      ]);
     } catch (error) {
-      Alert.alert("Error", "Failed to set up recurring delivery");
+      Alert.alert(t("error"), t("failedToSetUpRecurringDelivery"));
     } finally {
       setSaving(false);
     }
@@ -131,7 +134,7 @@ export default function RecurringDeliverySetupScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Set Up Recurring Delivery</Text>
+        <Text style={styles.headerTitle}>{t("setUpRecurringDelivery")}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -141,13 +144,13 @@ export default function RecurringDeliverySetupScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Delivery Details</Text>
+          <Text style={styles.sectionTitle}>{t("deliveryDetails")}</Text>
 
           {/* Quantity */}
-          <Text style={styles.label}>Quantity (cans) *</Text>
+          <Text style={styles.label}>{t("quantityCans")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="Enter quantity"
+            placeholder={t("enterQuantity")}
             placeholderTextColor={COLORS.textLight}
             value={quantity}
             onChangeText={setQuantity}
@@ -155,7 +158,7 @@ export default function RecurringDeliverySetupScreen() {
           />
 
           {/* Frequency */}
-          <Text style={styles.label}>Delivery Frequency *</Text>
+          <Text style={styles.label}>{t("deliveryFrequency")}</Text>
           <View style={styles.optionsGrid}>
             {FREQUENCY_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -173,7 +176,7 @@ export default function RecurringDeliverySetupScreen() {
                     frequency === option.value && styles.optionLabelSelected,
                   ]}
                 >
-                  {option.label}
+                  {t(option.label)}
                 </Text>
                 <Text
                   style={[
@@ -182,7 +185,7 @@ export default function RecurringDeliverySetupScreen() {
                       styles.optionDescriptionSelected,
                   ]}
                 >
-                  {option.description}
+                  {t(option.description)}
                 </Text>
                 {frequency === option.value && (
                   <View style={styles.selectedIndicator}>
@@ -194,7 +197,7 @@ export default function RecurringDeliverySetupScreen() {
           </View>
 
           {/* Delivery Address */}
-          <Text style={styles.label}>Delivery Address *</Text>
+          <Text style={styles.label}>{t("deliveryAddress")} *</Text>
           <TouchableOpacity
             style={styles.addressButton}
             onPress={() => setShowAddressPicker(true)}
@@ -207,17 +210,17 @@ export default function RecurringDeliverySetupScreen() {
             />
             <View style={styles.addressContent}>
               <Text style={styles.addressText} numberOfLines={2}>
-                {selectedAddress?.address || "Select delivery address"}
+                {selectedAddress?.address || t("selectDeliveryAddress")}
               </Text>
             </View>
             <Feather name="chevron-right" size={20} color={COLORS.textLight} />
           </TouchableOpacity>
 
           {/* Special Instructions */}
-          <Text style={styles.label}>Special Instructions (optional)</Text>
+          <Text style={styles.label}>{t("specialInstructionsOptional")}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Any special delivery instructions"
+            placeholder={t("specialInstructionsPlaceholder")}
             placeholderTextColor={COLORS.textLight}
             value={specialInstructions}
             onChangeText={setSpecialInstructions}
@@ -229,7 +232,7 @@ export default function RecurringDeliverySetupScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Payment Terms</Text>
           <Text style={styles.helperText}>
-            Choose how you want to pay for recurring deliveries
+            {t("chooseRecurringPaymentTerms")}
           </Text>
 
           <View style={styles.optionsGrid}>
@@ -249,7 +252,7 @@ export default function RecurringDeliverySetupScreen() {
                     paymentTerms === option.value && styles.optionLabelSelected,
                   ]}
                 >
-                  {option.label}
+                  {t(option.label)}
                 </Text>
                 <Text
                   style={[
@@ -258,7 +261,7 @@ export default function RecurringDeliverySetupScreen() {
                       styles.optionDescriptionSelected,
                   ]}
                 >
-                  {option.description}
+                  {t(option.description)}
                 </Text>
                 {paymentTerms === option.value && (
                   <View style={styles.selectedIndicator}>
@@ -272,9 +275,7 @@ export default function RecurringDeliverySetupScreen() {
           {(paymentTerms === "monthly" || paymentTerms === "weekly") && (
             <View style={styles.paymentInfoBanner}>
               <Text style={styles.paymentInfoBannerText}>
-                💰 All deliveries will be billed{" "}
-                {paymentTerms === "monthly" ? "monthly" : "weekly"}. Payment due
-                dates will be shown in order details.
+                {paymentInfoText}
               </Text>
             </View>
           )}
@@ -286,7 +287,7 @@ export default function RecurringDeliverySetupScreen() {
           disabled={saving}
         >
           <Text style={styles.saveButtonText}>
-            {saving ? "Setting Up..." : "Set Up Recurring Delivery"}
+            {saving ? t("settingUp") : t("setUpRecurringDelivery")}
           </Text>
         </TouchableOpacity>
 

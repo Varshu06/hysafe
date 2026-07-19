@@ -9,12 +9,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../../src/components/ui/Button";
 import { useAuth } from "../../../src/context/AuthContext";
 import { COLORS } from "../../../src/utils/constants";
 
 export default function DeleteAccountScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
@@ -24,33 +26,26 @@ export default function DeleteAccountScreen() {
 
   const handleRequestDelete = async () => {
     if (confirmText.trim().toUpperCase() !== "DELETE") {
-      Alert.alert("Confirm", "Please type DELETE to continue.");
+      Alert.alert(t("confirm"), t("pleaseTypeDeleteToContinue"));
       return;
     }
 
-    Alert.alert(
-      "Final Confirmation",
-      "This will permanently delete your account (feature coming soon).",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Continue",
-          style: "destructive",
-          onPress: async () => {
-            setWorking(true);
-            try {
-              // TODO: integrate backend endpoint for account deletion
-              Alert.alert(
-                "Coming soon",
-                "Account deletion will be available after API integration.",
-              );
-            } finally {
-              setWorking(false);
-            }
-          },
+    Alert.alert(t("finalConfirmation"), t("deleteAccountPermanentMessage"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("continue"),
+        style: "destructive",
+        onPress: async () => {
+          setWorking(true);
+          try {
+            // TODO: integrate backend endpoint for account deletion
+            Alert.alert(t("comingSoon"), t("accountDeletionComingSoon"));
+          } finally {
+            setWorking(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleLogout = async () => {
@@ -67,22 +62,19 @@ export default function DeleteAccountScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Delete Account</Text>
+        <Text style={styles.headerTitle}>{t("deleteAccount")}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.title}>Delete your account</Text>
-          <Text style={styles.subtitle}>
-            This action is permanent. Your order history and saved data will be
-            removed once this feature is enabled.
-          </Text>
+          <Text style={styles.title}>{t("deleteYourAccount")}</Text>
+          <Text style={styles.subtitle}>{t("deleteAccountDescription")}</Text>
 
-          <Text style={styles.label}>Type DELETE to confirm</Text>
+          <Text style={styles.label}>{t("typeDeleteToConfirm")}</Text>
           <TextInput
             style={styles.input}
-            placeholder="DELETE"
+            placeholder={t("deletePlaceholder")}
             placeholderTextColor={COLORS.textLight}
             value={confirmText}
             onChangeText={setConfirmText}
@@ -90,7 +82,7 @@ export default function DeleteAccountScreen() {
           />
 
           <Button
-            title={working ? "Please wait..." : "Request Account Deletion"}
+            title={working ? t("pleaseWait") : t("requestAccountDeletion")}
             variant="danger"
             onPress={handleRequestDelete}
             disabled={working}
@@ -98,7 +90,7 @@ export default function DeleteAccountScreen() {
           />
 
           <TouchableOpacity onPress={handleLogout} style={styles.logoutLink}>
-            <Text style={styles.logoutText}>Logout instead</Text>
+            <Text style={styles.logoutText}>{t("logoutInstead")}</Text>
           </TouchableOpacity>
         </View>
       </View>

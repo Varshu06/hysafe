@@ -277,29 +277,21 @@ export default function NewOrdersScreen() {
   const handleCallCustomer = async (phone?: string) => {
     if (!phone)
       return Alert.alert(
-        "No phone number",
-        "Customer phone number is not available.",
+        t("noPhoneNumber"),
+        t("customerPhoneNumberNotAvailable"),
       );
     const url = `tel:${phone}`;
     const can = await Linking.canOpenURL(url);
-    if (!can)
-      return Alert.alert(
-        "Not supported",
-        "Calling is not supported on this device.",
-      );
+    if (!can) return Alert.alert(t("notSupported"), t("callingNotSupported"));
     await Linking.openURL(url);
   };
 
   const handleNavigate = async (coords?: { lat: number; lng: number }) => {
     if (!coords)
-      return Alert.alert("No location", "Delivery location is not available.");
+      return Alert.alert(t("noLocation"), t("deliveryLocationNotAvailable"));
     const url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
     const can = await Linking.canOpenURL(url);
-    if (!can)
-      return Alert.alert(
-        "Not supported",
-        "Maps is not supported on this device.",
-      );
+    if (!can) return Alert.alert(t("notSupported"), t("mapsNotSupported"));
     await Linking.openURL(url);
   };
 
@@ -319,11 +311,11 @@ export default function NewOrdersScreen() {
           return String(id) !== String(orderId);
         }),
       );
-      Alert.alert("Success", "Order accepted!");
+      Alert.alert(t("success"), t("orderAccepted"));
       // Also refresh to ensure consistency
       refreshAvailableOrders();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to accept order");
+      Alert.alert(t("error"), error.message || t("failedToAcceptOrder"));
       // Refresh on error to restore correct state
       refreshAvailableOrders();
     }
@@ -402,7 +394,7 @@ export default function NewOrdersScreen() {
               activeOpacity={0.85}
             >
               <Feather name="phone" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Call</Text>
+              <Text style={styles.quickBtnText}>{t("call")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
@@ -410,7 +402,7 @@ export default function NewOrdersScreen() {
               activeOpacity={0.85}
             >
               <Feather name="map" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Navigate</Text>
+              <Text style={styles.quickBtnText}>{t("navigate")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
@@ -418,20 +410,20 @@ export default function NewOrdersScreen() {
               activeOpacity={0.85}
             >
               <Feather name="file-text" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Details</Text>
+              <Text style={styles.quickBtnText}>{t("details")}</Text>
             </TouchableOpacity>
           </>
         }
         actions={
           <View style={styles.buttonRow}>
             <Button
-              title="Reject"
+              title={t("reject")}
               variant="outline"
               onPress={() => setRejectingId(String(id))}
               style={styles.actionButton}
             />
             <Button
-              title="Accept"
+              title={t("accept")}
               variant="primary"
               onPress={() => handleAccept(String(id))}
               style={styles.actionButton}
@@ -537,9 +529,9 @@ export default function NewOrdersScreen() {
 
       <ReasonModal
         visible={!!rejectingId}
-        title="Reject order"
-        placeholder="Reason (e.g., too far / busy / out of stock)"
-        confirmText="Reject"
+        title={t("rejectOrder")}
+        placeholder={t("rejectReasonPlaceholder")}
+        confirmText={t("reject")}
         onClose={() => setRejectingId(null)}
         onConfirm={(reason) => {
           if (!rejectingId) return;

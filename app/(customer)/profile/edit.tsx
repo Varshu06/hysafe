@@ -1,57 +1,125 @@
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../../../src/context/AuthContext';
-import { COLORS } from '../../../src/utils/constants';
-import { updateProfile as updateProfileAPI } from '../../../src/services/customer.service';
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../../src/context/AuthContext";
+import { COLORS } from "../../../src/utils/constants";
+import { updateProfile as updateProfileAPI } from "../../../src/services/customer.service";
 
 export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshProfile } = useAuth();
 
-  type CustomerType = 'home' | 'shop' | 'hotel' | 'bank' | 'event';
-  type PaymentTerms = 'one-time' | 'weekly' | 'monthly';
+  type CustomerType = "home" | "shop" | "hotel" | "bank" | "event";
+  type PaymentTerms = "one-time" | "weekly" | "monthly";
 
-  const CUSTOMER_TYPES: { value: CustomerType; label: string; icon: keyof typeof Feather.glyphMap; description: string }[] = [
-    { value: 'home', label: 'Home', icon: 'home', description: 'Home delivery' },
-    { value: 'shop', label: 'Shop', icon: 'shopping-bag', description: 'Retail shop' },
-    { value: 'hotel', label: 'Hotel', icon: 'briefcase', description: 'Hotel/Restaurant' },
-    { value: 'bank', label: 'Bank', icon: 'credit-card', description: 'Bank/Office' },
-    { value: 'event', label: 'Event', icon: 'calendar', description: 'Events/Weddings' },
+  const CUSTOMER_TYPES: {
+    value: CustomerType;
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    description: string;
+  }[] = [
+    {
+      value: "home",
+      label: t("Home"),
+      icon: "home",
+      description: t("Home delivery"),
+    },
+    {
+      value: "shop",
+      label: t("Shop"),
+      icon: "shopping-bag",
+      description: t("Retail shop"),
+    },
+    {
+      value: "hotel",
+      label: t("Hotel"),
+      icon: "briefcase",
+      description: t("Hotel/Restaurant"),
+    },
+    {
+      value: "bank",
+      label: t("Bank"),
+      icon: "credit-card",
+      description: t("Bank/Office"),
+    },
+    {
+      value: "event",
+      label: t("Event"),
+      icon: "calendar",
+      description: t("Event/Weddings"),
+    },
   ];
 
-  const PAYMENT_TERMS_OPTIONS: { value: PaymentTerms; label: string; icon: keyof typeof Feather.glyphMap; description: string }[] = [
-    { value: 'one-time', label: 'Pay Per Order', icon: 'credit-card', description: 'Pay for each order' },
-    { value: 'weekly', label: 'Weekly', icon: 'refresh-cw', description: 'Pay weekly' },
-    { value: 'monthly', label: 'Monthly', icon: 'calendar', description: 'Pay monthly' },
+  const PAYMENT_TERMS_OPTIONS: {
+    value: PaymentTerms;
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    description: string;
+  }[] = [
+    {
+      value: "one-time",
+      label: t("payPerOrder"),
+      icon: "credit-card",
+      description: t("payForEachOrder"),
+    },
+    {
+      value: "weekly",
+      label: t("Weekly"),
+      icon: "refresh-cw",
+      description: t("payWeekly"),
+    },
+    {
+      value: "monthly",
+      label: t("Monthly"),
+      icon: "calendar",
+      description: t("payMonthly"),
+    },
   ];
 
   const getDefaultPaymentTerms = (type: CustomerType): PaymentTerms => {
-    if (type === 'hotel' || type === 'bank' || type === 'shop') {
-      return 'monthly';
+    if (type === "hotel" || type === "bank" || type === "shop") {
+      return "monthly";
     }
-    return 'one-time';
+    return "one-time";
   };
 
   const initial = useMemo(() => {
-    const defaultCustomerType: CustomerType = (user?.customerType as CustomerType) || 'home';
+    const defaultCustomerType: CustomerType =
+      (user?.customerType as CustomerType) || "home";
     return {
-      name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
+      name: user?.name || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
       customerType: defaultCustomerType,
-      paymentTerms: ((user as any)?.paymentTerms as PaymentTerms) || getDefaultPaymentTerms(defaultCustomerType),
+      paymentTerms:
+        ((user as any)?.paymentTerms as PaymentTerms) ||
+        getDefaultPaymentTerms(defaultCustomerType),
     };
   }, [user]);
 
   const [name, setName] = useState(initial.name);
   const [email, setEmail] = useState(initial.email);
   const [phone] = useState(initial.phone);
-  const [customerType, setCustomerType] = useState<CustomerType>(initial.customerType);
-  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(initial.paymentTerms);
+  const [customerType, setCustomerType] = useState<CustomerType>(
+    initial.customerType,
+  );
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>(
+    initial.paymentTerms,
+  );
   const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
@@ -60,13 +128,13 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!user) {
-      Alert.alert('Not logged in', 'Please login to edit profile.');
-      router.replace('/(auth)/login');
+      Alert.alert(t("error"), t("pleaseLoginToEditProfile"));
+      router.replace("/(auth)/login");
       return;
     }
 
     if (!name.trim()) {
-      Alert.alert('Missing name', 'Please enter your full name.');
+      Alert.alert(t("error"), t("pleaseEnterFullName"));
       return;
     }
 
@@ -81,13 +149,16 @@ export default function EditProfileScreen() {
 
       await updateProfileAPI(updateData);
       await refreshProfile();
-      router.replace('/(customer)/profile');
+      router.replace("/(customer)/profile");
       setTimeout(() => {
-        Alert.alert('Success', 'Your profile has been updated successfully!');
+        Alert.alert("Success", "Your profile has been updated successfully!");
       }, 100);
     } catch (error: any) {
-      console.error('Profile update error:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
+      console.error("Profile update error:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to update profile. Please try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -97,10 +168,13 @@ export default function EditProfileScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top }]}>
-        <TouchableOpacity onPress={() => router.replace('/(customer)/profile')} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.replace("/(customer)/profile")}
+          style={styles.backButton}
+        >
           <Feather name="arrow-left" size={22} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>{t("editProfile")}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -113,16 +187,21 @@ export default function EditProfileScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Feather name="user" size={18} color={COLORS.primary} />
-            <Text style={styles.cardTitle}>Personal Information</Text>
+            <Text style={styles.cardTitle}>{t("personalInformation")}</Text>
           </View>
-          
+
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Full Name</Text>
+            <Text style={styles.fieldLabel}>{t("fullName")}</Text>
             <View style={styles.inputContainer}>
-              <Feather name="user" size={18} color={COLORS.textLight} style={styles.fieldIcon} />
+              <Feather
+                name="user"
+                size={18}
+                color={COLORS.textLight}
+                style={styles.fieldIcon}
+              />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your name"
+                placeholder={t("enterYourName")}
                 placeholderTextColor={COLORS.textLight}
                 value={name}
                 onChangeText={setName}
@@ -132,13 +211,19 @@ export default function EditProfileScreen() {
 
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>
-              Email <Text style={styles.optionalLabel}>(optional)</Text>
+              {t("email")}{" "}
+              <Text style={styles.optionalLabel}>({t("optional")})</Text>
             </Text>
             <View style={styles.inputContainer}>
-              <Feather name="mail" size={18} color={COLORS.textLight} style={styles.fieldIcon} />
+              <Feather
+                name="mail"
+                size={18}
+                color={COLORS.textLight}
+                style={styles.fieldIcon}
+              />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder={t("enterYourEmail")}
                 placeholderTextColor={COLORS.textLight}
                 value={email}
                 onChangeText={setEmail}
@@ -149,16 +234,21 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Phone</Text>
+            <Text style={styles.fieldLabel}>{t("phone")}</Text>
             <View style={[styles.inputContainer, styles.inputDisabled]}>
-              <Feather name="phone" size={18} color={COLORS.textLight} style={styles.fieldIcon} />
+              <Feather
+                name="phone"
+                size={18}
+                color={COLORS.textLight}
+                style={styles.fieldIcon}
+              />
               <TextInput
                 style={[styles.input, styles.disabledText]}
                 value={phone}
                 editable={false}
               />
             </View>
-            <Text style={styles.hint}>Can be updated later with OTP verification</Text>
+            <Text style={styles.hint}>{t("phoneUpdateHint")}</Text>
           </View>
         </View>
 
@@ -168,10 +258,12 @@ export default function EditProfileScreen() {
             <Feather name="tag" size={18} color={COLORS.primary} />
             <Text style={styles.cardTitle}>Account Type</Text>
           </View>
-          <Text style={styles.cardSubtitle}>Select your account type for best pricing</Text>
-          
-          <ScrollView 
-            horizontal 
+          <Text style={styles.cardSubtitle}>
+            Select your account type for best pricing
+          </Text>
+
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScroll}
           >
@@ -185,30 +277,42 @@ export default function EditProfileScreen() {
                 onPress={() => setCustomerType(type.value)}
                 activeOpacity={0.7}
               >
-                <View style={[
-                  styles.chipIcon,
-                  customerType === type.value && styles.chipIconActive,
-                ]}>
-                  <Feather 
-                    name={type.icon} 
-                    size={16} 
-                    color={customerType === type.value ? COLORS.primary : COLORS.textLight} 
+                <View
+                  style={[
+                    styles.chipIcon,
+                    customerType === type.value && styles.chipIconActive,
+                  ]}
+                >
+                  <Feather
+                    name={type.icon}
+                    size={16}
+                    color={
+                      customerType === type.value
+                        ? COLORS.primary
+                        : COLORS.textLight
+                    }
                   />
                 </View>
-                <Text style={[
-                  styles.chipLabel,
-                  customerType === type.value && styles.chipLabelActive,
-                ]}>
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    customerType === type.value && styles.chipLabelActive,
+                  ]}
+                >
                   {type.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
-          {(customerType === 'shop' || customerType === 'hotel' || customerType === 'event') && (
+          {(customerType === "shop" ||
+            customerType === "hotel" ||
+            customerType === "event") && (
             <View style={styles.alertBox}>
               <Feather name="star" size={14} color={COLORS.success} />
-              <Text style={styles.alertText}>Bulk order pricing available for this account type</Text>
+              <Text style={styles.alertText}>
+                Bulk order pricing available for this account type
+              </Text>
             </View>
           )}
         </View>
@@ -219,8 +323,10 @@ export default function EditProfileScreen() {
             <Feather name="credit-card" size={18} color={COLORS.primary} />
             <Text style={styles.cardTitle}>Payment Terms</Text>
           </View>
-          <Text style={styles.cardSubtitle}>Choose your preferred payment schedule</Text>
-          
+          <Text style={styles.cardSubtitle}>
+            Choose your preferred payment schedule
+          </Text>
+
           <View style={styles.paymentContainer}>
             {PAYMENT_TERMS_OPTIONS.map((term) => (
               <TouchableOpacity
@@ -232,27 +338,38 @@ export default function EditProfileScreen() {
                 onPress={() => setPaymentTerms(term.value)}
                 activeOpacity={0.7}
               >
-                <View style={[
-                  styles.paymentIconBox,
-                  paymentTerms === term.value && styles.paymentIconBoxActive,
-                ]}>
-                  <Feather 
-                    name={term.icon} 
-                    size={18} 
-                    color={paymentTerms === term.value ? COLORS.primary : COLORS.textLight} 
+                <View
+                  style={[
+                    styles.paymentIconBox,
+                    paymentTerms === term.value && styles.paymentIconBoxActive,
+                  ]}
+                >
+                  <Feather
+                    name={term.icon}
+                    size={18}
+                    color={
+                      paymentTerms === term.value
+                        ? COLORS.primary
+                        : COLORS.textLight
+                    }
                   />
                 </View>
                 <View style={styles.paymentInfo}>
-                  <Text style={[
-                    styles.paymentTitle,
-                    paymentTerms === term.value && styles.paymentTitleActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.paymentTitle,
+                      paymentTerms === term.value && styles.paymentTitleActive,
+                    ]}
+                  >
                     {term.label}
                   </Text>
-                  <Text style={[
-                    styles.paymentSubtitle,
-                    paymentTerms === term.value && styles.paymentSubtitleActive,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.paymentSubtitle,
+                      paymentTerms === term.value &&
+                        styles.paymentSubtitleActive,
+                    ]}
+                  >
                     {term.description}
                   </Text>
                 </View>
@@ -265,11 +382,13 @@ export default function EditProfileScreen() {
             ))}
           </View>
 
-          {(paymentTerms === 'monthly' || paymentTerms === 'weekly') && (
+          {(paymentTerms === "monthly" || paymentTerms === "weekly") && (
             <View style={styles.alertBox}>
               <Feather name="info" size={14} color={COLORS.primary} />
               <Text style={styles.alertText}>
-                {paymentTerms === 'monthly' ? 'Monthly' : 'Weekly'} billing will be applied. Payment due dates will be shown in order details.
+                {paymentTerms === "monthly"
+                  ? t("monthlyBillingNotice")
+                  : t("weeklyBillingNotice")}
               </Text>
             </View>
           )}
@@ -285,12 +404,12 @@ export default function EditProfileScreen() {
           {saving ? (
             <>
               <ActivityIndicator color={COLORS.secondary} size="small" />
-              <Text style={styles.saveButtonText}>Saving...</Text>
+              <Text style={styles.saveButtonText}>{t("saving")}</Text>
             </>
           ) : (
             <>
               <Feather name="check" size={18} color={COLORS.secondary} />
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>{t("saveChanges")}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -307,31 +426,31 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingBottom: 14,
     backgroundColor: COLORS.secondary,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    position: 'relative',
+    borderBottomColor: "#F1F5F9",
+    position: "relative",
   },
   backButton: {
     padding: 8,
-    position: 'absolute',
+    position: "absolute",
     left: 12,
     borderRadius: 20,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     letterSpacing: 0.3,
   },
   placeholder: {
     width: 36,
-    position: 'absolute',
+    position: "absolute",
     right: 12,
   },
   content: {
@@ -346,23 +465,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: "#F1F5F9",
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginBottom: 16,
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: COLORS.text,
     letterSpacing: 0.2,
   },
@@ -377,27 +496,27 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 8,
   },
   optionalLabel: {
     fontSize: 11,
-    fontWeight: '400',
+    fontWeight: "400",
     color: COLORS.textLight,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
   inputDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
     opacity: 0.8,
   },
   fieldIcon: {
@@ -407,7 +526,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: "500",
     padding: 0,
   },
   disabledText: {
@@ -425,18 +544,18 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   typeChip: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 14,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     minWidth: 80,
     marginRight: 8,
   },
   typeChipActive: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: "#F0F9FF",
     borderColor: COLORS.primary,
     borderWidth: 2,
   },
@@ -445,36 +564,36 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     backgroundColor: COLORS.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   chipIconActive: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
   },
   chipLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
   },
   chipLabelActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   paymentContainer: {
     gap: 12,
   },
   paymentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
     borderRadius: 14,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   paymentCardActive: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: "#F0F9FF",
     borderColor: COLORS.primary,
     borderWidth: 2,
   },
@@ -483,25 +602,25 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 10,
     backgroundColor: COLORS.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
   },
   paymentIconBoxActive: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: "#E0F2FE",
   },
   paymentInfo: {
     flex: 1,
   },
   paymentTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.text,
     marginBottom: 3,
   },
   paymentTitleActive: {
     color: COLORS.primary,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   paymentSubtitle: {
     fontSize: 12,
@@ -515,14 +634,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#E0F2FE',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#E0F2FE",
+    justifyContent: "center",
+    alignItems: "center",
   },
   alertBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0FDFA',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0FDFA",
     borderRadius: 10,
     padding: 12,
     marginTop: 14,
@@ -533,17 +652,17 @@ const styles = StyleSheet.create({
   alertText: {
     flex: 1,
     fontSize: 12,
-    color: '#065F46',
-    fontWeight: '500',
+    color: "#065F46",
+    fontWeight: "500",
     lineHeight: 16,
   },
   saveButton: {
     backgroundColor: COLORS.primary,
     borderRadius: 14,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     marginTop: 8,
     shadowColor: COLORS.primary,
@@ -558,7 +677,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: COLORS.secondary,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   bottomSpacer: {

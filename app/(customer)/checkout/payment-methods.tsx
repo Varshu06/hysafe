@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../../src/components/ui/Button";
 import { COLORS } from "../../../src/utils/constants";
@@ -13,6 +14,7 @@ type PaymentMethodValue = "online" | "offline";
 const CHECKOUT_PAYMENT_METHOD_KEY = "@hysafe_checkout_payment_method";
 
 export default function CheckoutPaymentMethodsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -42,7 +44,7 @@ export default function CheckoutPaymentMethodsScreen() {
       await AsyncStorage.setItem(CHECKOUT_PAYMENT_METHOD_KEY, selected);
       router.replace("/(customer)/checkout");
     } catch {
-      Alert.alert("Error", "Could not save payment method. Please try again.");
+      Alert.alert(t("error"), t("couldNotSavePaymentMethod"));
     } finally {
       setSaving(false);
     }
@@ -102,31 +104,31 @@ export default function CheckoutPaymentMethodsScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Method</Text>
+        <Text style={styles.headerTitle}>{t("paymentMethod")}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Choose payment method</Text>
+        <Text style={styles.sectionTitle}>{t("choosePaymentMethod")}</Text>
         <Text style={styles.sectionSubtitle}>
-          This will be used for this order.
+          {t("paymentMethodDescription")}
         </Text>
 
         <Option
           value="online"
-          title="UPI"
-          subtitle="Pay instantly using UPI apps"
+          title={t("upi")}
+          subtitle={t("payUsingUpi")}
           iconName="smartphone"
         />
         <Option
           value="offline"
-          title="Cash on Delivery"
-          subtitle="Pay after delivery"
+          title={t("cashOnDelivery")}
+          subtitle={t("payAfterDelivery")}
           iconName="dollar-sign"
         />
 
         <Button
-          title={saving ? "Saving..." : "Confirm"}
+          title={saving ? t("saving") : t("confirm")}
           onPress={handleSave}
           disabled={loading || saving}
           style={styles.saveButton}

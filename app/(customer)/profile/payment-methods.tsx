@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../../src/components/ui/Button";
 import { COLORS } from "../../../src/utils/constants";
@@ -12,6 +13,7 @@ type PaymentMethodValue = "online" | "offline";
 const PAYMENT_METHOD_KEY = "@hysafe_default_payment_method";
 
 export default function PaymentMethodsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
@@ -42,9 +44,9 @@ export default function PaymentMethodsScreen() {
     setSaving(true);
     try {
       await AsyncStorage.setItem(PAYMENT_METHOD_KEY, selected);
-      Alert.alert("Saved", "Default payment method updated.", [
+      Alert.alert(t("saved"), t("defaultPaymentMethodUpdated"), [
         {
-          text: "OK",
+          text: t("ok"),
           onPress: () =>
             router.replace(
               returnTo === "checkout"
@@ -54,7 +56,7 @@ export default function PaymentMethodsScreen() {
         },
       ]);
     } catch (e) {
-      Alert.alert("Error", "Could not save payment method. Please try again.");
+      Alert.alert(t("error"), t("couldNotSavePaymentMethod"));
     } finally {
       setSaving(false);
     }
@@ -120,31 +122,31 @@ export default function PaymentMethodsScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Payment Methods</Text>
+        <Text style={styles.headerTitle}>{t("paymentMethods")}</Text>
         <View style={styles.placeholder} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Choose default payment</Text>
+        <Text style={styles.sectionTitle}>{t("chooseDefaultPayment")}</Text>
         <Text style={styles.sectionSubtitle}>
-          This will be used as the default option during checkout.
+          {t("defaultPaymentDescription")}
         </Text>
 
         <Option
           value="online"
-          title="UPI"
-          subtitle="Pay instantly using UPI apps"
+          title={t("upi")}
+          subtitle={t("payUsingUpi")}
           iconName="smartphone"
         />
         <Option
           value="offline"
-          title="Cash on Delivery"
-          subtitle="Pay after delivery"
+          title={t("cashOnDelivery")}
+          subtitle={t("payAfterDelivery")}
           iconName="dollar-sign"
         />
 
         <Button
-          title={saving ? "Saving..." : "Save"}
+          title={saving ? t("saving") : t("save")}
           onPress={handleSave}
           disabled={loading || saving}
           style={styles.saveButton}

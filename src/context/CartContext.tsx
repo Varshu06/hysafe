@@ -7,19 +7,8 @@ import React, {
   useState,
 } from "react";
 import { ImageSourcePropType } from "react-native";
-import { PRODUCTS } from "../data/dummy";
 
 const CART_STORAGE_KEY = "@hysafe_cart";
-
-// Product images map for reconstruction
-const ProductImages: Record<string, ImageSourcePropType> = {
-  "1l": require("../assets/1l.png"),
-  "2l": require("../assets/2l.png"),
-  "20l": require("../assets/20l.png"),
-  "250ml": require("../assets/250.png"),
-  "300ml": require("../assets/300ml.png"),
-  "500ml": require("../assets/500ml.png"),
-};
 
 export interface CartItem {
   deliveryCharge: number;
@@ -74,11 +63,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           const storedItems: StoredCartItem[] = JSON.parse(cartJson);
           // Reconstruct cart items and attach image from product lookup when possible
           const restoredItems: CartItem[] = storedItems.map((storedItem) => {
-            const product = PRODUCTS.find((p) => p.id === storedItem.id);
-            const image = product ? product.image : ProductImages["20l"];
+            // const product = PRODUCTS.find((p) => p.id === storedItem.id);
+            // const image = product ? product.image : ProductImages["20l"];
             return {
               ...storedItem,
-              image,
+              // image,
             } as CartItem;
           });
           setItems(restoredItems);
