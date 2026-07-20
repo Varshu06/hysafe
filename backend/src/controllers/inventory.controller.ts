@@ -192,3 +192,29 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
     });
   }
 };
+export const getLowStockItems = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const items = await InventoryItem.find({
+      $expr: {
+        $lte: ["$quantity", "$minStock"],
+      },
+    })
+      .sort({ quantity: 1 })
+      .limit(5);
+
+    res.json({
+      success: true,
+      data: items,
+    });
+  } catch (error: any) {
+    console.error("Low stock error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch low stock items",
+    });
+  }
+};

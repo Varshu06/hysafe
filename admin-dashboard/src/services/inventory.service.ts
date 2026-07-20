@@ -33,4 +33,8 @@ export const inventoryService = {
   deleteInventoryItem: async (id: string): Promise<void> => {
     await api.delete(`/inventory/${id}`);
   },
+  getLowStockItems: async () => {
+    const response = await api.get('/inventory/low-stock');
+    return response.data.data;
+  },
 };

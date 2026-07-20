@@ -75,6 +75,8 @@ export const initializeSocket = (httpServer: HTTPServer) => {
 export const emitNewOrder = (order: any) => {
   if (io) {
     io.to('staff').emit('new-order', order);
+    io.to("admin").emit("new-order", order);
+
     console.log(`📦 New order emitted to staff: ${order._id}`);
   }
 };
@@ -94,12 +96,27 @@ export const emitOrderAccepted = (order: any) => {
 // Helper function to emit order status update to customer
 export const emitOrderStatusUpdate = (order: any) => {
   if (io) {
-    io.to(`customer:${order.customerId}`).emit('order-status-updated', {
+    const payload = {
       orderId: order._id,
       status: order.status,
       order,
-    });
-    console.log(`📢 Order status update sent to customer: ${order.customerId} - Status: ${order.status}`);
+    };
+
+    // Notify the customer
+    io.to(`customer:${order.customerId}`).emit(
+      "order-status-updated",
+      payload
+    );
+
+    // Notify all admins
+    io.to("admin").emit(
+      "order-status-updated",
+      payload
+    );
+
+    console.log(
+      `📢 Order status updated: ${order._id} -> ${order.status}`
+    );
   }
 };
 

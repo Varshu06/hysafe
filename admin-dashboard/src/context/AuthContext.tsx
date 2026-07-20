@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { User } from '@types';
 import { storage } from '@utils/storage';
 import { authService } from '@services/auth.service';
-
+import { socketService } from "@services/socket.service";
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -28,6 +28,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUserState(storedUser);
+
+      socketService.connect();
     }
 
     setIsLoading(false);
@@ -44,12 +46,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setToken(token);
       setUserState(user);
+
+      socketService.connect();
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = () => {
+    socketService.disconnect();
     storage.clearAll();
     setToken(null);
     setUserState(null);

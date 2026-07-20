@@ -5,7 +5,7 @@ import { User } from "../models/User.model";
 import { Staff } from "../models/Staff.model";
 import { Inventory } from "../models/Inventory.model";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { emitNewOrder } from "../services/socket.service";
+import { emitNewOrder, emitOrderStatusUpdate,} from "../services/socket.service";
 import { sendNotificationToStaff } from "../services/notification.service";
 
 // Create order
@@ -362,6 +362,10 @@ export const updateOrderStatusByAdmin = async (
       .populate("customerId", "name phone email")
       .populate("assignedStaffId", "name phone");
 
+      if (populatedOrder) {
+      emitOrderStatusUpdate(populatedOrder);
+    }
+
     res.json({
       success: true,
       message: "Order status updated successfully",
@@ -428,7 +432,21 @@ export const getOrderStats = async (
     const activeDeliveries = await Order.countDocuments({
       status: "out_for_delivery",
     });
+    const pendingOrders = await Order.countDocuments({
+      status: "pending",
+    });
 
+    const acceptedOrders = await Order.countDocuments({
+      status: "accepted",
+    });
+
+    const deliveredOrders = await Order.countDocuments({
+      status: "delivered",
+    });
+
+    const cancelledOrders = await Order.countDocuments({
+      status: "cancelled",
+    });
     const totalCustomers = await User.countDocuments({
       role: "customer",
     });
@@ -456,7 +474,75 @@ export const getOrderStats = async (
               previousMonthOrders) *
               100
           );
+    const currentMonthRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          status: "delivered",
+          createdAt: { $gte: startOfCurrentMonth },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$totalPrice" },
+        },
+      },
+    ]);
 
+    const previousMonthRevenueResult = await Order.aggregate([
+      {
+        $match: {
+          status: "delivered",
+          createdAt: {
+            $gte: startOfPreviousMonth,
+            $lte: endOfPreviousMonth,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$totalPrice" },
+        },
+      },
+    ]);
+
+    const currentRevenue =
+      currentMonthRevenueResult.length > 0
+        ? currentMonthRevenueResult[0].total
+        : 0;
+
+    const previousRevenue =
+      previousMonthRevenueResult.length > 0
+        ? previousMonthRevenueResult[0].total
+        : 0;
+
+    const revenueGrowth =
+      previousRevenue === 0
+        ? 0
+        : Math.round(
+            ((currentRevenue - previousRevenue) / previousRevenue) * 100
+          );
+    const currentMonthCustomers = await User.countDocuments({
+      role: "customer",
+      createdAt: {
+        $gte: startOfCurrentMonth,
+      },
+    });
+
+    const previousMonthCustomers = await User.countDocuments({
+      role: "customer",
+      createdAt: {
+        $gte: startOfPreviousMonth,
+        $lte: endOfPreviousMonth,
+      },
+    });
+
+    const customerGrowth =
+      previousMonthCustomers === 0
+        ? 0
+        : Math.round(
+            ((currentMonthCustomers - previousMonthCustomers) / previousMonthCustomers) * 100);
     res.json({
       success: true,
       data: {
@@ -464,8 +550,16 @@ export const getOrderStats = async (
         totalRevenue,
         totalCustomers,
         activeDeliveries,
+
+        pendingOrders,
+        acceptedOrders,
+        deliveredOrders,
+        cancelledOrders,
+
         orderGrowth,
-      },
+        revenueGrowth,
+        customerGrowth,
+      }
     });
   } catch (error) {
     console.error(error);
@@ -482,8 +576,6 @@ export const getOrdersChart = async (
   res: Response
 ) => {
   try {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
     // Last 7 days
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
@@ -493,20 +585,43 @@ export const getOrdersChart = async (
       createdAt: { $gte: sevenDaysAgo },
     });
 
-    const chart = days.map((day) => ({
-      date: day,
-      orders: 0,
-      revenue: 0,
-    }));
+    // Create last 7 dates
+    const chart: {
+      date: string;
+      fullDate: string;
+      orders: number;
+      revenue: number;
+    }[] = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+
+      chart.push({
+        date: date.toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+        }),
+        fullDate: date.toISOString().split("T")[0],
+        orders: 0,
+        revenue: 0,
+      });
+    }
+
 
     orders.forEach((order) => {
-      const day = days[new Date(order.createdAt).getDay()];
+      const orderDate = new Date(order.createdAt)
+        .toISOString()
+        .split("T")[0];
 
-      const index = chart.findIndex((d) => d.date === day);
+      const index = chart.findIndex(
+        (item) => item.fullDate === orderDate
+      );
 
       if (index !== -1) {
         chart[index].orders += 1;
 
+        // Revenue only from delivered orders
         if (order.status === "delivered") {
           chart[index].revenue += order.totalPrice;
         }
@@ -515,7 +630,7 @@ export const getOrdersChart = async (
 
     res.json({
       success: true,
-      data: chart,
+      data: chart.map(({ fullDate, ...rest }) => rest),
     });
   } catch (error) {
     console.error(error);
@@ -526,7 +641,29 @@ export const getOrdersChart = async (
     });
   }
 };
+export const getRecentOrders = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const orders = await Order.find()
+      .populate("customerId", "name phone")
+      .sort({ createdAt: -1 })
+      .limit(5);
 
+    res.json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch recent orders",
+    });
+  }
+};
 // Helper function to update inventory when order is cancelled (customer cancellation)
 async function updateInventoryOnOrderCancel(quantity: number) {
   try {

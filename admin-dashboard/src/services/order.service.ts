@@ -40,4 +40,9 @@ export const orderService = {
     const response = await api.get('/orders/chart');
     return response.data.data;
   },
+  getRecentOrders: async () => {
+    const response = await api.get("/orders/recent");
+    return response.data.data;
+  },
 };
+

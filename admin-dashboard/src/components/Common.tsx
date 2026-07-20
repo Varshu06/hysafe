@@ -9,12 +9,24 @@ export const Loading = () => (
     </div>
   </div>
 );
-
-export const EmptyState = ({ message = 'No data found' }: { message?: string }) => (
+export const EmptyState = ({
+  title = "No Data",
+  description = "No data found",
+}: {
+  title?: string;
+  description?: string;
+}) => (
   <div className="flex h-64 items-center justify-center">
     <div className="rounded-3xl border border-dashed border-slate-200 bg-white/70 px-8 py-10 text-center shadow-sm">
       <Inbox className="mx-auto mb-3 text-slate-400" size={30} />
-      <p className="text-sm font-medium text-slate-500">{message}</p>
+
+      <h3 className="text-lg font-semibold text-slate-700">
+        {title}
+      </h3>
+
+      <p className="mt-2 text-sm text-slate-500">
+        {description}
+      </p>
     </div>
   </div>
 );

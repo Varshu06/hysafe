@@ -6,6 +6,7 @@ import {
   getInventoryItems,
   getProducts,
   updateInventoryItem,
+  getLowStockItems,
 } from "../controllers/inventory.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
@@ -13,6 +14,7 @@ import { requireRole } from "../middleware/role.middleware";
 const router = Router();
 
 router.get("/products", authenticate, requireRole("customer"), getProducts);
+router.get("/low-stock", authenticate, requireRole("admin"), getLowStockItems);
 router.get("/", authenticate, requireRole("admin"), getInventoryItems);
 router.get("/:id", authenticate, requireRole("admin"), getInventoryItemById);
 router.post("/", authenticate, requireRole("admin"), createInventoryItem);
