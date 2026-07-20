@@ -33,9 +33,6 @@ export default function ProductsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasNext, setHasNext] = useState(true);
 
-  useEffect(() => {
-    fetchProducts(1, true);
-  }, []);
 
   const fetchProducts = useCallback(
     async (pageNumber: number, refresh = false) => {
@@ -65,6 +62,10 @@ export default function ProductsScreen() {
     },
     [loading, hasNext],
   );
+
+  useEffect(() => {
+    fetchProducts(1, true);
+  }, []);
 
   const loadMore = () => {
     if (!loading && hasNext) {

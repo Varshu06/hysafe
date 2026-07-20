@@ -51,6 +51,14 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       });
     }
   }, [shouldAnimate]);
+  
+  const getProductImage = (volume: string) => {
+    return (
+      ProductImages[
+        volume.toLowerCase() as keyof typeof ProductImages
+      ] || ProductImages["20l"]
+    );
+  };
 
   return (
     <TouchableOpacity
@@ -72,7 +80,7 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       )}
       <View style={styles.imageContainer}>
         <Image
-          source={ProductImages[item.image]}
+          source={getProductImage(item.volume)}
           style={styles.productImage}
           resizeMode="contain"
         />

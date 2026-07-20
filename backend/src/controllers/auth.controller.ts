@@ -116,16 +116,16 @@ export const register = async (req: Request, res: Response) => {
 // Login
 export const login = async (req: Request, res: Response) => {
   try {
-    const { phone, password } = req.body;
+    const { phone,email, password } = req.body;
 
-    if (!phone || !password) {
+    if (!phone && !email || !password) {
       return res.status(400).json({
-        message: 'Phone number and password are required',
+        message: 'Phone number/email and password are required',
       });
     }
 
-    // Find user by phone number
-    const user = await User.findOne({ phone });
+    // Find user by phone number or email
+    const user = await User.findOne({ $or: [{  phone: phone  }, { email: email?.toLowerCase() }] });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });

@@ -5,7 +5,7 @@ export interface Product {
   quantity: number;
   price: number;
   deliveryCharge: number;
-  image: string;
+  image?: string;
   available: boolean;
 }
 

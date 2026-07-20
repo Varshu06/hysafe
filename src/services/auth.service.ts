@@ -62,7 +62,8 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     
     // Ensure we're sending phone (not email) for login
     const loginData = {
-      phone: credentials.phone || credentials.email, // Use phone or email as phone
+      phone: credentials.phone,
+      email: credentials.email,
       password: credentials.password,
     };
     
