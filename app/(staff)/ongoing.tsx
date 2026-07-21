@@ -287,7 +287,6 @@ export default function OngoingOrdersScreen() {
                     styles.tabText,
                     filter === filterItem.key && styles.tabTextActive,
                   ]}
-                  numberOfLines={1}
                 >
                   {t(filterItem.key)}
                 </Text>

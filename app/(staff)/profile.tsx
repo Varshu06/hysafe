@@ -210,19 +210,19 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Today</Text>
+          <Text style={styles.statsTitle}>{t("today")}</Text>
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.pending}</Text>
-              <Text style={styles.statLabel}>New</Text>
+              <Text style={styles.statLabel}>{t("new")}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.ongoing}</Text>
-              <Text style={styles.statLabel}>Ongoing</Text>
+              <Text style={styles.statLabel}>{t("ongoing")}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.delivered}</Text>
-              <Text style={styles.statLabel}>Delivered</Text>
+              <Text style={styles.statLabel}>{t("delivered")}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>₹{stats.cod}</Text>
@@ -479,6 +479,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+    flexShrink: 1,
   },
   menuItemRight: {
     flexDirection: "row",
@@ -489,6 +491,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     fontWeight: "500",
+    flexShrink: 1,
   },
   menuItemLangText: {
     fontSize: 14,

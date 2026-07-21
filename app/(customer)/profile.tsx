@@ -509,6 +509,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+    flexShrink: 1,
   },
   menuItemRight: {
     flexDirection: "row",
@@ -519,6 +521,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     fontWeight: "500",
+    flexShrink: 1,
   },
   menuItemLangText: {
     fontSize: 14,

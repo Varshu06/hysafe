@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   customerTypeCard: {
-    width: "31%",
+    width: "48%",
     backgroundColor: "#F8FAFC",
     borderRadius: 12,
     padding: 12,
