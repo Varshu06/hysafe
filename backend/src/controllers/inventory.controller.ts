@@ -60,6 +60,7 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       name,
       volume,
       quantity,
+      minStock,
       price,
       deliveryCharge,
       available,
@@ -68,7 +69,7 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
     if (!name || !volume || quantity === undefined) {
       return res.status(400).json({
         success: false,
-        message: "Name, quantity and minStock are required",
+        message: "Name, volume and quantity are required",
       });
     }
 
@@ -76,9 +77,12 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       name: String(name).trim(),
       volume: String(volume).trim(),
       quantity: Number(quantity),
+      minStock: Number(minStock ?? 10),
+      lastRestocked: new Date(),
+
       price: Number(price),
       deliveryCharge: Number(deliveryCharge || 0),
-      available: available ?? true,
+      available: Number(quantity) > 0,
     });
 
     res.status(201).json({
@@ -102,23 +106,30 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       name,
       volume,
       quantity,
+      minStock,
+      lastRestocked,
       price,
       deliveryCharge,
-      available,
     } = req.body;
 
     const updateData: Record<string, unknown> = {};
 
     if (name !== undefined) updateData.name = String(name).trim();
-    if (quantity !== undefined) updateData.quantity = Number(quantity);
+    if (quantity !== undefined) {
+      updateData.quantity = Number(quantity);
+      updateData.available = Number(quantity) > 0;
+    }
+    if (minStock !== undefined)
+      updateData.minStock = Number(minStock);
+
+    if (lastRestocked !== undefined)
+      updateData.lastRestocked = new Date(lastRestocked);
     if (volume !== undefined)
       updateData.volume = String(volume).trim();
-
+    if (price !== undefined)
+      updateData.price = Number(price);
     if (deliveryCharge !== undefined)
       updateData.deliveryCharge = Number(deliveryCharge);
-
-    if (available !== undefined)
-      updateData.available = available;
 
     const item = await InventoryItem.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -187,6 +198,8 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
       name: product.name,
       volume: product.volume,
       quantity: product.quantity,
+      minStock: product.minStock,
+      lastRestocked: product.lastRestocked,
       price: product.price,
       deliveryCharge: product.deliveryCharge,
       image: product.image,
