@@ -4,6 +4,7 @@ import { CustomerProfile } from "../models/CustomerProfile.model";
 import { User } from "../models/User.model";
 import { Staff } from "../models/Staff.model";
 import { Inventory } from "../models/Inventory.model";
+import { InventoryItem } from "../models/InventoryItem.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { emitNewOrder, emitOrderStatusUpdate, } from "../services/socket.service";
 import { sendNotificationToStaff } from "../services/notification.service";
@@ -251,7 +252,7 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
 
     // Update inventory: Release reserved stock if order was accepted (not pending)
     if (previousStatus === "accepted") {
-      await updateInventoryOnOrderCancel(order.quantity);
+      await updateInventoryOnOrderCancel(order.items);
     }
 
     res.json({
@@ -268,6 +269,7 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
 
 export const assignOrderStaff = async (req: AuthRequest, res: Response) => {
   try {
+    console.log("assignOrderStaff called");
     const { id } = req.params;
     const { staffId } = req.body;
 
@@ -295,7 +297,7 @@ export const assignOrderStaff = async (req: AuthRequest, res: Response) => {
     order.assignedStaffId = staffUser._id as any;
     if (order.status === "pending") {
 
-      await reserveInventory(order.quantity);
+      await reserveInventory(order.items);
 
       order.status = "accepted";
       order.acceptedAt = new Date();
@@ -325,6 +327,7 @@ export const updateOrderStatusByAdmin = async (
   res: Response,
 ) => {
   try {
+    console.log("updateOrderStatusByAdmin called");
     const { id } = req.params;
     const { status } = req.body;
 
@@ -353,7 +356,7 @@ export const updateOrderStatusByAdmin = async (
       previousStatus === "pending" &&
       status === "accepted"
     ) {
-      await reserveInventory(order.quantity);
+      await reserveInventory(order.items);
     }
 
     // Complete delivery
@@ -361,7 +364,7 @@ export const updateOrderStatusByAdmin = async (
       previousStatus !== "delivered" &&
       status === "delivered"
     ) {
-      await completeInventoryDelivery(order.quantity);
+      await completeInventoryDelivery(order.items);
     }
 
     // Return stock if accepted order gets cancelled
@@ -369,7 +372,7 @@ export const updateOrderStatusByAdmin = async (
       previousStatus === "accepted" &&
       status === "cancelled"
     ) {
-      await updateInventoryOnOrderCancel(order.quantity);
+      await updateInventoryOnOrderCancel(order.items);
     }
 
     if (status === "accepted" && !order.acceptedAt) {
@@ -690,50 +693,76 @@ export const getRecentOrders = async (
     });
   }
 };
-async function reserveInventory(quantity: number) {
-  const inventory = await Inventory.findOne();
+async function reserveInventory(
+  items: {
+    productName: string;
+    quantity: number;
+  }[],
+) {
+  for (const item of items) {
+    
 
-  if (!inventory) return;
+    const inventoryItem = await InventoryItem.findOne({
+      name: item.productName,
+    });
 
-  if (inventory.availableStock < quantity) {
-    throw new Error("Not enough inventory available");
+    
+
+    if (!inventoryItem) {
+      throw new Error(`Inventory item not found: ${item.productName}`);
+    }
+
+    
+
+    inventoryItem.quantity -= item.quantity;
+
+    
+
+    await inventoryItem.save();
+
+    
   }
 
-  inventory.availableStock -= quantity;
-  inventory.reservedStock += quantity;
-  inventory.lastUpdated = new Date();
-
-  await inventory.save();
+  
 }
-async function completeInventoryDelivery(quantity: number) {
-  const inventory = await Inventory.findOne();
-
-  if (!inventory) return;
-
-  inventory.reservedStock -= quantity;
-  inventory.deliveredStock += quantity;
-
-  inventory.lastUpdated = new Date();
-
-  await inventory.save();
+async function completeInventoryDelivery(
+  items: {
+    productName: string;
+    quantity: number;
+  }[],
+) {
+  // Stock was already deducted when the order was accepted.
+  // Nothing more needs to be deducted on delivery.
+  console.log(
+    `Order delivered. Inventory already updated during acceptance.`,
+  );
 }
 // Helper function to update inventory when order is cancelled (customer cancellation)
-async function updateInventoryOnOrderCancel(quantity: number) {
-  try {
-    const inventory = await Inventory.findOne();
-    if (!inventory) return;
+async function updateInventoryOnOrderCancel(
+  items: {
+    productName: string;
+    quantity: number;
+  }[],
+) {
+  for (const item of items) {
+    const inventoryItem = await InventoryItem.findOne({
+      name: item.productName,
+    });
 
-    // Release reserved stock back to available
-    if (inventory.reservedStock >= quantity) {
-      inventory.reservedStock -= quantity;
-      inventory.availableStock += quantity;
-      inventory.lastUpdated = new Date();
-      await inventory.save();
-      console.log(
-        `📦 Inventory updated on cancel: Released ${quantity} cans. Available: ${inventory.availableStock}, Reserved: ${inventory.reservedStock}`,
+    if (!inventoryItem) {
+      console.warn(
+        `Inventory item not found: ${item.productName}`,
       );
+      continue;
     }
-  } catch (error: any) {
-    console.error("Error updating inventory on order cancel:", error);
+
+    inventoryItem.quantity += item.quantity;
+    inventoryItem.lastRestocked = new Date();
+
+    await inventoryItem.save();
+
+    console.log(
+      `Returned ${item.quantity} ${item.productName} back to inventory.`,
+    );
   }
 }
