@@ -2,13 +2,13 @@ import { Response } from "express";
 import mongoose from "mongoose";
 import { Order } from "../models/Order.model";
 import { Staff } from "../models/Staff.model";
-import { Inventory } from "../models/Inventory.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import {
   emitOrderAccepted,
   emitOrderAcceptedToStaff,
   emitOrderStatusUpdate,
 } from "../services/socket.service";
+import { InventoryItem } from "../models/InventoryItem.model";
 
 // Toggle online/offline status
 export const toggleStatus = async (req: AuthRequest, res: Response) => {
@@ -97,15 +97,15 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Order already assigned" });
     }
 
+    // Reserve stock before changing the order state
+    await reserveInventory(order.items);
+
     // Assign order to staff
     const staffId = req.user._id;
     order.assignedStaffId = staffId;
     order.status = "accepted";
     order.acceptedAt = new Date();
     await order.save();
-
-    // Update inventory: Reserve stock when order is accepted
-    await updateInventoryOnOrderAccept(order.quantity);
 
     console.log(
       `✅ Order ${order._id} accepted by staff ${staffId}. Status: ${order.status}, AssignedStaffId: ${order.assignedStaffId}`,
@@ -231,10 +231,15 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       order.paymentStatus = "paid"; // Mark as paid if transaction ID is provided
     }
 
+    const totalOrderQuantity = order.items.reduce(
+      (sum, item) => sum + item.quantity,
+      0,
+    );
+
     if (status === "out_for_delivery") {
       order.outForDeliveryAt = new Date();
       // Driver picks up cans: Add to driver's inventory
-      await updateDriverInventory(req.user._id, order.quantity, "pickup");
+      await updateDriverInventory(req.user._id, totalOrderQuantity, "pickup");
     } else if (status === "delivered") {
       order.deliveredAt = new Date();
       if (order.paymentMethod === "offline") {
@@ -242,17 +247,17 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
       }
 
       // Driver delivers cans: Remove from driver's inventory
-      await updateDriverInventory(req.user._id, order.quantity, "deliver");
+      await updateDriverInventory(req.user._id, totalOrderQuantity, "deliver");
 
-      // Update factory inventory: Reduce stock when order is delivered
-      await updateInventoryOnOrderDelivered(order.quantity, previousStatus);
+      // Update inventory: no extra deduction needed because stock was already reserved
+      await completeInventoryDelivery(order.items);
     } else if (status === "cancelled" && previousStatus !== "pending") {
       // If order was accepted/out_for_delivery and now cancelled, release reserved stock
       if (previousStatus === "out_for_delivery") {
         // Driver had picked up cans, return them to driver's inventory (or factory)
-        await updateDriverInventory(req.user._id, order.quantity, "return");
+        await updateDriverInventory(req.user._id, totalOrderQuantity, "return");
       }
-      await updateInventoryOnOrderCancel(order.quantity, previousStatus);
+      await updateInventoryOnOrderCancel(order.items);
     }
 
     await order.save();
@@ -285,124 +290,73 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 };
 
 // Helper function to update inventory when order is accepted
-async function updateInventoryOnOrderAccept(quantity: number) {
-  try {
-    // Get or create inventory document
-    let inventory = await Inventory.findOne();
-    if (!inventory) {
-      // Initialize inventory if it doesn't exist
-      inventory = await Inventory.create({
-        totalStock: 1000, // Default starting stock
-        availableStock: 1000,
-        reservedStock: 0,
-        deliveredStock: 0,
-        lowStockThreshold: 50,
-      });
+async function reserveInventory(
+  items: {
+    productName: string;
+    quantity: number;
+  }[],
+) {
+  for (const item of items) {
+    const inventoryItem = await InventoryItem.findOne({
+      name: item.productName,
+    });
+
+    if (!inventoryItem) {
+      throw new Error(`Inventory item not found: ${item.productName}`);
     }
 
-    // Reserve stock: Move from available to reserved
-    if (inventory.availableStock >= quantity) {
-      inventory.availableStock -= quantity;
-      inventory.reservedStock += quantity;
-      inventory.lastUpdated = new Date();
-      await inventory.save();
-      console.log(
-        `📦 Inventory updated: Reserved ${quantity} cans. Available: ${inventory.availableStock}, Reserved: ${inventory.reservedStock}`,
-      );
-    } else {
-      console.warn(
-        `⚠️ Insufficient stock: Requested ${quantity}, Available: ${inventory.availableStock}`,
-      );
+    if (inventoryItem.quantity < item.quantity) {
+      throw new Error(`Not enough stock for ${item.productName}`);
     }
-  } catch (error: any) {
-    console.error("Error updating inventory on order accept:", error);
-    // Don't throw - inventory update shouldn't block order acceptance
+
+    inventoryItem.quantity -= item.quantity;
+    inventoryItem.lastRestocked = new Date();
+
+    await inventoryItem.save();
   }
 }
 
 // Helper function to update inventory when order is delivered
-async function updateInventoryOnOrderDelivered(
-  quantity: number,
-  previousStatus: string,
+async function completeInventoryDelivery(
+  items: {
+    productName: string;
+    quantity: number;
+  }[],
 ) {
-  try {
-    let inventory = await Inventory.findOne();
-    if (!inventory) {
-      console.warn("Inventory not found, creating new inventory record");
-      inventory = await Inventory.create({
-        totalStock: 1000,
-        availableStock: 1000,
-        reservedStock: 0,
-        deliveredStock: quantity,
-        lowStockThreshold: 50,
-      });
-      return;
-    }
-
-    // If order was previously accepted/out_for_delivery, release from reserved
-    if (
-      previousStatus === "accepted" ||
-      previousStatus === "out_for_delivery"
-    ) {
-      if (inventory.reservedStock >= quantity) {
-        inventory.reservedStock -= quantity;
-      } else {
-        // Handle edge case where reserved stock might be less
-        inventory.reservedStock = Math.max(
-          0,
-          inventory.reservedStock - quantity,
-        );
-      }
-    }
-
-    // Reduce total stock and update delivered count
-    inventory.totalStock = Math.max(0, inventory.totalStock - quantity);
-    inventory.deliveredStock += quantity;
-    inventory.lastUpdated = new Date();
-    await inventory.save();
-
-    console.log(
-      `📦 Inventory updated on delivery: Delivered ${quantity} cans. Total: ${inventory.totalStock}, Available: ${inventory.availableStock}, Reserved: ${inventory.reservedStock}`,
-    );
-
-    // Check for low stock
-    if (inventory.availableStock < inventory.lowStockThreshold) {
-      console.warn(
-        `⚠️ LOW STOCK ALERT: Available stock (${inventory.availableStock}) is below threshold (${inventory.lowStockThreshold})`,
-      );
-    }
-  } catch (error: any) {
-    console.error("Error updating inventory on order delivery:", error);
-    // Don't throw - inventory update shouldn't block order delivery
-  }
+  // Stock was already deducted when the order was accepted.
+  // Nothing more needs to be deducted on delivery.
+  console.log(
+    `Order delivered. Inventory already updated during acceptance.`,
+  );
 }
 
 // Helper function to update inventory when order is cancelled
 async function updateInventoryOnOrderCancel(
-  quantity: number,
-  previousStatus: string,
+  items: {
+    productName: string;
+    quantity: number;
+  }[],
 ) {
-  try {
-    const inventory = await Inventory.findOne();
-    if (!inventory) return;
+  for (const item of items) {
+    const inventoryItem = await InventoryItem.findOne({
+      name: item.productName,
+    });
 
-    // If order was accepted/out_for_delivery, release reserved stock back to available
-    if (
-      previousStatus === "accepted" ||
-      previousStatus === "out_for_delivery"
-    ) {
-      if (inventory.reservedStock >= quantity) {
-        inventory.reservedStock -= quantity;
-        inventory.availableStock += quantity;
-        inventory.lastUpdated = new Date();
-        await inventory.save();
-        console.log(
-          `📦 Inventory updated on cancel: Released ${quantity} cans. Available: ${inventory.availableStock}, Reserved: ${inventory.reservedStock}`,
-        );
-      }
+    if (!inventoryItem) {
+      console.warn(
+        `Inventory item not found: ${item.productName}`,
+      );
+      continue;
     }
-  } catch (error: any) {
-    console.error("Error updating inventory on order cancel:", error);
+
+    inventoryItem.quantity += item.quantity;
+    inventoryItem.lastRestocked = new Date();
+
+    await inventoryItem.save();
+
+    console.log(
+      `Returned ${item.quantity} ${item.productName} back to inventory.`,
+    );
   }
 }
 
