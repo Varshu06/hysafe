@@ -5,7 +5,7 @@ import { User } from "../models/User.model";
 import { Staff } from "../models/Staff.model";
 import { Inventory } from "../models/Inventory.model";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { emitNewOrder, emitOrderStatusUpdate,} from "../services/socket.service";
+import { emitNewOrder, emitOrderStatusUpdate, } from "../services/socket.service";
 import { sendNotificationToStaff } from "../services/notification.service";
 
 // Create order
@@ -50,8 +50,9 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const normalizedItems = items.map((item: any, index: number) => {
       const price = Number(item.price);
-      const deliveryChargeRaw = item.deliveryCharge ?? item.deliveryCharges ?? 0;
-      const deliveryCharge = isNaN(Number(deliveryChargeRaw)) ? 0 : Number(deliveryChargeRaw);
+      const deliveryCharge = Number(
+        item.deliveryCharge ?? item.deliveryCharges ?? 0,
+      );
       const quantity = Number(item.quantity);
 
       if (
@@ -62,15 +63,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         !Number.isFinite(quantity) ||
         quantity < 1
       ) {
-        console.error("Invalid item validation failed details:", {
-          index,
-          productId: item.productId,
-          productName: item.productName,
-          price,
-          deliveryCharge,
-          quantity,
-          rawItem: item
-        });
         throw new Error(`Invalid item at index ${index}`);
       }
 
@@ -302,8 +294,11 @@ export const assignOrderStaff = async (req: AuthRequest, res: Response) => {
 
     order.assignedStaffId = staffUser._id as any;
     if (order.status === "pending") {
+
+      await reserveInventory(order.quantity);
+
       order.status = "accepted";
-      order.acceptedAt = order.acceptedAt || new Date();
+      order.acceptedAt = new Date();
     }
 
     await order.save();
@@ -353,6 +348,29 @@ export const updateOrderStatusByAdmin = async (
 
     const previousStatus = order.status;
     order.status = status;
+    // Reserve stock when order is accepted
+    if (
+      previousStatus === "pending" &&
+      status === "accepted"
+    ) {
+      await reserveInventory(order.quantity);
+    }
+
+    // Complete delivery
+    if (
+      previousStatus !== "delivered" &&
+      status === "delivered"
+    ) {
+      await completeInventoryDelivery(order.quantity);
+    }
+
+    // Return stock if accepted order gets cancelled
+    if (
+      previousStatus === "accepted" &&
+      status === "cancelled"
+    ) {
+      await updateInventoryOnOrderCancel(order.quantity);
+    }
 
     if (status === "accepted" && !order.acceptedAt) {
       order.acceptedAt = new Date();
@@ -370,7 +388,7 @@ export const updateOrderStatusByAdmin = async (
       .populate("customerId", "name phone email")
       .populate("assignedStaffId", "name phone");
 
-      if (populatedOrder) {
+    if (populatedOrder) {
       emitOrderStatusUpdate(populatedOrder);
     }
 
@@ -477,11 +495,11 @@ export const getOrderStats = async (
       previousMonthOrders === 0
         ? 0
         : Math.round(
-            ((currentMonthOrders -
-              previousMonthOrders) /
-              previousMonthOrders) *
-              100
-          );
+          ((currentMonthOrders -
+            previousMonthOrders) /
+            previousMonthOrders) *
+          100
+        );
     const currentMonthRevenueResult = await Order.aggregate([
       {
         $match: {
@@ -529,8 +547,8 @@ export const getOrderStats = async (
       previousRevenue === 0
         ? 0
         : Math.round(
-            ((currentRevenue - previousRevenue) / previousRevenue) * 100
-          );
+          ((currentRevenue - previousRevenue) / previousRevenue) * 100
+        );
     const currentMonthCustomers = await User.countDocuments({
       role: "customer",
       createdAt: {
@@ -550,7 +568,7 @@ export const getOrderStats = async (
       previousMonthCustomers === 0
         ? 0
         : Math.round(
-            ((currentMonthCustomers - previousMonthCustomers) / previousMonthCustomers) * 100);
+          ((currentMonthCustomers - previousMonthCustomers) / previousMonthCustomers) * 100);
     res.json({
       success: true,
       data: {
@@ -672,6 +690,33 @@ export const getRecentOrders = async (
     });
   }
 };
+async function reserveInventory(quantity: number) {
+  const inventory = await Inventory.findOne();
+
+  if (!inventory) return;
+
+  if (inventory.availableStock < quantity) {
+    throw new Error("Not enough inventory available");
+  }
+
+  inventory.availableStock -= quantity;
+  inventory.reservedStock += quantity;
+  inventory.lastUpdated = new Date();
+
+  await inventory.save();
+}
+async function completeInventoryDelivery(quantity: number) {
+  const inventory = await Inventory.findOne();
+
+  if (!inventory) return;
+
+  inventory.reservedStock -= quantity;
+  inventory.deliveredStock += quantity;
+
+  inventory.lastUpdated = new Date();
+
+  await inventory.save();
+}
 // Helper function to update inventory when order is cancelled (customer cancellation)
 async function updateInventoryOnOrderCancel(quantity: number) {
   try {

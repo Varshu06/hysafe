@@ -4,14 +4,16 @@ import { Button } from '@components/Button';
 import { Badge, Loading, EmptyState } from '@components/Common';
 import { inventoryService } from '@services/inventory.service';
 import { formatDate } from '@utils/formatting';
-import { AlertTriangle, Plus, Edit2, Trash2 } from 'lucide-react';
+import { AlertTriangle, Plus, Edit2, Trash2, X, MoreVertical } from 'lucide-react';
+import { createPortal } from "react-dom";
 
 const emptyForm = {
-  name: '',
-  quantity: '',
-  unit: 'pcs',
-  minStock: '',
-  price: '',
+  name: "",
+  volume: "",
+  quantity: "",
+  minStock: "",
+  price: "",
+  deliveryCharge: "",
 };
 
 export const InventoryPage: React.FC = () => {
@@ -22,6 +24,18 @@ export const InventoryPage: React.FC = () => {
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState(emptyForm);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [menu, setMenu] = useState<{
+    id: string;
+  } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [showConsumeStockModal, setShowConsumeStockModal] = useState(false);
+
+  const [stockQuantity, setStockQuantity] = useState("");
+  const [stockReason, setStockReason] = useState("");
 
   useEffect(() => {
     loadInventory();
@@ -30,11 +44,22 @@ export const InventoryPage: React.FC = () => {
   const loadInventory = async () => {
     try {
       setIsLoading(true);
+
       const data = await inventoryService.getAllInventory({ limit: 100 });
+
       const itemsArray = Array.isArray(data) ? data : data?.data || [];
+
+      console.table(
+        itemsArray.map((item: any) => ({
+          name: item.name,
+          lastRestocked: item.lastRestocked,
+          updatedAt: item.updatedAt,
+        }))
+      );
+
       setItems(itemsArray);
     } catch (error) {
-      console.error('Error loading inventory:', error);
+      console.error("Error loading inventory:", error);
     } finally {
       setIsLoading(false);
     }
@@ -50,15 +75,17 @@ export const InventoryPage: React.FC = () => {
   const openEditForm = (item: any) => {
     setEditingItemId(item._id);
     setFormData({
-      name: item.name || '',
-      quantity: String(item.quantity ?? ''),
-      unit: item.unit || 'pcs',
-      minStock: String(item.minStock ?? ''),
-      price: String(item.price ?? ''),
+      name: item.name || "",
+      volume: item.volume || "",
+      quantity: String(item.quantity ?? ""),
+      minStock: String(item.minStock ?? ""),
+      price: String(item.price ?? ""),
+      deliveryCharge: String(item.deliveryCharge ?? ""),
     });
     setFormError('');
     setShowForm(true);
   };
+
 
   const closeForm = () => {
     setShowForm(false);
@@ -71,21 +98,15 @@ export const InventoryPage: React.FC = () => {
     event.preventDefault();
     setFormError('');
 
-    if (!formData.name.trim()) {
-      setFormError('Item name is required.');
+    if (!formData.name.trim() || !formData.volume.trim()) {
+      setFormError("Name and volume are required.");
       return;
     }
 
     const quantity = Number(formData.quantity);
-    const minStock = Number(formData.minStock);
 
     if (Number.isNaN(quantity) || quantity < 0) {
-      setFormError('Quantity must be a valid non-negative number.');
-      return;
-    }
-
-    if (Number.isNaN(minStock) || minStock < 0) {
-      setFormError('Minimum stock must be a valid non-negative number.');
+      setFormError("Quantity must be a valid non-negative number.");
       return;
     }
 
@@ -94,10 +115,11 @@ export const InventoryPage: React.FC = () => {
     try {
       const payload = {
         name: formData.name.trim(),
+        volume: formData.volume.trim(),
         quantity,
-        unit: formData.unit.trim() || 'pcs',
-        minStock,
-        price: formData.price.trim() ? Number(formData.price) : 0,
+        minStock: Number(formData.minStock || 10),
+        price: Number(formData.price),
+        deliveryCharge: Number(formData.deliveryCharge || 0),
       };
 
       if (editingItemId) {
@@ -112,25 +134,76 @@ export const InventoryPage: React.FC = () => {
       const message =
         error?.response?.data?.message ||
         error?.message ||
-        'Failed to save inventory item.';
+        "Failed to save inventory item.";
+
       setFormError(message);
-      console.error('Save inventory item error:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this inventory item?')) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
 
     try {
-      await inventoryService.deleteInventoryItem(id);
+      await inventoryService.deleteInventoryItem(itemToDelete._id);
+
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+
       loadInventory();
     } catch (error) {
       console.error('Delete inventory item error:', error);
     }
+  };
+  const openAddStock = (item: any) => {
+    setSelectedItem(item);
+    setStockQuantity("");
+    setStockReason("");
+    setShowAddStockModal(true);
+  };
+
+  const openConsumeStock = (item: any) => {
+    setSelectedItem(item);
+    setStockQuantity("");
+    setStockReason("");
+    setShowConsumeStockModal(true);
+  };
+  const handleAddStock = async () => {
+    if (!selectedItem) return;
+
+    const qty = Number(stockQuantity);
+
+    if (qty <= 0) return;
+
+    await inventoryService.updateInventoryItem(selectedItem._id, {
+      quantity: selectedItem.quantity + qty,
+      lastRestocked: new Date(),
+    });
+
+    setShowAddStockModal(false);
+
+    loadInventory();
+  };
+  const handleConsumeStock = async () => {
+    if (!selectedItem) return;
+
+    const qty = Number(stockQuantity);
+
+    if (qty <= 0) return;
+
+    if (qty > selectedItem.quantity) {
+      alert("Not enough stock.");
+      return;
+    }
+
+    await inventoryService.updateInventoryItem(selectedItem._id, {
+      quantity: selectedItem.quantity - qty,
+    });
+
+    setShowConsumeStockModal(false);
+
+    loadInventory();
   };
 
   return (
@@ -149,102 +222,138 @@ export const InventoryPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Add Item Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold text-text-primary">
-              {editingItemId ? 'Edit Item' : 'Add New Item'}
-            </h3>
-          </CardHeader>
-          <CardBody>
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {formError && (
-                <div className="bg-danger/10 border border-danger text-danger px-4 py-3 rounded-lg text-sm">
-                  {formError}
-                </div>
-              )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                placeholder="Item Name"
-                value={formData.name}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Quantity"
-                value={formData.quantity}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    quantity: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                min={0}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Unit (kg, L, etc)"
-                value={formData.unit}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    unit: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                required
-              />
-              <input
-                type="number"
-                placeholder="Min Stock"
-                value={formData.minStock}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    minStock: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                min={0}
-                required
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={formData.price}
-                onChange={(event) =>
-                  setFormData((current) => ({
-                    ...current,
-                    price: event.target.value,
-                  }))
-                }
-                className="border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
-                min={0}
-              />
+      {showForm &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-6"
+            onClick={closeForm}
+          >
+            <div
+              className="relative w-full max-w-2xl rounded-xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardHeader className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  {editingItemId ? "Add Stock" : "Add New Item"}
+                </h2>
+
+                <button
+                  onClick={closeForm}
+                  className="rounded-lg p-2 hover:bg-gray-100 transition"
+                >
+                  <X size={20} />
+                </button>
+              </CardHeader>
+
+              <CardBody>
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  {formError && (
+                    <div className="rounded-lg border border-danger bg-danger/10 px-4 py-3 text-sm text-danger">
+                      {formError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+                    <input
+                      type="text"
+                      placeholder="Item Name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData((current) => ({
+                          ...current,
+                          name: e.target.value,
+                        }))
+                      }
+                      className="rounded-lg border border-border px-4 py-2 focus:ring-2 focus:ring-primary"
+                    />
+
+                    <input
+                      type="number"
+                      placeholder="Quantity"
+                      value={formData.quantity}
+                      onChange={(e) =>
+                        setFormData((current) => ({
+                          ...current,
+                          quantity: e.target.value,
+                        }))
+                      }
+                      className="rounded-lg border border-border px-4 py-2 focus:ring-2 focus:ring-primary"
+                      min={0}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Minimum Stock"
+                      value={formData.minStock}
+                      onChange={(e) =>
+                        setFormData((current) => ({
+                          ...current,
+                          minStock: e.target.value,
+                        }))
+                      }
+                      className="rounded-lg border border-border px-4 py-2 focus:ring-2 focus:ring-primary"
+                      min={0}
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="Volume (20L)"
+                      value={formData.volume}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          volume: e.target.value,
+                        })
+                      }
+                      className="rounded-lg border border-border px-4 py-2"
+                    />
+
+                    <input
+                      type="number"
+                      placeholder="Delivery Charge"
+                      value={formData.deliveryCharge}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          deliveryCharge: e.target.value,
+                        })
+                      }
+                      className="rounded-lg border border-border px-4 py-2"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Price"
+                      value={formData.price}
+                      onChange={(e) =>
+                        setFormData((current) => ({
+                          ...current,
+                          price: e.target.value,
+                        }))
+                      }
+                      className="rounded-lg border border-border px-4 py-2 focus:ring-2 focus:ring-primary md:col-span-2"
+                      min={0}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button type="submit" isLoading={isSubmitting}>
+                      {editingItemId ? "Update Item" : "Save"}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={closeForm}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </CardBody>
             </div>
-            <div className="flex gap-2">
-              <Button type="submit" isLoading={isSubmitting}>
-                {editingItemId ? 'Update Item' : 'Save'}
-              </Button>
-              <Button type="button" variant="secondary" onClick={closeForm}>
-                Cancel
-              </Button>
-            </div>
-            </form>
-          </CardBody>
-        </Card>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Inventory Table */}
       <Card>
@@ -257,7 +366,7 @@ export const InventoryPage: React.FC = () => {
           {isLoading ? (
             <Loading />
           ) : items.length === 0 ? (
-            <EmptyState message="No inventory items found" />
+            <EmptyState description="No inventory items found" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -269,6 +378,11 @@ export const InventoryPage: React.FC = () => {
                     <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
                       Quantity
                     </th>
+
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
+                      Price
+                    </th>
+
                     <th className="px-6 py-3 text-left text-sm font-semibold text-text-primary">
                       Min Stock
                     </th>
@@ -297,6 +411,11 @@ export const InventoryPage: React.FC = () => {
                         <td className="px-6 py-4 text-sm">
                           {item.quantity} {item.unit}
                         </td>
+
+                        <td className="px-6 py-4 text-sm font-medium">
+                          ₹{Number(item.price || 0).toFixed(2)}
+                        </td>
+
                         <td className="px-6 py-4 text-sm">
                           {item.minStock} {item.unit}
                         </td>
@@ -315,21 +434,61 @@ export const InventoryPage: React.FC = () => {
                             ? formatDate(item.lastRestocked)
                             : 'Never'}
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => openEditForm(item)}
-                              className="p-2 hover:bg-surface rounded transition-colors"
-                            >
-                              <Edit2 size={18} className="text-primary" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item._id)}
-                              className="p-2 hover:bg-surface rounded transition-colors"
-                            >
-                              <Trash2 size={18} className="text-danger" />
-                            </button>
-                          </div>
+                        <td className="relative px-6 py-4 text-center">
+                          <button
+                            onClick={() =>
+                              setMenu(menu?.id === item._id ? null : { id: item._id })
+                            }
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+
+                          {menu?.id === item._id && (
+                            <div className="absolute right-0 top-full mt-2 z-50 w-52 rounded-xl border bg-white shadow-xl">
+                              <button
+                                className="flex w-full items-center gap-3 px-4 py-3 hover:bg-gray-100"
+                                onClick={() => {
+                                  openAddStock(item);
+                                  setMenu(null);
+                                }}
+                              >
+                                <Plus size={18} />
+                                Add Stock
+                              </button>
+                              <button
+                                className="flex w-full items-center gap-3 px-4 py-3 hover:bg-gray-100"
+                                onClick={() => {
+                                  openConsumeStock(item);
+                                  setMenu(null);
+                                }}
+                              >
+                                <AlertTriangle size={18} />
+                                Consume Stock
+                              </button>
+                              <button
+                                className="flex w-full items-center gap-3 px-4 py-3 hover:bg-gray-100"
+                                onClick={() => {
+                                  openEditForm(item);
+                                  setMenu(null);
+                                }}
+                              >
+                                <Edit2 size={18} />
+                                Edit Item
+                              </button>
+
+                              <button
+                                className="flex w-full items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  setItemToDelete(item);
+                                  setShowDeleteModal(true);
+                                  setMenu(null);
+                                }}
+                              >
+                                <Trash2 size={18} />
+                                Delete Item
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -340,6 +499,184 @@ export const InventoryPage: React.FC = () => {
           )}
         </CardBody>
       </Card>
+      {showAddStockModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+            onClick={() => setShowAddStockModal(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardHeader>
+                <h2 className="text-xl font-semibold">
+                  Add Stock
+                </h2>
+              </CardHeader>
+
+              <CardBody className="space-y-4">
+
+                <p>
+                  Current Stock:
+                  <strong>
+                    {" "}
+                    {selectedItem?.quantity} {selectedItem?.unit}
+                  </strong>
+                </p>
+
+                <input
+                  type="number"
+                  placeholder="Quantity"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  className="w-full rounded-lg border px-4 py-2"
+                />
+
+                <input
+                  placeholder="Reason"
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  className="w-full rounded-lg border px-4 py-2"
+                />
+
+                <div className="flex justify-end gap-2">
+
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowAddStockModal(false)}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button onClick={handleAddStock}>
+                    Add Stock
+                  </Button>
+
+                </div>
+
+              </CardBody>
+            </div>
+          </div>,
+          document.body
+        )}
+      {showConsumeStockModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+            onClick={() => setShowConsumeStockModal(false)}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardHeader>
+                <h2 className="text-xl font-semibold">
+                  Consume Stock
+                </h2>
+              </CardHeader>
+
+              <CardBody className="space-y-4">
+
+                <p>
+                  Current Stock:
+                  <strong>
+                    {" "}
+                    {selectedItem?.quantity} {selectedItem?.unit}
+                  </strong>
+                </p>
+
+                <input
+                  type="number"
+                  placeholder="Quantity Used"
+                  value={stockQuantity}
+                  onChange={(e) => setStockQuantity(e.target.value)}
+                  className="w-full rounded-lg border px-4 py-2"
+                />
+
+                <input
+                  placeholder="Reason"
+                  value={stockReason}
+                  onChange={(e) => setStockReason(e.target.value)}
+                  className="w-full rounded-lg border px-4 py-2"
+                />
+
+                <div className="flex justify-end gap-2">
+
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowConsumeStockModal(false)}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button onClick={handleConsumeStock}>
+                    Update Stock
+                  </Button>
+
+                </div>
+
+              </CardBody>
+            </div>
+          </div>,
+          document.body
+        )}
+      {showDeleteModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-6"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setItemToDelete(null);
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardHeader>
+                <h2 className="text-xl font-semibold text-red-600">
+                  Delete Inventory Item
+                </h2>
+              </CardHeader>
+
+              <CardBody className="space-y-6">
+                <p className="text-text-secondary">
+                  Are you sure you want to delete
+                  <span className="font-semibold text-text-primary">
+                    {" "}
+                    {itemToDelete?.name}
+                  </span>
+                  ?
+                </p>
+
+                <p className="text-sm text-red-500">
+                  This action cannot be undone.
+                </p>
+
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      setItemToDelete(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    onClick={handleDelete}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </CardBody>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

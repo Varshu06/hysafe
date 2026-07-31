@@ -90,9 +90,11 @@ export default function LoginScreen() {
       let alertTitle = t("loginFailed");
       if (
         errorMessage.includes("Wrong password") ||
-        errorMessage.includes("password")
+        errorMessage.includes("password") ||
+        errorMessage.includes("credentials") ||
+        errorMessage.includes("Invalid phone number")
       ) {
-        alertTitle = t("wrongPassword");
+        alertTitle = t("loginFailed");
         errorMessage = t("wrongPasswordMessage");
       } else if (
         errorMessage.includes("Connection") ||
@@ -151,6 +153,8 @@ export default function LoginScreen() {
             onChangeText={setPhone}
             keyboardType="phone-pad"
             maxLength={10}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
         </View>
 
@@ -162,6 +166,8 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <TouchableOpacity
             style={styles.eyeIconButton}
@@ -178,6 +184,13 @@ export default function LoginScreen() {
             />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.forgotPasswordLink}
+          onPress={() => router.push("/(auth)/forgot-password")}
+        >
+          <Text style={styles.forgotPasswordText}>{t("forgotPassword")}</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -367,5 +380,15 @@ const styles = StyleSheet.create({
   signupLinkText: {
     color: COLORS.primary,
     fontWeight: "600",
+  },
+  forgotPasswordLink: {
+    alignSelf: "flex-end",
+    marginBottom: 24,
+    marginTop: -8,
+  },
+  forgotPasswordText: {
+    color: COLORS.primary,
+    fontWeight: "600",
+    fontSize: 14,
   },
 });

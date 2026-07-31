@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { InventoryItem } from "../models/InventoryItem.model";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { Inventory } from "../models/Inventory.model";
 
 export const getInventoryItems = async (req: AuthRequest, res: Response) => {
   try {
@@ -55,22 +56,33 @@ export const getInventoryItemById = async (req: AuthRequest, res: Response) => {
 
 export const createInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, quantity, unit, minStock, price, lastRestocked } = req.body;
+    const {
+      name,
+      volume,
+      quantity,
+      minStock,
+      price,
+      deliveryCharge,
+      available,
+    } = req.body;
 
-    if (!name || quantity === undefined || minStock === undefined) {
+    if (!name || !volume || quantity === undefined) {
       return res.status(400).json({
         success: false,
-        message: "Name, quantity and minStock are required",
+        message: "Name, volume and quantity are required",
       });
     }
 
     const item = await InventoryItem.create({
       name: String(name).trim(),
+      volume: String(volume).trim(),
       quantity: Number(quantity),
-      unit: unit ? String(unit).trim() : "pcs",
-      minStock: Number(minStock),
-      price: price !== undefined ? Number(price) : 0,
-      lastRestocked: lastRestocked ? new Date(lastRestocked) : new Date(),
+      minStock: Number(minStock ?? 10),
+      lastRestocked: new Date(),
+
+      price: Number(price),
+      deliveryCharge: Number(deliveryCharge || 0),
+      available: Number(quantity) > 0,
     });
 
     res.status(201).json({
@@ -90,18 +102,34 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
 export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, quantity, unit, minStock, price, lastRestocked } = req.body;
+    const {
+      name,
+      volume,
+      quantity,
+      minStock,
+      lastRestocked,
+      price,
+      deliveryCharge,
+    } = req.body;
 
     const updateData: Record<string, unknown> = {};
 
     if (name !== undefined) updateData.name = String(name).trim();
-    if (quantity !== undefined) updateData.quantity = Number(quantity);
-    if (unit !== undefined) updateData.unit = String(unit).trim();
-    if (minStock !== undefined) updateData.minStock = Number(minStock);
-    if (price !== undefined) updateData.price = Number(price);
-    if (lastRestocked !== undefined) {
-      updateData.lastRestocked = lastRestocked ? new Date(lastRestocked) : null;
+    if (quantity !== undefined) {
+      updateData.quantity = Number(quantity);
+      updateData.available = Number(quantity) > 0;
     }
+    if (minStock !== undefined)
+      updateData.minStock = Number(minStock);
+
+    if (lastRestocked !== undefined)
+      updateData.lastRestocked = new Date(lastRestocked);
+    if (volume !== undefined)
+      updateData.volume = String(volume).trim();
+    if (price !== undefined)
+      updateData.price = Number(price);
+    if (deliveryCharge !== undefined)
+      updateData.deliveryCharge = Number(deliveryCharge);
 
     const item = await InventoryItem.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -170,6 +198,8 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
       name: product.name,
       volume: product.volume,
       quantity: product.quantity,
+      minStock: product.minStock,
+      lastRestocked: product.lastRestocked,
       price: product.price,
       deliveryCharge: product.deliveryCharge,
       image: product.image,
@@ -215,6 +245,82 @@ export const getLowStockItems = async (
     res.status(500).json({
       success: false,
       message: "Failed to fetch low stock items",
+    });
+  }
+};
+export const getInventorySummary = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    let inventory = await Inventory.findOne();
+
+    if (!inventory) {
+      inventory = await Inventory.create({
+        totalStock: 0,
+        availableStock: 0,
+        reservedStock: 0,
+        deliveredStock: 0,
+        lowStockThreshold: 50,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: inventory,
+    });
+  } catch (error: any) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch inventory summary",
+    });
+  }
+};
+export const restockInventory = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const { quantity } = req.body;
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Quantity must be greater than 0",
+      });
+    }
+
+    let inventory = await Inventory.findOne();
+
+    if (!inventory) {
+      inventory = await Inventory.create({
+        totalStock: 0,
+        availableStock: 0,
+        reservedStock: 0,
+        deliveredStock: 0,
+        lowStockThreshold: 50,
+      });
+    }
+
+    inventory.totalStock += Number(quantity);
+    inventory.availableStock += Number(quantity);
+    inventory.lastUpdated = new Date();
+
+    await inventory.save();
+
+    res.json({
+      success: true,
+      message: "Inventory restocked successfully",
+      data: inventory,
+    });
+  } catch (error: any) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to restock inventory",
     });
   }
 };

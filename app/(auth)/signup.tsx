@@ -78,6 +78,7 @@ export default function SignupScreen() {
   const router = useRouter();
   const { register, refreshProfile } = useAuth();
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -89,7 +90,7 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!name || !phone || !password) {
+    if (!name || !email || !phone || !password) {
       Alert.alert(t("error"), t("pleaseFillAllRequiredFields"));
       return;
     }
@@ -104,7 +105,15 @@ export default function SignupScreen() {
       return;
     }
 
-    if (phone.length < 10) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert(t("error"), t("pleaseEnterValidEmail"));
+      return;
+    }
+
+    const cleanPhone = phone.replace(/\s+/g, "").replace(/[^0-9]/g, "");
+
+    if (cleanPhone.length < 10) {
       Alert.alert(t("error"), t("phoneNumberMustBeAtLeast10Digits"));
       return;
     }
@@ -113,7 +122,8 @@ export default function SignupScreen() {
       setLoading(true);
       await register({
         name,
-        phone: phone || undefined,
+        email: email.trim(),
+        phone: cleanPhone,
         password,
         role: role,
         address: address || undefined,
@@ -250,6 +260,27 @@ export default function SignupScreen() {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               maxLength={10}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputWrapper}>
+            <Feather
+              name="mail"
+              size={18}
+              color={COLORS.textLight}
+              style={styles.inputIconLeft}
+            />
+            <TextInput
+              style={styles.inputWithIcon}
+              placeholder={t("emailPlaceholder")}
+              placeholderTextColor={COLORS.textLight}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
@@ -359,6 +390,8 @@ export default function SignupScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
@@ -381,6 +414,8 @@ export default function SignupScreen() {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
             <TouchableOpacity
               style={styles.eyeIcon}

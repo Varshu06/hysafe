@@ -170,5 +170,19 @@
   "confirmLogout": "Are you sure you want to logout?",
   "cancel": "Cancel",
   "today": "Today",
-  "new": "New"
+  "new": "New",
+  "forgotPassword": "Forgot Password?",
+  "forgotPasswordTitle": "Forgot Password",
+  "forgotPasswordSubtitle": "Enter your registered phone number to reset your password.",
+  "resetPasswordTitle": "Reset Password",
+  "resetPasswordSubtitle": "Enter the OTP sent to your phone and choose a new password.",
+  "sendOTP": "Send OTP",
+  "otpPlaceholder": "Enter 6-digit OTP",
+  "newPasswordPlaceholder": "New Password",
+  "confirmNewPasswordPlaceholder": "Confirm New Password",
+  "otpSentSuccess": "OTP sent successfully (Use '123456' for testing)",
+  "passwordResetSuccess": "Password reset successfully!",
+  "emailPlaceholder": "Email Address *",
+  "pleaseEnterEmail": "Please enter your email address",
+  "pleaseEnterValidEmail": "Please enter a valid email address"
 }

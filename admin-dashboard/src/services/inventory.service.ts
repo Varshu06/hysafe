@@ -37,4 +37,16 @@ export const inventoryService = {
     const response = await api.get('/inventory/low-stock');
     return response.data.data;
   },
+  getInventorySummary: async () => {
+    const response = await api.get("/inventory/summary");
+    return response.data.data;
+  },
+
+  restockInventory: async (quantity: number) => {
+    const response = await api.post("/inventory/restock", {
+      quantity,
+    });
+
+    return response.data.data;
+  },
 };

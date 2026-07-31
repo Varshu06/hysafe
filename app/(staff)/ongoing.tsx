@@ -223,6 +223,7 @@ export default function OngoingOrdersScreen() {
         id={String(id)}
         createdAt={item.createdAt}
         quantity={item.quantity || 1}
+        items={item.items}
         deliveryAddress={item.deliveryAddress}
         pickupAddress={item.pickupAddress}
         customer={item.customer}

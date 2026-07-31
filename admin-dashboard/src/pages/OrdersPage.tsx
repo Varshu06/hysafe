@@ -8,7 +8,8 @@ import { staffService } from '@services/staff.service';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@utils/constants';
 import { formatDate, formatCurrency } from '@utils/formatting';
 import { Order, OrderStatus } from '@types';
-import { Edit2, Eye, X } from 'lucide-react';
+import { Edit2, Eye, MoreVertical, X } from 'lucide-react';
+import { createPortal } from "react-dom";
 
 export const OrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -21,11 +22,30 @@ export const OrdersPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState('');
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
+  const [menu, setMenu] = useState<{
+    id: string;
+  } | null>(null);
 
   useEffect(() => {
+    setSelectedOrder(null);
+    setShowAssignModal(false);
+    setSelectedStaffId('');
+    setSelectedStatus('pending');
+    setFormError('');
+
     loadOrders();
     loadStaff();
   }, [filter]);
+
+  useEffect(() => {
+    if (
+      selectedOrder &&
+      !orders.some((order) => order._id === selectedOrder._id)
+    ) {
+      setSelectedOrder(null);
+      setShowAssignModal(false);
+    }
+  }, [orders]);
 
   const loadOrders = async () => {
     try {
@@ -194,9 +214,9 @@ export const OrdersPage: React.FC = () => {
           {isLoading ? (
             <Loading />
           ) : orders.length === 0 ? (
-            <EmptyState message="No orders found" />
+            <EmptyState description="No orders found" />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-visible">
               <table className="w-full">
                 <thead>
                   <tr className="bg-surface border-b border-border">
@@ -244,21 +264,40 @@ export const OrdersPage: React.FC = () => {
                       <td className="px-6 py-4 text-sm">
                         {formatDate(order.createdAt)}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openDetails(order)}
-                            className="p-2 hover:bg-surface rounded transition-colors"
-                          >
-                            <Eye size={18} className="text-primary" />
-                          </button>
-                          <button
-                            onClick={() => openAssignEditor(order)}
-                            className="p-2 hover:bg-surface rounded transition-colors"
-                          >
-                            <Edit2 size={18} className="text-primary" />
-                          </button>
-                        </div>
+                      <td className="relative px-6 py-4 text-center">
+                        <button
+                          onClick={() =>
+                            setMenu(menu?.id === order._id ? null : { id: order._id })
+                          }
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+
+                        {menu?.id === order._id && (
+                          <div className="absolute right-0 top-full mt-2 z-50 w-52 rounded-xl border bg-white shadow-xl">
+                            <button
+                              className="flex w-full items-center gap-3 px-4 py-3 hover:bg-gray-100"
+                              onClick={() => {
+                                openDetails(order);
+                                setMenu(null);
+                              }}
+                            >
+                              <Eye size={18} />
+                              View Details
+                            </button>
+
+                            <button
+                              className="flex w-full items-center gap-3 px-4 py-3 hover:bg-gray-100"
+                              onClick={() => {
+                                openAssignEditor(order);
+                                setMenu(null);
+                              }}
+                            >
+                              <Edit2 size={18} />
+                              Update Order
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -266,95 +305,142 @@ export const OrdersPage: React.FC = () => {
               </table>
             </div>
           )}
+
+
         </CardBody>
       </Card>
 
-      {selectedOrder && !showAssignModal && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-lg font-semibold text-text-primary">
-                Order Details
-              </h3>
-              <Button variant="secondary" size="sm" onClick={() => setSelectedOrder(null)}>
-                <X size={16} /> Close
-              </Button>
-            </div>
-          </CardHeader>
-          <CardBody>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div><p className="text-text-secondary">Order ID</p><p className="font-semibold">#{String(selectedOrder._id).slice(0, 8)}</p></div>
-              <div><p className="text-text-secondary">Customer</p><p className="font-semibold">{selectedOrder.customerName}</p></div>
-              <div><p className="text-text-secondary">Amount</p><p className="font-semibold">{formatCurrency(selectedOrder.totalPrice)}</p></div>
-              <div><p className="text-text-secondary">Status</p><p className="font-semibold">{ORDER_STATUS_LABELS[selectedOrder.status]}</p></div>
-              <div><p className="text-text-secondary">Payment</p><p className="font-semibold capitalize">{selectedOrder.paymentMethod}</p></div>
-              <div><p className="text-text-secondary">Assigned Staff</p><p className="font-semibold">{selectedOrder.assignedStaffName || 'Unassigned'}</p></div>
-              <div className="md:col-span-2"><p className="text-text-secondary">Delivery Address</p><p className="font-semibold">{selectedOrder.deliveryAddress}</p></div>
-            </div>
-          </CardBody>
-        </Card>
-      )}
+      {selectedOrder &&
+        !showAssignModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-6"
+            onClick={closeEditor}
+          >
+            <div
+              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardHeader className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Order Details</h2>
 
-      {selectedOrder && showAssignModal && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-lg font-semibold text-text-primary">
-                Assign / Update Order
-              </h3>
-              <Button variant="secondary" size="sm" onClick={closeEditor}>
-                <X size={16} /> Close
-              </Button>
-            </div>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            {formError && (
-              <div className="bg-danger/10 border border-danger text-danger px-4 py-3 rounded-lg text-sm">
-                {formError}
-              </div>
-            )}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="space-y-2">
-                <span className="block text-sm font-medium text-text-primary">Staff Member</span>
-                <select
-                  value={selectedStaffId}
-                  onChange={(e) => setSelectedStaffId(e.target.value)}
-                  className="w-full border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                <button
+                  onClick={closeEditor}
+                  className="rounded-lg p-2 hover:bg-gray-100"
                 >
-                  <option value="">Select staff</option>
-                  {staff.map((member) => (
-                    <option key={member._id} value={member._id}>
-                      {member.name} - {member.phone}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="space-y-2">
-                <span className="block text-sm font-medium text-text-primary">Status</span>
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as OrderStatus)}
-                  className="w-full border border-border rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary"
+                  <X size={20} />
+                </button>
+              </CardHeader>
+
+              <CardBody>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div><p className="text-text-secondary">Order ID</p><p className="font-semibold">#{String(selectedOrder._id).slice(0, 8)}</p></div>
+                  <div><p className="text-text-secondary">Customer</p><p className="font-semibold">{selectedOrder.customerName}</p></div>
+                  <div><p className="text-text-secondary">Amount</p><p className="font-semibold">{formatCurrency(selectedOrder.totalPrice)}</p></div>
+                  <div><p className="text-text-secondary">Status</p><p className="font-semibold">{ORDER_STATUS_LABELS[selectedOrder.status]}</p></div>
+                  <div><p className="text-text-secondary">Payment</p><p className="font-semibold capitalize">{selectedOrder.paymentMethod}</p></div>
+                  <div><p className="text-text-secondary">Assigned Staff</p><p className="font-semibold">{selectedOrder.assignedStaffName || 'Unassigned'}</p></div>
+                  <div className="md:col-span-2"><p className="text-text-secondary">Delivery Address</p><p className="font-semibold">{selectedOrder.deliveryAddress}</p></div>
+                </div>
+              </CardBody>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {selectedOrder &&
+        showAssignModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-6"
+            onClick={closeEditor}
+          >
+            <div
+              className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardHeader className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  Assign / Update Order
+                </h2>
+
+                <button
+                  onClick={closeEditor}
+                  className="rounded-lg p-2 hover:bg-gray-100 transition"
                 >
-                  {['pending', 'accepted', 'out_for_delivery', 'delivered', 'cancelled'].map((status) => (
-                    <option key={status} value={status}>
-                      {ORDER_STATUS_LABELS[status] || status}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <X size={20} />
+                </button>
+              </CardHeader>
+
+              <CardBody className="space-y-4">
+                {formError && (
+                  <div className="rounded-lg border border-danger bg-danger/10 px-4 py-3 text-sm text-danger">
+                    {formError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="space-y-2">
+                    <span className="block text-sm font-medium text-text-primary">
+                      Staff Member
+                    </span>
+
+                    <select
+                      value={selectedStaffId}
+                      onChange={(e) => setSelectedStaffId(e.target.value)}
+                      className="w-full rounded-lg border border-border px-4 py-2 focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Select staff</option>
+
+                      {staff.map((member) => (
+                        <option key={member._id} value={member._id}>
+                          {member.name} - {member.phone}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className="block text-sm font-medium text-text-primary">
+                      Status
+                    </span>
+
+                    <select
+                      value={selectedStatus}
+                      onChange={(e) =>
+                        setSelectedStatus(e.target.value as OrderStatus)
+                      }
+                      className="w-full rounded-lg border border-border px-4 py-2 focus:ring-2 focus:ring-primary"
+                    >
+                      {[
+                        'pending',
+                        'accepted',
+                        'out_for_delivery',
+                        'delivered',
+                        'cancelled',
+                      ].map((status) => (
+                        <option key={status} value={status}>
+                          {ORDER_STATUS_LABELS[status] || status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveAssignment} isLoading={isSaving}>
+                    Save Changes
+                  </Button>
+
+                  <Button variant="secondary" onClick={closeEditor}>
+                    Cancel
+                  </Button>
+                </div>
+              </CardBody>
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSaveAssignment} isLoading={isSaving}>
-                Save Changes
-              </Button>
-              <Button variant="secondary" onClick={closeEditor}>
-                Cancel
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
