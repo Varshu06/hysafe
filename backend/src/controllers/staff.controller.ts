@@ -81,6 +81,7 @@ export const getAvailableOrders = async (req: AuthRequest, res: Response) => {
 // Accept order
 export const acceptOrder = async (req: AuthRequest, res: Response) => {
   try {
+    console.log("===== STAFF ACCEPT ORDER =====");
     const { id } = req.params;
 
     const order = await Order.findById(id);
@@ -297,6 +298,7 @@ async function reserveInventory(
   }[],
 ) {
   for (const item of items) {
+    console.log("reserveInventory() called");
     const inventoryItem = await InventoryItem.findOne({
       name: item.productName,
     });
