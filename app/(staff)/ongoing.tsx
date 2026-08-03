@@ -223,6 +223,7 @@ export default function OngoingOrdersScreen() {
         id={String(id)}
         createdAt={item.createdAt}
         quantity={item.quantity || 1}
+        items={item.items}
         deliveryAddress={item.deliveryAddress}
         pickupAddress={item.pickupAddress}
         customer={item.customer}
@@ -287,7 +288,6 @@ export default function OngoingOrdersScreen() {
                     styles.tabText,
                     filter === filterItem.key && styles.tabTextActive,
                   ]}
-                  numberOfLines={1}
                 >
                   {t(filterItem.key)}
                 </Text>

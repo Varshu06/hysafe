@@ -16,7 +16,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../src/components/ui/Button";
 import { useAuth } from "../../src/context/AuthContext";
-import { getAssignedOrders } from "../../src/services/staff.service";
+import { getAssignedOrders, getOngoingOrders } from "../../src/services/staff.service";
 import { COLORS } from "../../src/utils/constants";
 import { StaffHeader } from "../../src/components/staff/StaffHeader";
 import { storage } from "../../src/utils/storage";
@@ -76,6 +76,45 @@ export default function ProfileScreen() {
             });
           }
         }
+
+        // Fetch stats
+        try {
+          const [availableOrders, assignedOrders] = await Promise.all([
+            getAssignedOrders(),
+            getOngoingOrders(),
+          ]);
+
+          const pending = availableOrders.filter(
+            (o: any) => String(o.status).toLowerCase() === "pending",
+          ).length;
+
+          const delivered = assignedOrders.filter(
+            (o: any) => String(o.status).toLowerCase() === "delivered",
+          ).length;
+
+          const ongoing = assignedOrders.filter((o: any) => {
+            const s = String(o.status).toLowerCase();
+            return s === "accepted" || s === "out_for_delivery";
+          }).length;
+
+          const cod = assignedOrders
+            .filter(
+              (o: any) =>
+                String(o.status).toLowerCase() === "delivered" &&
+                String(o.paymentMethod || "").toLowerCase() === "offline",
+            )
+            .reduce(
+              (sum: number, o: any) =>
+                sum + Number(o.codAmount || o.totalPrice || 0),
+              0,
+            );
+
+          if (mounted) {
+            setStats({ pending, ongoing, delivered, cod });
+          }
+        } catch (statsError) {
+          console.error("Failed to load stats:", statsError);
+        }
       };
       load();
       return () => {
@@ -83,38 +122,6 @@ export default function ProfileScreen() {
       };
     }, [user]),
   );
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const orders = await getAssignedOrders();
-        const pending = orders.filter(
-          (o: any) => String(o.status).toLowerCase() === "pending",
-        ).length;
-        const delivered = orders.filter(
-          (o: any) => String(o.status).toLowerCase() === "delivered",
-        ).length;
-        const ongoing = orders.filter((o: any) => {
-          const s = String(o.status).toLowerCase();
-          return s !== "pending" && s !== "delivered" && s !== "cancelled";
-        }).length;
-        const cod = orders
-          .filter(
-            (o: any) =>
-              String(o.paymentMethod || "").toLowerCase() === "offline",
-          )
-          .reduce(
-            (sum: number, o: any) =>
-              sum + Number(o.codAmount || o.totalPrice || 0),
-            0,
-          );
-        setStats({ pending, ongoing, delivered, cod });
-      } catch (e) {
-        // ignore for now
-      }
-    };
-    load();
-  }, []);
 
   const getInitials = (value?: string) => {
     const s = (value || "").trim();
@@ -203,19 +210,19 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsCard}>
-          <Text style={styles.statsTitle}>Today</Text>
+          <Text style={styles.statsTitle}>{t("today")}</Text>
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.pending}</Text>
-              <Text style={styles.statLabel}>New</Text>
+              <Text style={styles.statLabel}>{t("new")}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.ongoing}</Text>
-              <Text style={styles.statLabel}>Ongoing</Text>
+              <Text style={styles.statLabel}>{t("ongoing")}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.delivered}</Text>
-              <Text style={styles.statLabel}>Delivered</Text>
+              <Text style={styles.statLabel}>{t("delivered")}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>₹{stats.cod}</Text>
@@ -472,6 +479,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+    flexShrink: 1,
   },
   menuItemRight: {
     flexDirection: "row",
@@ -482,6 +491,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     fontWeight: "500",
+    flexShrink: 1,
   },
   menuItemLangText: {
     fontSize: 14,

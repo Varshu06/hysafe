@@ -85,7 +85,11 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     // Handle HTTP status errors first (before logging)
     if (error.response?.status === 401) {
       // Don't log wrong password errors to console
-      throw new Error('Wrong password. Please check your password and try again.');
+      const backendMessage = error.response?.data?.message;
+      if (backendMessage === 'Account is inactive') {
+        throw new Error('Account is inactive. Please contact admin.');
+      }
+      throw new Error(backendMessage || 'Invalid phone number or password. Please check your credentials and try again.');
     }
     
     // Only log non-401 errors for debugging
@@ -217,6 +221,44 @@ export const changePassword = async (currentPassword: string, newPassword: strin
   } catch (error: any) {
     console.error('Change password error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to change password');
+  }
+};
+
+/**
+ * Initiate forgot password flow
+ */
+export const forgotPassword = async (phone: string): Promise<{ message: string, otp?: string }> => {
+  if (MOCK_AUTH) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { message: 'OTP sent successfully (MOCK)', otp: '123456' };
+  }
+  try {
+    const response = await api.post<{ message: string, otp?: string }>('/auth/forgot-password', { phone });
+    return response.data;
+  } catch (error: any) {
+    console.error('Forgot password API error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to request OTP');
+  }
+};
+
+/**
+ * Reset password
+ */
+export const resetPassword = async (phone: string, otp: string, newPassword: string): Promise<{ message: string }> => {
+  if (MOCK_AUTH) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return { message: 'Password reset successful (MOCK)' };
+  }
+  try {
+    const response = await api.post<{ message: string }>('/auth/reset-password', {
+      phone,
+      otp,
+      newPassword,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Reset password API error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Failed to reset password');
   }
 };
 

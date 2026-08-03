@@ -73,12 +73,11 @@ export default function StaffOrderDetailsScreen() {
         if (!found) {
           try {
             const orderData = await getOrderById(id);
-            // Transform to match expected format
             found = {
               ...orderData,
-              id: orderData._id || orderData.id,
-              customer: orderData.customerId?.name || "Customer",
-              customerPhone: orderData.customerId?.phone || "",
+              id: orderData._id,
+              customer: (orderData as any).customerId?.name || "Customer",
+              customerPhone: (orderData as any).customerId?.phone || "",
               pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
               pickupLocation: { lat: 13.0827, lng: 80.2707 },
               location: orderData.location || { lat: 0, lng: 0 },
@@ -155,11 +154,11 @@ export default function StaffOrderDetailsScreen() {
           // Try direct API call as last resort
           try {
             const orderData = await getOrderById(id);
-            setOrder({
+             setOrder({
               ...orderData,
-              id: orderData._id || orderData.id,
-              customer: orderData.customerId?.name || "Customer",
-              customerPhone: orderData.customerId?.phone || "",
+              id: orderData._id,
+              customer: (orderData as any).customerId?.name || "Customer",
+              customerPhone: (orderData as any).customerId?.phone || "",
               pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
               pickupLocation: { lat: 13.0827, lng: 80.2707 },
               location: orderData.location || { lat: 0, lng: 0 },
@@ -252,7 +251,17 @@ export default function StaffOrderDetailsScreen() {
                 <Text style={styles.meta}>#{order?._id || order?.id}</Text>
               </View>
 
-              <Text style={styles.qty}>{order?.quantity || 1} x 20L</Text>
+              <View style={styles.qtyContainer}>
+                {order?.items && order.items.length > 0 ? (
+                  order.items.map((it: any, idx: number) => (
+                    <Text key={idx} style={styles.qty}>
+                      {it.quantity} x {it.productName}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.qty}>{order?.quantity || 1} x 20L</Text>
+                )}
+              </View>
 
               <StatusStepper status={String(order?.status || "")} />
 
@@ -465,6 +474,9 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     fontSize: 18,
     fontWeight: "900",
+    marginBottom: 8,
+  },
+  qtyContainer: {
     marginBottom: 12,
   },
   section: {

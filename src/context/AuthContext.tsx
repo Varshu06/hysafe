@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { getProfile, login, LoginCredentials, logout as logoutService, register, RegisterData } from '../services/auth.service';
 import { User, UserRole } from '../types/user.types';
 import { storage } from '../utils/storage';
+import { setUnauthorizedCallback } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    setUnauthorizedCallback(() => {
+      setUser(null);
+      if (router) {
+        try {
+          router.replace('/(auth)/login');
+        } catch (error) {
+          console.error('Auto-logout redirect error:', error);
+        }
+      }
+    });
+  }, [router]);
 
   // Navigate based on role after authentication
   useEffect(() => {

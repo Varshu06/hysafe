@@ -23,6 +23,10 @@ type Props = {
   extra?: ReactNode;
   actions?: ReactNode;
   quickActions?: ReactNode;
+  items?: {
+    productName: string;
+    quantity: number;
+  }[];
 };
 
 export function StaffOrderCard({
@@ -44,6 +48,7 @@ export function StaffOrderCard({
   extra,
   actions,
   quickActions,
+  items,
 }: Props) {
   const timeText = useMemo(() => {
     if (!createdAt) return '';
@@ -73,7 +78,17 @@ export function StaffOrderCard({
       </View>
 
       <View style={styles.mainRow}>
-        <Text style={styles.qty}>{quantity} x 20L</Text>
+        <View style={styles.qtyContainer}>
+          {items && items.length > 0 ? (
+            items.map((it, idx) => (
+              <Text key={idx} style={styles.qty}>
+                {it.quantity} x {it.productName}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.qty}>{quantity} x 20L</Text>
+          )}
+        </View>
         <View style={styles.metrics}>
           <View style={styles.metricChip}>
             <Feather name="navigation" size={14} color={COLORS.primary} />
@@ -209,6 +224,11 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flexShrink: 1,
     lineHeight: 24,
+  },
+  qtyContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 2,
   },
   metrics: {
     flexDirection: 'row',

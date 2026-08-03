@@ -35,6 +35,12 @@ api.interceptors.request.use(
   }
 );
 
+let onUnauthorizedCallback: (() => void) | null = null;
+
+export const setUnauthorizedCallback = (callback: () => void) => {
+  onUnauthorizedCallback = callback;
+};
+
 // Response interceptor - Handle errors
 api.interceptors.response.use(
   (response) => response,
@@ -55,6 +61,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid - clear storage
       await storage.clearAll();
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
+      }
     }
     
     // Handle timeout errors

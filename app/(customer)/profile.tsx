@@ -65,9 +65,6 @@ export default function ProfileScreen() {
     router.push("/(customer)/address/search");
   };
 
-  const handlePaymentMethods = () => {
-    router.push("/(customer)/profile/payment-methods");
-  };
 
   const handleNotifications = () => {
     Alert.alert("Notifications", "Notification settings feature coming soon!", [
@@ -211,16 +208,7 @@ export default function ProfileScreen() {
             <Feather name="chevron-right" size={20} color={COLORS.textLight} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handlePaymentMethods}
-          >
-            <View style={styles.menuItemLeft}>
-              <Feather name="credit-card" size={20} color={COLORS.text} />
-              <Text style={styles.menuItemText}>{t("paymentMethods")}</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color={COLORS.textLight} />
-          </TouchableOpacity>
+
 
           <TouchableOpacity
             style={styles.menuItem}
@@ -521,6 +509,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+    flexShrink: 1,
   },
   menuItemRight: {
     flexDirection: "row",
@@ -531,6 +521,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     fontWeight: "500",
+    flexShrink: 1,
   },
   menuItemLangText: {
     fontSize: 14,

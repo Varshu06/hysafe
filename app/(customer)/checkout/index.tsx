@@ -63,7 +63,7 @@ export default function CheckoutScreen() {
     ampm: "AM" as const,
   });
   const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethodValue>("online");
+    useState<PaymentMethodValue>("offline");
   const [isScheduledDelivery, setIsScheduledDelivery] = useState(false);
   const [showAddressPicker, setShowAddressPicker] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -147,29 +147,8 @@ export default function CheckoutScreen() {
     return `${dateLabel}, ${timeLabel}`;
   };
 
-  const loadPaymentMethod = useCallback(async () => {
-    try {
-      const stored = await AsyncStorage.getItem(CHECKOUT_PAYMENT_METHOD_KEY);
-      if (stored === "online" || stored === "offline") {
-        setPaymentMethod(stored);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPaymentMethod();
-  }, [loadPaymentMethod]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadPaymentMethod();
-    }, [loadPaymentMethod]),
-  );
-
-  const paymentLabel = paymentMethod === "offline" ? "Cash on Delivery" : "UPI";
-  const paymentBadge = paymentMethod === "offline" ? "COD" : "UPI";
+  const paymentLabel = "Cash on Delivery";
+  const paymentBadge = "COD";
 
   const selectedAddress =
     savedAddresses.find((a) => a.id === selectedAddressId) ||
@@ -209,7 +188,7 @@ export default function CheckoutScreen() {
           productName: item.name,
           quantity: item.quantity,
           price: item.price,
-          deliveryCharge: item.deliveryCharge || 0,
+          deliveryCharge: typeof item.deliveryCharge === 'number' ? item.deliveryCharge : (parseFloat(String(item.deliveryCharge)) || 0),
         })),
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
         location: selectedAddress.location,
@@ -586,23 +565,6 @@ export default function CheckoutScreen() {
 
       {items.length > 0 && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-          {/* Only show payment method selection if payment terms are one-time or not set */}
-          {shouldCollectPaymentNow && (
-            <TouchableOpacity
-              style={styles.paymentRow}
-              onPress={() =>
-                router.push("/(customer)/checkout/payment-methods")
-              }
-              activeOpacity={0.85}
-            >
-              <Text style={styles.gpayLogo}>{paymentBadge}</Text>
-              <View style={styles.paymentTextContainer}>
-                <Text style={styles.payVia}>Pay using</Text>
-                <Text style={styles.gpay}>{paymentLabel}</Text>
-              </View>
-              <Feather name="chevron-right" size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
           <TouchableOpacity
             style={[
               styles.payButton,
@@ -635,9 +597,7 @@ export default function CheckoutScreen() {
                 ? "Placing Order..."
                 : !isWithinServiceArea && distanceFromFactory !== null
                   ? `Proceed (${distanceFromFactory.toFixed(1)} km away)`
-                  : shouldCollectPaymentNow
-                    ? `Pay ₹${totalPrice}`
-                    : "Place Order"}
+                  : `Place Order - ₹${totalPrice}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -907,16 +867,19 @@ const styles = StyleSheet.create({
   },
   payButton: {
     backgroundColor: "#102841",
-    paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#FFFFFF",
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   payButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
   payButtonDisabled: {
     opacity: 0.6,

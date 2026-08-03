@@ -56,14 +56,6 @@ export default function CustomerLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile/payment-methods"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
         name="profile/privacy-security"
         options={{
           href: null,
@@ -137,14 +129,6 @@ export default function CustomerLayout() {
       />
       <Tabs.Screen
         name="checkout/index"
-        options={{
-          href: null,
-          tabBarStyle: { display: "none" },
-          headerShown: false,
-        }}
-      />
-      <Tabs.Screen
-        name="checkout/payment-methods"
         options={{
           href: null,
           tabBarStyle: { display: "none" },

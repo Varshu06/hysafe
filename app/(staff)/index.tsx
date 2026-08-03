@@ -217,7 +217,6 @@ export default function NewOrdersScreen() {
             try {
               const loc = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Balanced,
-                timeout: 5000, // 5 second timeout
               });
               location = {
                 lat: loc.coords.latitude,
@@ -386,6 +385,7 @@ export default function NewOrdersScreen() {
         id={String(id)}
         createdAt={item.createdAt}
         quantity={item.quantity || 1}
+        items={item.items}
         deliveryAddress={item.deliveryAddress}
         customer={item.customer}
         paymentLabel={paymentLabel}
