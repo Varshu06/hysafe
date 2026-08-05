@@ -38,7 +38,7 @@ export interface Order {
   quantity: number;
   totalPrice: number;
   status: OrderStatus;
-  paymentMethod: 'online' | 'offline';
+  paymentMethod: 'offline';
   paymentStatus: 'pending' | 'paid' | 'failed';
   deliveryAddress: string;
   notes?: string;

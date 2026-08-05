@@ -12,8 +12,11 @@ import {
 } from "../controllers/inventory.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { requireRole } from "../middleware/role.middleware";
+import { validateObjectId } from "../middleware/objectId.middleware";
 
 const router = Router();
+
+router.param("id", validateObjectId);
 
 router.get("/products", authenticate, requireRole("customer"), getProducts);
 router.get("/low-stock", authenticate, requireRole("admin"), getLowStockItems);

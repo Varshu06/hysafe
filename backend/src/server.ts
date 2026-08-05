@@ -2,6 +2,7 @@ import http from 'http';
 import app from './app';
 import { connectDatabase } from './config/database';
 import { initializeSocket } from './services/socket.service';
+import { validateJwtConfiguration } from './utils/jwt.util';
 
 const PORT = process.env.PORT || 5000;
 
@@ -10,6 +11,13 @@ const httpServer = http.createServer(app);
 
 // Initialize Socket.io
 const io = initializeSocket(httpServer);
+
+try {
+  validateJwtConfiguration();
+} catch (error: any) {
+  console.error(`Server startup failed: ${error.message}`);
+  process.exit(1);
+}
 
 // Connect to database and start server
 const startServer = async () => {
@@ -32,4 +40,3 @@ const startServer = async () => {
 };
 
 startServer();
-

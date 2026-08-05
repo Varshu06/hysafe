@@ -1,4 +1,3 @@
-import { AxiosError } from "axios";
 import api from "./api";
 import { PaymentMethod } from "@/components/staff/DeliveryConfirmModal";
 
@@ -87,14 +86,20 @@ export const getOngoingOrders = async (): Promise<any[]> => {
  */
 export const acceptOrder = async (orderId: string): Promise<any> => {
   try {
+    console.log("Calling accept API for:", orderId);
+
     const response = await api.post(`/staff/accept-order/${orderId}`);
+
+    console.log("Accept API Response:", response.data);
+
     return response.data;
   } catch (error: any) {
-    const errorMessage =
+    console.log("Accept API Error:", error.response?.data);
+    throw new Error(
       error.response?.data?.message ||
       error.message ||
-      "Failed to accept order";
-    throw new Error(errorMessage);
+      "Failed to accept order"
+    );
   }
 };
 

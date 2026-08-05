@@ -101,7 +101,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     paymentMethod: {
       type: String,
-      enum: ["online", "offline"],
+      enum: ["offline"],
       required: true,
     },
     paymentStatus: {

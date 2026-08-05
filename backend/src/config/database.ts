@@ -26,7 +26,6 @@ export const connectDatabase = async () => {
       // This avoids SSL/TLS version conflicts
     };
 
-    console.log("Mongo URI:", mongoURI);
     console.log("Node version:", process.version);
 
     await mongoose.connect(mongoURI, options);
@@ -58,4 +57,3 @@ export const connectDatabase = async () => {
     throw error;
   }
 };
-

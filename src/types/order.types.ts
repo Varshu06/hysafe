@@ -21,7 +21,7 @@ export interface Order {
   totalPrice?: number; // Backend uses totalPrice, frontend used price
   price?: number; // detailed UI uses price
   status: OrderStatus;
-  paymentMethod: "online" | "offline";
+  paymentMethod: "offline";
   paymentStatus?: "pending" | "paid" | "failed";
   deliveryAddress: string;
   pickupAddress?: string; // Admin/Staff might see this, or derived from system
@@ -36,8 +36,18 @@ export interface Order {
   outForDeliveryAt?: string;
   deliveredAt?: string;
   deliverySlot?: string;
+  isEventOrder?: boolean;
+  eventName?: string;
+  receiverName?: string;
+  receiverPhone?: string;
+  paymentTerms?: "one-time" | "weekly" | "monthly";
   staffId?: string;
-  assignedStaffId?: string;
+  assignedStaffId?: {
+    _id?: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
   driverName?: string; // Delivery person's name
   assignedStaff?: {
     name?: string;

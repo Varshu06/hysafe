@@ -17,8 +17,11 @@ import {
 } from '../controllers/staff.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
+import { validateObjectId } from '../middleware/objectId.middleware';
 
 const router = Router();
+
+router.param('id', validateObjectId);
 
 router.use(authenticate);
 
@@ -38,7 +41,6 @@ router.put('/:id', requireRole('admin'), updateStaffById);
 router.delete('/:id', requireRole('admin'), deleteStaffById);
 
 export default router;
-
 
 
 

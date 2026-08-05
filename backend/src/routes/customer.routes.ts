@@ -15,8 +15,11 @@ import {
 } from '../controllers/recurringDelivery.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
+import { validateObjectId } from '../middleware/objectId.middleware';
 
 const router = Router();
+
+router.param('id', validateObjectId);
 
 router.get('/', authenticate, requireRole('admin'), getCustomers);
 router.get('/stats', authenticate, requireRole('admin'), getCustomerStats);
@@ -35,4 +38,3 @@ router.get('/:id/orders', authenticate, requireRole('admin'), getCustomerOrders)
 router.get('/:id', authenticate, requireRole('admin'), getCustomerById);
 
 export default router;
-

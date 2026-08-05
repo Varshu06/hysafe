@@ -80,6 +80,7 @@ export const getAvailableOrders = async (req: AuthRequest, res: Response) => {
 
 // Accept order
 export const acceptOrder = async (req: AuthRequest, res: Response) => {
+  console.log("===== ACCEPT ORDER API HIT =====");
   try {
     console.log("===== STAFF ACCEPT ORDER =====");
     const { id } = req.params;

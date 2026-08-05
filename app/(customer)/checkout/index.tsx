@@ -1,5 +1,4 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -37,9 +36,7 @@ import {
   SERVICE_RADIUS_KM,
 } from "../../../src/utils/constants";
 import { t } from "i18next";
-
-type PaymentMethodValue = "online" | "offline";
-const CHECKOUT_PAYMENT_METHOD_KEY = "@hysafe_checkout_payment_method";
+import { Order } from "../../../src/types/order.types";
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -62,8 +59,6 @@ export default function CheckoutScreen() {
     minute: "30",
     ampm: "AM" as const,
   });
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethodValue>("offline");
   const [isScheduledDelivery, setIsScheduledDelivery] = useState(false);
   const [showAddressPicker, setShowAddressPicker] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -146,10 +141,6 @@ export default function CheckoutScreen() {
     const timeLabel = `${scheduledTime.hour}:${scheduledTime.minute} ${scheduledTime.ampm}`;
     return `${dateLabel}, ${timeLabel}`;
   };
-
-  const paymentLabel = "Cash on Delivery";
-  const paymentBadge = "COD";
-
   const selectedAddress =
     savedAddresses.find((a) => a.id === selectedAddressId) ||
     savedAddresses[0] ||
@@ -181,7 +172,7 @@ export default function CheckoutScreen() {
       const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
 
       // Prepare order data
-      const orderData = {
+      const orderData: Partial<Order> = {
         quantity: totalQuantity,
         items: items.map((item) => ({
           productId: item.id,
@@ -192,7 +183,7 @@ export default function CheckoutScreen() {
         })),
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
         location: selectedAddress.location,
-        paymentMethod: paymentMethod,
+        paymentMethod: "offline",
         notes: "", // TODO: Get from instructions
         deliverySlot: isScheduledDelivery
           ? new Date(

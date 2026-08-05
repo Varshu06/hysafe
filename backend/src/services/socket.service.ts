@@ -2,13 +2,14 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { verifyToken } from '../utils/jwt.util';
 import { User } from '../models/User.model';
+import { corsOriginValidator } from '../config/cors';
 
 let io: SocketIOServer;
 
 export const initializeSocket = (httpServer: HTTPServer) => {
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN?.split(',') || '*',
+      origin: corsOriginValidator,
       methods: ['GET', 'POST'],
       credentials: true,
     },
@@ -129,7 +130,6 @@ export const emitOrderAcceptedToStaff = (order: any) => {
     console.log(`🔔 Order accepted notification sent to staff: ${order._id}`);
   }
 };
-
 
 
 

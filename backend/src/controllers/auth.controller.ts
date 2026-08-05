@@ -10,7 +10,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 // Register
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, phone, password, name, role, customerType, address } = req.body;
+    const { email, phone, password, name, customerType, address } = req.body;
 
     const normalizedEmail = typeof email === 'string' && email.trim()
       ? email.trim().toLowerCase()
@@ -58,7 +58,9 @@ export const register = async (req: Request, res: Response) => {
       phone: normalizedPhone,
       password: hashedPassword,
       name,
-      role: role || 'customer',
+      // Public registration must never grant a privileged role. Staff accounts
+      // are created through the authenticated admin staff-management endpoint.
+      role: 'customer',
     };
 
     if (normalizedEmail) {
@@ -399,4 +401,3 @@ export const googleAuth = async (req: Request, res: Response) => {
     res.status(500).json({ message: error.message || 'Google authentication failed' });
   }
 };
-

@@ -45,14 +45,6 @@ export default function OrdersScreen() {
     );
   }
 
-  const getPaymentMethodLabel = (method?: string) => {
-    if (!method) return "N/A";
-    const methodLower = method.toLowerCase();
-    if (methodLower === "online") return "Card";
-    if (methodLower === "offline") return "Cash";
-    return method.charAt(0).toUpperCase() + method.slice(1);
-  };
-
   const getDriverName = (order: Order): string => {
     // Priority: driverName > assignedStaff.name > default placeholder
     if (order.driverName) return order.driverName;
