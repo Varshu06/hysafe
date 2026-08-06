@@ -46,35 +46,41 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Delivery address is required" });
     }
 
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "At least one item is required" });
+    }
+
     // Get customer profile
     const profile = await CustomerProfile.findOne({ userId: customerId });
 
-    const normalizedItems = items.map((item: any, index: number) => {
-      const price = Number(item.price);
-      const deliveryCharge = Number(
-        item.deliveryCharge ?? item.deliveryCharges ?? 0,
-      );
+    const normalizedItems: OrderItem[] = [];
+
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index] as any;
       const quantity = Number(item.quantity);
 
-      if (
-        !item.productId ||
-        !item.productName ||
-        !Number.isFinite(price) ||
-        !Number.isFinite(deliveryCharge) ||
-        !Number.isFinite(quantity) ||
-        quantity < 1
-      ) {
+      if (!item.productId || !Number.isFinite(quantity) || quantity < 1) {
         throw new Error(`Invalid item at index ${index}`);
       }
 
-      return {
-        productId: String(item.productId),
-        productName: String(item.productName),
+      const inventoryItem = await InventoryItem.findById(item.productId);
+
+      if (!inventoryItem) {
+        return res.status(400).json({ message: "Invalid productId" });
+      }
+
+      if (!inventoryItem.available || inventoryItem.quantity < quantity) {
+        return res.status(400).json({ message: "Product is unavailable" });
+      }
+
+      normalizedItems.push({
+        productId: String(inventoryItem._id),
+        productName: inventoryItem.name,
         quantity,
-        price,
-        deliveryCharge,
-      } as OrderItem;
-    });
+        price: Number(inventoryItem.price),
+        deliveryCharge: Number(inventoryItem.deliveryCharge ?? 0),
+      });
+    }
 
     if (normalizedItems.length === 0) {
       return res.status(400).json({ message: "At least one item is required" });
