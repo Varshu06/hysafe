@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -15,11 +16,11 @@ import { WhyChooseUs } from "../../src/components/customer/WhyChooseUs";
 import { FloatingAddButton } from "../../src/components/ui/FloatingAddButton";
 import { useCart } from "../../src/context/CartContext";
 import { useOrder } from "../../src/context/OrderContext";
+import { useProduct } from "../../src/context/ProductContext";
 // import { PRODUCTS } from "../../src/data/dummy";
 import { Order } from "../../src/types/order.types";
 import { COLORS } from "../../src/utils/constants";
 import { t } from "i18next";
-import { getProducts } from "@/services/product.service";
 import { Product } from "@/types/product.types";
 import { ProductImages } from "@/data/dummy";
 // import { Product } from "../types/product.types";
@@ -29,20 +30,17 @@ export default function CustomerHomeScreen() {
   const { addToCart, getQuantity, incrementQuantity, decrementQuantity } =
     useCart();
   const { orders, refreshOrders, isLoading } = useOrder();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { products, loading, refreshing, error, refreshProducts } = useProduct();
 
   useEffect(() => {
     refreshOrders();
   }, []);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      const fetchedProducts = await getProducts();
-      setProducts(fetchedProducts.data);
-      console.log("Fetching products...", fetchedProducts);
-    };
-    fetchProducts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      refreshProducts();
+    }, [refreshProducts]),
+  );
 
   // Get active orders (pending, accepted, out_for_delivery)
   const activeOrders = orders.filter((order) => {

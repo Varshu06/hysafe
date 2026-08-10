@@ -1,22 +1,20 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   FlatList,
   ActivityIndicator,
-  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProductCard } from "../../../src/components/customer/ProductCard";
 import { useCart } from "../../../src/context/CartContext";
-import { PRODUCTS } from "../../../src/data/dummy";
+import { useProduct } from "../../../src/context/ProductContext";
 import { COLORS } from "../../../src/utils/constants";
-import { getProducts } from "@/services/product.service";
 import { t } from "i18next";
 import { Product } from "@/types/product.types";
 const PAGE_SIZE = 5;
@@ -25,58 +23,44 @@ export default function ProductsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addToCart, removeFromCart, getQuantity, getTotalItems } = useCart();
+  const { products, loading, refreshing, error, refreshProducts } = useProduct();
 
-  const [products, setProducts] = useState<Product[]>([]);
   const [page, setPage] = useState(1);
-
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [moreProducts, setMoreProducts] = useState<Product[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [hasNext, setHasNext] = useState(true);
 
-
-  const fetchProducts = useCallback(
-    async (pageNumber: number, refresh = false) => {
-      if (loading) return;
-
-      if (!refresh && !hasNext) return;
-
-      setLoading(true);
-
-      try {
-        const res = await getProducts(pageNumber, PAGE_SIZE);
-
-        if (refresh) {
-          setProducts(res.data);
-        } else {
-          setProducts((prev) => [...prev, ...res.data]);
-        }
-
-        setPage(res.page);
-        setHasNext(res.hasNext);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [loading, hasNext],
+  useFocusEffect(
+    useCallback(() => {
+      refreshProducts(PAGE_SIZE);
+    }, [refreshProducts]),
   );
 
-  useEffect(() => {
-    fetchProducts(1, true);
-  }, []);
+  const loadMore = async () => {
+    if (loadingMore || loading || !hasNext) {
+      return;
+    }
 
-  const loadMore = () => {
-    if (!loading && hasNext) {
-      fetchProducts(page + 1);
+    setLoadingMore(true);
+    const nextPage = page + 1;
+
+    try {
+      const response = await getProducts(nextPage, PAGE_SIZE);
+      setMoreProducts((prev) => [...prev, ...response.data]);
+      setPage(nextPage);
+      setHasNext(response.hasNext);
+    } catch (error: any) {
+      console.log(error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = () => {
-    setRefreshing(true);
     setHasNext(true);
-    fetchProducts(1, true);
+    setPage(1);
+    setMoreProducts([]);
+    refreshProducts(PAGE_SIZE);
   };
 
   const toggleSelection = (product: Product) => {
@@ -128,7 +112,7 @@ export default function ProductsScreen() {
         </View>
       </ScrollView> */}
       <FlatList
-        data={products}
+        data={[...products, ...moreProducts]}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <ProductCard

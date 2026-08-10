@@ -7,6 +7,7 @@ import { FlashScreen } from "../src/components/FlashScreen";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
 import { CartProvider } from "../src/context/CartContext";
 import { OrderProvider } from "../src/context/OrderContext";
+import { ProductProvider } from "../src/context/ProductContext";
 
 function RootStack() {
   const { isLoading } = useAuth();
@@ -36,7 +37,9 @@ export default function RootLayout() {
       <AuthProvider>
         <CartProvider>
           <OrderProvider>
-            <RootStack />
+            <ProductProvider>
+              <RootStack />
+            </ProductProvider>
           </OrderProvider>
         </CartProvider>
       </AuthProvider>
