@@ -16,15 +16,15 @@ interface BillDetailsModalProps {
   visible: boolean;
   items: CartItem[];
   onClose: () => void;
+  deliveryFee?: number;
 }
 
-export const BillDetailsModal: React.FC<BillDetailsModalProps> = ({ visible, items, onClose }) => {
+export const BillDetailsModal: React.FC<BillDetailsModalProps> = ({ visible, items, onClose, deliveryFee = 0 }) => {
   const subtotal = useMemo(() => {
     return items.reduce((sum, it) => sum + it.price * it.quantity, 0);
   }, [items]);
 
-  const deliveryFee = 0; // for now
-  const total = subtotal + deliveryFee;
+  const total = subtotal + (deliveryFee || 0);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

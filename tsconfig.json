@@ -11,6 +11,10 @@
   "include": [
     "**/*.ts",
     "**/*.tsx"
+  ],
+  "exclude": [
+    "admin-dashboard/**",
+    "backend/**"
   ]
 }
 

@@ -24,6 +24,7 @@ import { useAuth } from "../../../src/context/AuthContext";
 import { useCart } from "../../../src/context/CartContext";
 import { useOrder } from "../../../src/context/OrderContext";
 import { createOrder } from "../../../src/services/order.service";
+import { getProductsByIds } from "../../../src/services/product.service";
 import { createRecurringDelivery } from "../../../src/services/recurring.service";
 import {
   addressStorage,
@@ -37,6 +38,8 @@ import {
 } from "../../../src/utils/constants";
 import { t } from "i18next";
 import { Order } from "../../../src/types/order.types";
+import { Product } from "../../../src/types/product.types";
+import { useProduct } from "../../../src/context/ProductContext";
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -106,6 +109,8 @@ export default function CheckoutScreen() {
     }
   }, [userPaymentTerms, selectedPaymentTerms]);
   const paymentTerm = selectedPaymentTerms || userPaymentTerms;
+  const { products: availableProducts } = useProduct();
+  const [deliveryInstructions, setDeliveryInstructions] = useState<string>("");
   // Load saved addresses
   const loadAddresses = useCallback(async () => {
     const addresses = await addressStorage.getAllAddresses(user);
@@ -131,14 +136,31 @@ export default function CheckoutScreen() {
   const shouldCollectPaymentNow =
     selectedPaymentTerms === "one-time" || !selectedPaymentTerms;
 
-  const totalPrice = getTotalPrice();
+  const subtotal = getTotalPrice();
+
+  // Determine order-level delivery charge using available product data (max of deliveryCharge)
+  const computeDeliveryCharge = () => {
+    try {
+      if (!items || items.length === 0) return 0;
+      const charges = items.map((it) => {
+        const p = availableProducts.find((ap) => ap.id === it.id);
+        return Number(p?.deliveryCharge ?? it.deliveryCharge ?? 0);
+      });
+      return charges.length > 0 ? Math.max(...charges) : 0;
+    } catch (e) {
+      return 0;
+    }
+  };
+
+  const deliveryCharge = computeDeliveryCharge();
+  const totalPrice = subtotal + deliveryCharge;
 
   const getScheduledLabel = () => {
     const dateLabel = scheduledDate.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     });
-    const timeLabel = `${scheduledTime.hour}:${scheduledTime.minute} ${scheduledTime.ampm}`;
+       const timeLabel = `${scheduledTime.hour}:${scheduledTime.minute} ${scheduledTime.ampm}`;
     return `${dateLabel}, ${timeLabel}`;
   };
   const selectedAddress =
@@ -166,25 +188,137 @@ export default function CheckoutScreen() {
       return;
     }
 
+    if (isPlacingOrder) {
+      return;
+    }
+
     setIsPlacingOrder(true);
     try {
       // Calculate total quantity
       const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+      const cartProductIds = items.map((item) => item.id);
 
-      // Prepare order data
+      let latestProducts: Map<string, Product>;
+      try {
+        latestProducts = await getProductsByIds(cartProductIds);
+      } catch (error: any) {
+        Alert.alert(
+          "Unable to verify cart",
+          "We couldn't verify the latest product information. Please check your connection and try again.",
+        );
+        return;
+      }
+
+      // Validate stock and availability per item
+      for (const item of items) {
+        const latestProduct = latestProducts.get(item.id);
+        if (!latestProduct) {
+          Alert.alert(
+            "Product unavailable",
+            `Product ${item.name} is no longer available. Please review your cart before placing the order.`,
+          );
+          return;
+        }
+
+        if (latestProduct.available === false) {
+          Alert.alert(
+            "Product unavailable",
+            `Product ${latestProduct.name} is currently unavailable. Please review your cart before placing the order.`,
+          );
+          return;
+        }
+
+        if (Number(latestProduct.quantity) === 0) {
+          Alert.alert(
+            "Out of stock",
+            `Product ${latestProduct.name} is out of stock. Please remove it from your cart.`,
+          );
+          return;
+        }
+
+        if (Number(latestProduct.quantity) < item.quantity) {
+          Alert.alert(
+            "Insufficient quantity",
+            `Only ${latestProduct.quantity} unit(s) of ${latestProduct.name} are available. Please reduce the quantity.`,
+          );
+          return;
+        }
+      }
+
+      const changedProducts = items.reduce(
+        (acc, item) => {
+          const latestProduct = latestProducts.get(item.id);
+          if (!latestProduct) {
+            return acc;
+          }
+
+          const priceChanged = item.price !== latestProduct.price;
+          const deliveryChanged =
+            item.deliveryCharge !== latestProduct.deliveryCharge;
+
+          if (priceChanged || deliveryChanged) {
+            acc.push({
+              productName: latestProduct.name,
+              oldPrice: item.price,
+              newPrice: latestProduct.price,
+              oldDeliveryCharge: item.deliveryCharge,
+              newDeliveryCharge: latestProduct.deliveryCharge,
+            });
+          }
+          return acc;
+        },
+        [] as Array<{
+          productName: string;
+          oldPrice: number;
+          newPrice: number;
+          oldDeliveryCharge: number;
+          newDeliveryCharge: number;
+        }>,
+      );
+
+      if (changedProducts.length > 0) {
+        const confirmPriceChange = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            "Cart updated",
+            "Some product prices or delivery charges have changed. Please review the updated prices before placing the order.",
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: () => resolve(false),
+              },
+              {
+                text: "Continue",
+                onPress: () => resolve(true),
+              },
+            ],
+            { cancelable: false },
+          );
+        });
+
+        if (!confirmPriceChange) {
+          return;
+        }
+      }
+
+      // Prepare order data with latest backend prices and charges
       const orderData: Partial<Order> = {
         quantity: totalQuantity,
-        items: items.map((item) => ({
-          productId: item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          price: item.price,
-          deliveryCharge: typeof item.deliveryCharge === 'number' ? item.deliveryCharge : (parseFloat(String(item.deliveryCharge)) || 0),
-        })),
+        items: items.map((item) => {
+          const latestProduct = latestProducts.get(item.id)!;
+          return {
+            productId: latestProduct.id,
+            productName: latestProduct.name,
+            quantity: item.quantity,
+            price: latestProduct.price,
+            deliveryCharge: latestProduct.deliveryCharge,
+          };
+        }),
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
         location: selectedAddress.location,
         paymentMethod: "offline",
-        notes: "", // TODO: Get from instructions
+           notes: deliveryInstructions || "",
+           deliveryCharge: deliveryCharge,
         deliverySlot: isScheduledDelivery
           ? new Date(
               `${scheduledDate.toISOString().split("T")[0]}T${scheduledTime.hour}:${scheduledTime.minute}:00`,
@@ -597,6 +731,8 @@ export default function CheckoutScreen() {
       <DeliveryInstructionsSheet
         visible={showInstructions}
         onClose={() => setShowInstructions(false)}
+        onSave={(val) => setDeliveryInstructions(val)}
+        initial={deliveryInstructions}
       />
 
       <AddressPickerModal
@@ -633,6 +769,7 @@ export default function CheckoutScreen() {
         visible={showBillDetails}
         items={items}
         onClose={() => setShowBillDetails(false)}
+        deliveryFee={deliveryCharge}
       />
 
       <PaymentTermsModal

@@ -10,6 +10,7 @@ import {
 import { COLORS } from "../../utils/constants";
 import { Product } from "@/types/product.types";
 import { ProductImages } from "@/data/dummy";
+import { normalizeImageSource } from "../../utils/image";
 
 interface ProductCardProps {
   item: Product;
@@ -80,7 +81,7 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       )}
       <View style={styles.imageContainer}>
         <Image
-          source={getProductImage(item.volume)}
+          source={normalizeImageSource(item.image) || getProductImage(item.volume)}
           style={styles.productImage}
           resizeMode="contain"
         />
@@ -91,7 +92,7 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       <View style={styles.priceRow}>
         <Text style={styles.price}>₹ {item.price}</Text>
         <View style={styles.deliveryBadge}>
-          <Text style={styles.deliveryText}>🚚 {item.deliveryCharge}</Text>
+          <Text style={styles.deliveryText}>🚚 {item.deliveryCharge === 0 ? 'Free' : `₹${item.deliveryCharge}`}</Text>
         </View>
       </View>
     </TouchableOpacity>

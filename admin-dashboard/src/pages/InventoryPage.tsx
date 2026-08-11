@@ -13,7 +13,10 @@ const emptyForm = {
   quantity: "",
   minStock: "",
   price: "",
-  deliveryCharge: "",
+  // default delivery charge to 0
+  deliveryCharge: 0,
+  // availability toggle (true = available)
+  available: true,
 };
 
 export const InventoryPage: React.FC = () => {
@@ -80,7 +83,8 @@ export const InventoryPage: React.FC = () => {
       quantity: String(item.quantity ?? ""),
       minStock: String(item.minStock ?? ""),
       price: String(item.price ?? ""),
-      deliveryCharge: String(item.deliveryCharge ?? ""),
+      deliveryCharge: String(item.deliveryCharge ?? "0"),
+      available: item.available ?? true,
     });
     setFormError('');
     setShowForm(true);
@@ -120,6 +124,7 @@ export const InventoryPage: React.FC = () => {
         minStock: Number(formData.minStock || 10),
         price: Number(formData.price),
         deliveryCharge: Number(formData.deliveryCharge || 0),
+        available: formData.available !== undefined ? Boolean(formData.available) : undefined,
       };
 
       if (editingItemId) {
@@ -320,6 +325,16 @@ export const InventoryPage: React.FC = () => {
                       }
                       className="rounded-lg border border-border px-4 py-2"
                     />
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!formData.available}
+                        onChange={(e) =>
+                          setFormData({ ...formData, available: e.target.checked })
+                        }
+                      />
+                      <span className="text-sm">Available</span>
+                    </label>
                     <input
                       type="number"
                       placeholder="Price"

@@ -1,3 +1,5 @@
+import { ProductImageSource } from "../utils/image";
+
 export interface Product {
   id: string;
   name: string;
@@ -5,7 +7,7 @@ export interface Product {
   quantity: number;
   price: number;
   deliveryCharge: number;
-  image?: string;
+  image?: ProductImageSource;
   available: boolean;
 }
 

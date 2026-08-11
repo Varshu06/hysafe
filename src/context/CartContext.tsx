@@ -8,6 +8,11 @@ import React, {
 } from "react";
 import { ImageSourcePropType } from "react-native";
 import { PRODUCTS } from "../data/dummy";
+import {
+  ProductImageSource,
+  getRemoteImageUri,
+  normalizeImageSource,
+} from "../utils/image";
 
 const CART_STORAGE_KEY = "@hysafe_cart";
 
@@ -38,6 +43,8 @@ interface StoredCartItem {
   price: number;
   quantity: number;
   volume: string;
+  deliveryCharge: number;
+  image?: string;
 }
 
 interface CartContextType {
@@ -46,7 +53,7 @@ interface CartContextType {
     id: string;
     name: string;
     price: number;
-    image: string;
+    image?: ProductImageSource;
     volume: string;
     deliveryCharge: number;
   }) => void;
@@ -75,19 +82,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
         const cartJson = await AsyncStorage.getItem(CART_STORAGE_KEY);
         if (cartJson) {
           const storedItems: StoredCartItem[] = JSON.parse(cartJson);
-          // Reconstruct cart items with image from volume
+          // Reconstruct cart items with image from stored URI or volume fallback
           const restoredItems: CartItem[] = storedItems.map((storedItem) => {
-            // Try to find product first for accurate image
             const product = PRODUCTS.find((p) => p.id === storedItem.id);
-            if (product) {
-              return {
-                ...storedItem,
-                image: product.image,
-              };
-            }
-            // Fallback: reconstruct image from volume
-            const volumeKey = storedItem.volume.toLowerCase().replace("l", "l");
-            const image = ProductImages[volumeKey] || ProductImages["20l"];
+            const imageSource = normalizeImageSource(
+              product?.image ?? storedItem.image,
+            );
+            const image =
+              imageSource ||
+              ProductImages[storedItem.volume.toLowerCase()] ||
+              ProductImages["20l"];
             return {
               ...storedItem,
               image,
@@ -129,10 +133,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
     id: string;
     name: string;
     price: number;
-    image: string;
+    image?: ProductImageSource;
     volume: string;
     deliveryCharge: number;
   }) => {
+    const normalizedImage = normalizeImageSource(product.image);
     setItems((prev) => {
       const existingItem = prev.find((item) => item.id === product.id);
       if (existingItem) {
@@ -142,7 +147,21 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
             : item,
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [
+        ...prev,
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          volume: product.volume,
+          deliveryCharge: product.deliveryCharge,
+          quantity: 1,
+          image:
+            normalizedImage ||
+            ProductImages[product.volume.toLowerCase()] ||
+            ProductImages["20l"],
+        },
+      ];
     });
   };
 

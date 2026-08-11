@@ -20,6 +20,7 @@ export interface Order {
   items: OrderItem[];
   totalPrice?: number; // Backend uses totalPrice, frontend used price
   price?: number; // detailed UI uses price
+  deliveryCharge?: number;
   status: OrderStatus;
   paymentMethod: "offline";
   paymentStatus?: "pending" | "paid" | "failed";

@@ -82,7 +82,8 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
 
       price: Number(price),
       deliveryCharge: Number(deliveryCharge || 0),
-      available: Number(quantity) > 0,
+      // If the client explicitly provides `available`, respect it; otherwise derive from quantity
+      available: available !== undefined ? Boolean(available) : Number(quantity) > 0,
     });
 
     res.status(201).json({
@@ -110,6 +111,7 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       lastRestocked,
       price,
       deliveryCharge,
+      available,
     } = req.body;
 
     const updateData: Record<string, unknown> = {};
@@ -130,6 +132,8 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       updateData.price = Number(price);
     if (deliveryCharge !== undefined)
       updateData.deliveryCharge = Number(deliveryCharge);
+    if (available !== undefined)
+      updateData.available = Boolean(available);
 
     const item = await InventoryItem.findByIdAndUpdate(id, updateData, {
       new: true,

@@ -22,3 +22,37 @@ export const getProducts = async (
     throw new Error(errorMessage);
   }
 };
+
+export const getProductsByIds = async (
+  ids: string[],
+  pageSize: number = 50,
+): Promise<Map<string, Product>> => {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  const foundProducts = new Map<string, Product>();
+
+  if (uniqueIds.length === 0) {
+    return foundProducts;
+  }
+
+  const pendingIds = new Set(uniqueIds);
+  let page = 1;
+
+  while (true) {
+    const response = await getProducts(page, pageSize);
+
+    for (const product of response.data) {
+      if (pendingIds.has(product.id)) {
+        foundProducts.set(product.id, product);
+        pendingIds.delete(product.id);
+      }
+    }
+
+    if (pendingIds.size === 0 || !response.hasNext) {
+      break;
+    }
+
+    page += 1;
+  }
+
+  return foundProducts;
+};

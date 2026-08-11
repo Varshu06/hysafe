@@ -86,11 +86,21 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "At least one item is required" });
     }
 
-    const totalPrice = normalizedItems.reduce(
-      (total: number, item: OrderItem) =>
-        total + (item.price + item.deliveryCharge) * item.quantity,
+    // Compute subtotal (sum of price * quantity)
+    const subtotal = normalizedItems.reduce(
+      (total: number, item: OrderItem) => total + item.price * item.quantity,
       0,
     );
+
+    // Determine single delivery charge for the order.
+    // Use the maximum deliveryCharge among items (preserves existing product-level charge logic
+    // while ensuring it's applied once per order).
+    const orderDeliveryCharge = normalizedItems.reduce(
+      (max: number, item: OrderItem) => Math.max(max, Number(item.deliveryCharge || 0)),
+      0,
+    );
+
+    const totalPrice = subtotal + orderDeliveryCharge;
 
     if (!Number.isFinite(totalPrice)) {
       return res.status(400).json({ message: "Invalid order total" });
@@ -104,6 +114,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       items: normalizedItems,
       totalPrice,
       price: totalPrice,
+      deliveryCharge: orderDeliveryCharge,
       status: "pending",
       paymentMethod:
         paymentMethod || profile?.defaultPaymentMethod || "offline",

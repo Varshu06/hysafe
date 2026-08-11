@@ -110,7 +110,7 @@ export default function OrderDetailsScreen() {
           price: product.price,
           image: product.image,
           volume: product.volume,
-          deliveryCharge: product.deliveryCharge || 0,
+          deliveryCharge: product.deliveryCharge,
         });
 
         // Update quantity to match order quantity
@@ -298,6 +298,11 @@ export default function OrderDetailsScreen() {
                 <Text style={styles.infoValue}>
                   ₹{order.price || order.totalPrice}
                 </Text>
+                {/* Show breakdown: subtotal and delivery charge when available */}
+                <View style={{ marginTop: 6 }}>
+                  <Text style={[styles.infoLabel, { fontSize: 12 }]}>Subtotal: ₹{(order.items || []).reduce((s, it) => s + (it.price || 0) * (it.quantity || 0), 0)}</Text>
+                  <Text style={[styles.infoLabel, { fontSize: 12 }]}>Delivery: {order.deliveryCharge === 0 ? 'Free' : `₹${order.deliveryCharge ?? 0}`}</Text>
+                </View>
               </View>
             </View>
           )}

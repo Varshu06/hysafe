@@ -5,10 +5,12 @@ import { COLORS } from '../../utils/constants';
 interface DeliveryInstructionsSheetProps {
   visible: boolean;
   onClose: () => void;
+  onSave?: (value: string) => void;
+  initial?: string;
 }
 
-export const DeliveryInstructionsSheet = ({ visible, onClose }: DeliveryInstructionsSheetProps) => {
-  const [selected, setSelected] = useState<string[]>([]);
+export const DeliveryInstructionsSheet = ({ visible, onClose, onSave, initial }: DeliveryInstructionsSheetProps) => {
+  const [selected, setSelected] = useState<string[]>(() => (initial ? initial.split(",").map(s => s.trim()).filter(Boolean) : []));
 
   const options = [
     { id: 'door', label: 'Leave at door', icon: '🚪' },
@@ -61,6 +63,18 @@ export const DeliveryInstructionsSheet = ({ visible, onClose }: DeliveryInstruct
                     </View>
                   </TouchableOpacity>
                 ))}
+              </View>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={() => {
+                    const value = selected.join(", ");
+                    onSave && onSave(value);
+                    onClose();
+                  }}
+                >
+                  <Text style={styles.saveText}>Save</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -145,6 +159,20 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  actions: {
+    marginTop: 12,
+    alignItems: 'flex-end',
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  saveText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
 

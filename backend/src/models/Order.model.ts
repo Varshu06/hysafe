@@ -16,9 +16,11 @@ export interface IOrder extends Document {
     productName: string;
     quantity: number;
     price: number;
+    deliveryCharge?: number;
   }[];
   totalPrice: number;
   price: number;
+  deliveryCharge?: number;
   status: OrderStatus;
   paymentMethod: "online" | "offline";
   paymentStatus: "pending" | "paid" | "failed";
@@ -76,9 +78,18 @@ const OrderSchema = new Schema<IOrder>(
             type: Number,
             required: true,
           },
+          deliveryCharge: {
+            type: Number,
+            default: 0,
+          },
         },
       ],
       required: true,
+    },
+    // Single delivery charge applied per order
+    deliveryCharge: {
+      type: Number,
+      default: 0,
     },
     totalPrice: {
       type: Number,

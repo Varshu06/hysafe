@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { normalizeImageSource } from '../../utils/image';
 import { COLORS } from '../../utils/constants';
 
 interface BulkOrderCardProps {
@@ -9,8 +10,8 @@ interface BulkOrderCardProps {
     price: number;           // Single order price
     bulkPrice: number;      // Bulk order price
     bulkMinQuantity: number; // Minimum quantity for bulk
-    deliveryCharge: string;
-    image: ImageSourcePropType;
+    deliveryCharge: number;
+    image: ImageSourcePropType | string;
     volume: string;
   };
   selected?: boolean;
@@ -79,7 +80,7 @@ export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) 
 
       <View style={styles.imageContainer}>
         <Image 
-          source={item.image} 
+          source={normalizeImageSource(item.image)} 
           style={styles.productImage}
           resizeMode="contain"
         />
@@ -119,7 +120,7 @@ export const BulkOrderCard = ({ item, selected, onSelect }: BulkOrderCardProps) 
       </View>
 
       <View style={styles.deliveryBadge}>
-        <Text style={styles.deliveryText}>🚚 {item.deliveryCharge}</Text>
+        <Text style={styles.deliveryText}>🚚 {item.deliveryCharge === 0 ? 'Free' : `₹${item.deliveryCharge}`}</Text>
       </View>
     </TouchableOpacity>
   );

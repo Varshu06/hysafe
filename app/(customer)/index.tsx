@@ -23,6 +23,7 @@ import { COLORS } from "../../src/utils/constants";
 import { t } from "i18next";
 import { Product } from "@/types/product.types";
 import { ProductImages } from "@/data/dummy";
+import { normalizeImageSource } from "../../src/utils/image";
 // import { Product } from "../types/product.types";
 
 export default function CustomerHomeScreen() {
@@ -155,7 +156,7 @@ export default function CustomerHomeScreen() {
               <View key={product.id} style={styles.productCardSmall}>
                 <View style={styles.productImageContainer}>
                   <Image
-                    source={ProductImages[product.image]}
+                    source={normalizeImageSource(product.image) || ProductImages[product.volume.toLowerCase()]}
                     style={styles.productImage}
                     resizeMode="contain"
                   />

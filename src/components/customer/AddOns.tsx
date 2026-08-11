@@ -12,6 +12,7 @@ import {
 import { useCart } from "../../context/CartContext";
 import { PRODUCTS } from "../../data/dummy";
 import { COLORS } from "../../utils/constants";
+import { normalizeImageSource } from "../../utils/image";
 import { Product } from "@/types/product.types";
 import { t } from "i18next";
 
@@ -21,7 +22,8 @@ interface AddOnItemProps {
     name: string;
     price: number;
     volume: string;
-    image: ImageSourcePropType;
+    image: ImageSourcePropType | string;
+    deliveryCharge?: number;
   };
   isInCart: boolean;
   onAdd: () => void;
@@ -87,7 +89,7 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
       <View style={styles.imageContainer}>
         {item.image && (
           <Image
-            source={item.image}
+            source={normalizeImageSource(item.image)}
             style={styles.productImage}
             resizeMode="contain"
           />
@@ -96,7 +98,7 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
       <Text style={styles.name}>{item.name}</Text>
       <View style={styles.priceRow}>
         <Text style={styles.price}>₹{item.price}</Text>
-        <Text style={styles.free}>Free</Text>
+        <Text style={styles.free}>{item.price ? (item.price > 0 ? '' : 'Free') : 'Free'}</Text>
       </View>
     </View>
   );
@@ -105,14 +107,14 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
 export const AddOns = () => {
   const { addToCart, getQuantity } = useCart();
 
-  const handleAddItem = (item: Product) => {
+  const handleAddItem = (item: AddOnItemProps['item']) => {
     addToCart({
       id: item.id,
       name: item.name,
       price: item.price,
       image: item.image,
       volume: item.volume,
-      deliveryCharge: item.deliveryCharge,
+      deliveryCharge: item.deliveryCharge ?? 0,
     });
   };
 

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProductCard } from "../../../src/components/customer/ProductCard";
+import { normalizeImageSource } from "../../../src/utils/image";
 import { useCart } from "../../../src/context/CartContext";
 import { useProduct } from "../../../src/context/ProductContext";
 import { getProducts } from "../../../src/services/product.service";
