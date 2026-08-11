@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ProductCard } from "../../../src/components/customer/ProductCard";
 import { useCart } from "../../../src/context/CartContext";
 import { useProduct } from "../../../src/context/ProductContext";
+import { getProducts } from "../../../src/services/product.service";
 import { COLORS } from "../../../src/utils/constants";
 import { t } from "i18next";
 import { Product } from "@/types/product.types";
@@ -32,7 +33,7 @@ export default function ProductsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      refreshProducts(PAGE_SIZE);
+      refreshProducts();
     }, [refreshProducts]),
   );
 
@@ -60,7 +61,7 @@ export default function ProductsScreen() {
     setHasNext(true);
     setPage(1);
     setMoreProducts([]);
-    refreshProducts(PAGE_SIZE);
+    refreshProducts();
   };
 
   const toggleSelection = (product: Product) => {
@@ -72,7 +73,7 @@ export default function ProductsScreen() {
         id: product.id,
         name: product.name,
         price: product.price,
-        image: product.image,
+        image: product.image ?? "",
         volume: product.volume,
         deliveryCharge: product.deliveryCharge || 0,
       });
