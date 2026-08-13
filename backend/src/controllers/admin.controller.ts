@@ -5,6 +5,7 @@ import { Staff } from '../models/Staff.model';
 import { Order } from '../models/Order.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { hashPassword } from '../utils/bcrypt.util';
+import { normalizeIndianMobilePhone } from '../utils/phone.util';
 
 const toObject = (doc: any) => (doc?.toObject ? doc.toObject() : doc);
 
@@ -328,15 +329,26 @@ export const getStaffById = async (req: AuthRequest, res: Response) => {
 export const createStaff = async (req: AuthRequest, res: Response) => {
   try {
     const { name, email, phone, password, isOnline } = req.body;
+    const normalizedPhone = normalizeIndianMobilePhone(phone);
+    const normalizedEmail =
+      typeof email === 'string' && email.trim()
+        ? email.trim().toLowerCase()
+        : undefined;
 
-    if (!name || !phone || !password) {
+    if (
+      typeof name !== 'string' ||
+      !name.trim() ||
+      !normalizedPhone ||
+      typeof password !== 'string' ||
+      !password
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Name, phone and password are required',
+        message: 'Name, a valid 10-digit phone number and password are required',
       });
     }
 
-    if (String(password).length < 6) {
+    if (password.length < 6) {
       return res.status(400).json({
         success: false,
         message: 'Password must be at least 6 characters',
@@ -344,7 +356,7 @@ export const createStaff = async (req: AuthRequest, res: Response) => {
     }
 
     const existingUser = await User.findOne({
-      $or: [{ phone }, ...(email ? [{ email: String(email).toLowerCase() }] : [])],
+      $or: [{ phone: normalizedPhone }, ...(normalizedEmail ? [{ email: normalizedEmail }] : [])],
     });
 
     if (existingUser) {
@@ -354,12 +366,12 @@ export const createStaff = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const hashedPassword = await hashPassword(String(password));
+    const hashedPassword = await hashPassword(password);
 
     const user = await User.create({
-      name,
-      email: email ? String(email).toLowerCase() : undefined,
-      phone,
+      name: name.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
       password: hashedPassword,
       role: 'staff',
       isActive: true,
@@ -367,8 +379,8 @@ export const createStaff = async (req: AuthRequest, res: Response) => {
 
     const staffProfile = await Staff.create({
       userId: user._id,
-      name,
-      phone,
+      name: name.trim(),
+      phone: normalizedPhone,
       isOnline: !!isOnline,
       cansInHand: 0,
     });

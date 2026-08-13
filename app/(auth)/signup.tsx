@@ -16,30 +16,9 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { COLORS } from "../../src/utils/constants";
-import { UserRole } from "../../src/types/user.types";
 import { t } from "i18next";
 
 type CustomerType = "home" | "shop" | "hotel" | "bank" | "event";
-
-const ROLES: {
-  value: UserRole;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  description: string;
-}[] = [
-  {
-    value: "customer",
-    label: "Customer",
-    icon: "user",
-    description: "Order water cans",
-  },
-  {
-    value: "staff",
-    label: "Staff",
-    icon: "truck",
-    description: "Delivery staff",
-  },
-];
 
 const CUSTOMER_TYPES: {
   value: CustomerType;
@@ -76,7 +55,7 @@ const CUSTOMER_TYPES: {
 
 export default function SignupScreen() {
   const router = useRouter();
-  const { register, refreshProfile } = useAuth();
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -85,7 +64,6 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [address, setAddress] = useState("");
-  const [role, setRole] = useState<UserRole>("customer");
   const [customerType, setCustomerType] = useState<CustomerType>("home");
   const [loading, setLoading] = useState(false);
 
@@ -125,9 +103,8 @@ export default function SignupScreen() {
         email: email.trim(),
         phone: cleanPhone,
         password,
-        role: role,
         address: address || undefined,
-        customerType: role === "customer" ? customerType : undefined,
+        customerType: customerType,
       });
 
       // Navigation will be handled by AuthContext based on role
@@ -165,67 +142,6 @@ export default function SignupScreen() {
         </View>
 
         <View style={styles.form}>
-          {/* Role Selection */}
-          <View style={styles.roleSection}>
-            <Text style={styles.sectionLabel}>{t("selectYourRole")}</Text>
-            <Text style={styles.sectionSubtext}>
-              {t("selectRoleDescription")}
-            </Text>
-            <View style={styles.roleContainer}>
-              {ROLES.map((roleOption) => (
-                <TouchableOpacity
-                  key={roleOption.value}
-                  style={[
-                    styles.roleCard,
-                    role === roleOption.value && styles.roleCardSelected,
-                  ]}
-                  onPress={() => setRole(roleOption.value)}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={[
-                      styles.roleIconContainer,
-                      role === roleOption.value &&
-                        styles.roleIconContainerSelected,
-                    ]}
-                  >
-                    <Feather
-                      name={roleOption.icon}
-                      size={24}
-                      color={
-                        role === roleOption.value
-                          ? COLORS.primary
-                          : COLORS.textLight
-                      }
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.roleLabel,
-                      role === roleOption.value && styles.roleLabelSelected,
-                    ]}
-                  >
-                    {t(roleOption.label)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.roleDescription,
-                      role === roleOption.value &&
-                        styles.roleDescriptionSelected,
-                    ]}
-                  >
-                    {t(roleOption.description)}
-                  </Text>
-                  {role === roleOption.value && (
-                    <View style={styles.selectedIndicator}>
-                      <Feather name="check" size={12} color="white" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
           <View style={styles.inputWrapper}>
             <Feather
               name="user"
@@ -302,14 +218,13 @@ export default function SignupScreen() {
             />
           </View>
 
-          {/* Customer Type Selection - Only show for customers */}
-          {role === "customer" && (
-            <View style={styles.customerTypeSection}>
-              <Text style={styles.sectionLabel}>{t("selectAccountType")}</Text>
-              <Text style={styles.sectionSubtext}>
-                {t("selectAccountTypeDescription")}
-              </Text>
-              <View style={styles.customerTypeGrid}>
+          {/* Customer Type Selection */}
+          <View style={styles.customerTypeSection}>
+            <Text style={styles.sectionLabel}>{t("selectAccountType")}</Text>
+            <Text style={styles.sectionSubtext}>
+              {t("selectAccountTypeDescription")}
+            </Text>
+            <View style={styles.customerTypeGrid}>
                 {CUSTOMER_TYPES.map((type) => (
                   <TouchableOpacity
                     key={type.value}
@@ -380,7 +295,6 @@ export default function SignupScreen() {
                 </View>
               )}
             </View>
-          )}
 
           <View style={styles.passwordContainer}>
             <TextInput
@@ -651,58 +565,6 @@ const styles = StyleSheet.create({
   loginLinkText: {
     color: COLORS.primary,
     fontWeight: "600",
-  },
-  roleSection: {
-    marginBottom: 20,
-  },
-  roleContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 8,
-  },
-  roleCard: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    position: "relative",
-    minHeight: 100,
-  },
-  roleCardSelected: {
-    backgroundColor: "#E0F2FE",
-    borderColor: COLORS.primary,
-  },
-  roleIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  roleIconContainerSelected: {
-    backgroundColor: "#E0F2FE",
-  },
-  roleLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  roleLabelSelected: {
-    color: COLORS.primary,
-  },
-  roleDescription: {
-    fontSize: 11,
-    color: COLORS.textLight,
-    textAlign: "center",
-  },
-  roleDescriptionSelected: {
-    color: COLORS.primary,
   },
   customerTypeSection: {
     marginBottom: 16,

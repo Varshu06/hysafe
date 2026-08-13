@@ -17,7 +17,6 @@ export interface RegisterData {
   password: string;
   name: string;
   address?: string;
-  role?: 'admin' | 'staff' | 'customer';
   customerType?: 'home' | 'shop' | 'hotel' | 'bank' | 'event';
 }
 
@@ -135,7 +134,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 };
 
 /**
- * Unified registration for all roles
+ * Public customer registration
  */
 export const register = async (data: RegisterData): Promise<AuthResponse> => {
   if (MOCK_AUTH) {
@@ -151,7 +150,7 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
         name: data.name,
         email: data.email || 'new@example.com',
         phone: data.phone,
-        role: data.role || 'customer',
+        role: 'customer',
         customerType: data.customerType || 'home',
       }
     };
