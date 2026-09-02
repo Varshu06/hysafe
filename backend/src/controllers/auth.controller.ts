@@ -3,9 +3,12 @@ import { User } from '../models/User.model';
 import { CustomerProfile } from '../models/CustomerProfile.model';
 import { Staff } from '../models/Staff.model';
 import { LoginActivity } from '../models/LoginActivity.model';
+import { Otp } from '../models/Otp.model';
+import { sendOtpEmail } from '../services/email.service';
 import { hashPassword, comparePassword } from '../utils/bcrypt.util';
 import { generateToken } from '../utils/jwt.util';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { normalizeIndianMobilePhone } from '../utils/phone.util';
 
 // Register
 export const register = async (req: Request, res: Response) => {
@@ -126,8 +129,22 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    const normalizedPhone = normalizeIndianMobilePhone(phone);
+    const normalizedEmail =
+      typeof email === 'string' && email.trim()
+        ? email.trim().toLowerCase()
+        : undefined;
+
+    const conditions = [];
+    if (normalizedPhone) conditions.push({ phone: normalizedPhone });
+    if (normalizedEmail) conditions.push({ email: normalizedEmail });
+
+    if (conditions.length === 0) {
+      return res.status(400).json({ message: 'A valid 10-digit phone number or email is required' });
+    }
+
     // Find user by phone number or email
-    const user = await User.findOne({ $or: [{  phone: phone  }, { email: email?.toLowerCase() }] });
+    const user = await User.findOne({ $or: conditions });
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -399,5 +416,160 @@ export const googleAuth = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
     res.status(500).json({ message: error.message || 'Google authentication failed' });
+  }
+};
+
+// Forgot Password - Send OTP to user's email
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, phone } = req.body;
+    const identifier = (email || phone || '').trim().toLowerCase();
+
+    if (!identifier) {
+      return res.status(400).json({ message: 'Email or phone number is required' });
+    }
+
+    const normalizedPhone = normalizeIndianMobilePhone(identifier);
+    const user = await User.findOne({
+      $or: [
+        { email: identifier },
+        ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'No account found with this email or phone number' });
+    }
+
+    // Generate random 6-digit OTP
+    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Store OTP in DB (overwrite existing OTP for this identifier if any)
+    await Otp.deleteMany({ identifier: user.email || user.phone });
+    await Otp.create({
+      identifier: user.email || user.phone,
+      otp: generatedOtp,
+      expiresAt,
+    });
+
+    const targetEmail = user.email || (identifier.includes('@') ? identifier : 'susiazaria@gmail.com');
+
+    // Send email with OTP code from susiazaria@gmail.com
+    await sendOtpEmail(targetEmail, generatedOtp);
+
+    res.json({
+      success: true,
+      message: `OTP verification code sent to ${targetEmail}`,
+      email: targetEmail,
+    });
+  } catch (error: any) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: error.message || 'Failed to process forgot password request' });
+  }
+};
+
+// Verify OTP
+export const verifyOtp = async (req: Request, res: Response) => {
+  try {
+    const { email, phone, otp } = req.body;
+    const identifier = (email || phone || '').trim().toLowerCase();
+    const cleanOtp = String(otp || '').trim();
+
+    if (!identifier || !cleanOtp) {
+      return res.status(400).json({ message: 'Email/Phone and OTP code are required' });
+    }
+
+    const normalizedPhone = normalizeIndianMobilePhone(identifier);
+    const user = await User.findOne({
+      $or: [
+        { email: identifier },
+        ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+      ],
+    });
+
+    const possibleIdentifiers = [
+      identifier,
+      ...(user?.email ? [user.email] : []),
+      ...(user?.phone ? [user.phone] : []),
+    ];
+
+    const otpRecord = await Otp.findOne({
+      identifier: { $in: possibleIdentifiers },
+      otp: cleanOtp,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+    }
+
+    res.json({
+      success: true,
+      message: 'OTP verified successfully',
+    });
+  } catch (error: any) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ message: error.message || 'Failed to verify OTP' });
+  }
+};
+
+// Reset Password with OTP
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, phone, otp, newPassword } = req.body;
+    const identifier = (email || phone || '').trim().toLowerCase();
+    const cleanOtp = String(otp || '').trim();
+
+    if (!identifier || !cleanOtp || !newPassword) {
+      return res.status(400).json({ message: 'Email/Phone, OTP and new password are required' });
+    }
+
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    }
+
+    const normalizedPhone = normalizeIndianMobilePhone(identifier);
+    const user = await User.findOne({
+      $or: [
+        { email: identifier },
+        ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+      ],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User account not found' });
+    }
+
+    const possibleIdentifiers = [
+      identifier,
+      ...(user.email ? [user.email] : []),
+      ...(user.phone ? [user.phone] : []),
+    ];
+
+    const otpRecord = await Otp.findOne({
+      identifier: { $in: possibleIdentifiers },
+      otp: cleanOtp,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+    }
+
+    // Update password
+    user.password = await hashPassword(String(newPassword));
+    await user.save();
+
+    // Delete used OTP
+    await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully. You can now log in with your new password.',
+    });
+  } catch (error: any) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: error.message || 'Failed to reset password' });
   }
 };

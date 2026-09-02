@@ -9,6 +9,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -33,7 +35,7 @@ export const registerForPushNotifications = async (): Promise<string | null> => 
           allowBadge: true,
           allowSound: true,
           allowAnnouncements: false,
-        },
+        } as any,
       });
       finalStatus = status;
       console.log('📋 Permission request result:', status);

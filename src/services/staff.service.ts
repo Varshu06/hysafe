@@ -157,7 +157,7 @@ export const updateDeliveryStatus = async (
 export const getStaffProfile = async (): Promise<any> => {
   try {
     // This would typically be from auth context, but if needed from API:
-    const response = await api.get("/auth/profile");
+    const response = await api.get("/auth/me");
     return response.data.user;
   } catch (error: any) {
     const errorMessage =

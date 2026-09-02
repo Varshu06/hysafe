@@ -22,10 +22,12 @@ export const LoginPage: React.FC = () => {
     try {
       await login(phone, password);
       navigate('/');
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Login failed. Please try again.'
-      );
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Login failed. Please check your credentials and try again.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

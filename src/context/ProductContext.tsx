@@ -1,6 +1,7 @@
-import React, { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { getProducts } from "../services/product.service";
 import { Product } from "../types/product.types";
+import { useAuth } from "./AuthContext";
 
 interface ProductContextType {
   products: Product[];
@@ -13,25 +14,19 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const fetchInProgressRef = useRef(false);
 
-  const loadProducts = async (
+  const loadProducts = useCallback(async (
     page: number = 1,
     limit: number = 6,
     refresh = false,
   ) => {
     if (fetchInProgressRef.current) {
-      return;
-    }
-
-    if (refresh && refreshing) {
-      return;
-    }
-    if (!refresh && loading) {
       return;
     }
 
@@ -56,15 +51,20 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
         setLoading(false);
       }
     }
-  };
+  }, []);
 
-  const refreshProducts = async (limit: number = 6): Promise<void> => {
+  const refreshProducts = useCallback(async (limit: number = 6): Promise<void> => {
     await loadProducts(1, limit, true);
-  };
+  }, [loadProducts]);
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (isAuthenticated) {
+      loadProducts();
+    } else {
+      setProducts([]);
+      setError(null);
+    }
+  }, [isAuthenticated, loadProducts]);
 
   return (
     <ProductContext.Provider

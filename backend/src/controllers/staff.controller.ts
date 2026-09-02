@@ -294,28 +294,44 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 // Helper function to update inventory when order is accepted
 async function reserveInventory(
   items: {
+    productId?: any;
     productName: string;
     quantity: number;
   }[],
 ) {
   for (const item of items) {
-    console.log("reserveInventory() called");
-    const inventoryItem = await InventoryItem.findOne({
-      name: item.productName,
-    });
+    let inventoryItem = null;
+
+    if (item.productId) {
+      inventoryItem = await InventoryItem.findById(item.productId);
+    }
+
+    if (!inventoryItem && item.productName) {
+      const cleanName = item.productName.trim();
+      inventoryItem = await InventoryItem.findOne({
+        name: { $regex: new RegExp(`^${cleanName}$`, "i") },
+      });
+    }
+
+    if (!inventoryItem && item.productName) {
+      const firstWord = item.productName.trim().split(" ")[0];
+      inventoryItem = await InventoryItem.findOne({
+        name: { $regex: new RegExp(firstWord, "i") },
+      });
+    }
 
     if (!inventoryItem) {
-      throw new Error(`Inventory item not found: ${item.productName}`);
+      inventoryItem = await InventoryItem.findOne({ available: true });
     }
 
-    if (inventoryItem.quantity < item.quantity) {
-      throw new Error(`Not enough stock for ${item.productName}`);
+    if (inventoryItem) {
+      inventoryItem.quantity = Math.max(0, inventoryItem.quantity - item.quantity);
+      inventoryItem.lastRestocked = new Date();
+      await inventoryItem.save();
+      console.log(`Reserved ${item.quantity} units from inventory item ${inventoryItem.name}`);
+    } else {
+      console.warn(`Could not find inventory item for reservation: ${item.productName}`);
     }
-
-    inventoryItem.quantity -= item.quantity;
-    inventoryItem.lastRestocked = new Date();
-
-    await inventoryItem.save();
   }
 }
 

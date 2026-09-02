@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { getMyOrders } from '../services/order.service';
 import { Order } from '../types/order.types';
 import { useAuth } from './AuthContext';
@@ -22,7 +22,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const userRole = user?.role;
   const userId = user?.id || user?._id;
 
-  const refreshOrders = async (): Promise<void> => {
+  const refreshOrders = useCallback(async (): Promise<void> => {
     // Only fetch orders for customers - staff and admin have their own order endpoints
     if (!isAuthenticated || userRole !== 'customer') {
       setOrders([]);
@@ -43,7 +43,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isAuthenticated, userRole]);
 
   // Refresh orders when user logs in or changes
   useEffect(() => {

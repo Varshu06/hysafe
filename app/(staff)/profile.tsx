@@ -24,7 +24,7 @@ import { getProfile } from "../../src/services/auth.service";
 import { useTranslation } from "react-i18next";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const [visible, setVisible] = useState(false);
@@ -46,6 +46,10 @@ export default function ProfileScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (!isAuthenticated || user?.role !== "staff") {
+        return;
+      }
+
       let mounted = true;
       const load = async () => {
         try {
@@ -120,7 +124,7 @@ export default function ProfileScreen() {
       return () => {
         mounted = false;
       };
-    }, [user]),
+    }, [isAuthenticated, user]),
   );
 
   const getInitials = (value?: string) => {
@@ -452,6 +456,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignSelf: "center",
     marginBottom: 24,
+  },
+  langChangeTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.text,
+    textAlign: "center",
+    marginBottom: 16,
   },
   modelOption: {
     flexDirection: "row",

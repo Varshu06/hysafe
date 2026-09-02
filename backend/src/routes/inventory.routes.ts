@@ -18,7 +18,7 @@ const router = Router();
 
 router.param("id", validateObjectId);
 
-router.get("/products", authenticate, requireRole("customer"), getProducts);
+router.get("/products", authenticate, requireRole("customer", "staff", "admin"), getProducts);
 router.get("/low-stock", authenticate, requireRole("admin"), getLowStockItems);
 router.get(
   "/summary",

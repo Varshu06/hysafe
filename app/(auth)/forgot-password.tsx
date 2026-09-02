@@ -20,7 +20,7 @@ import { t } from "i18next";
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1); // 1 = Enter Phone, 2 = Verify OTP & Reset Password
-  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,30 +28,17 @@ export default function ForgotPasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [receivedOtp, setReceivedOtp] = useState<string | null>(null);
-
   const handleRequestOtp = async () => {
-    if (!phone || phone.trim().length === 0) {
-      Alert.alert(t("error"), t("pleaseEnterPhoneNumber"));
-      return;
-    }
-
-    const cleanPhone = phone.replace(/\s+/g, "").replace(/[^0-9]/g, "");
-    if (cleanPhone.length < 10) {
-      Alert.alert(t("error"), t("phoneNumberMustBeAtLeast10Digits"));
+    if (!identifier || identifier.trim().length === 0) {
+      Alert.alert(t("error"), "Please enter your registered email or phone number");
       return;
     }
 
     try {
       setLoading(true);
-      const res = await forgotPassword(cleanPhone);
-      
-      if (__DEV__ && res && res.otp) {
-        setReceivedOtp(res.otp);
-        setOtp(res.otp); // autofill for easier development testing
-      }
+      const res = await forgotPassword(identifier.trim());
 
-      Alert.alert(t("success") || "Success", t("otpSentSuccess"));
+      Alert.alert(t("success") || "Success", res.message || "OTP verification code sent!");
       setStep(2);
     } catch (error: any) {
       Alert.alert(t("error"), error.message || t("serverErrorMessage"));
@@ -76,12 +63,10 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
-    const cleanPhone = phone.replace(/\s+/g, "").replace(/[^0-9]/g, "");
-
     try {
       setLoading(true);
-      await resetPassword(cleanPhone, otp.trim(), newPassword);
-      Alert.alert(t("success") || "Success", t("passwordResetSuccess"), [
+      await resetPassword(identifier.trim(), otp.trim(), newPassword);
+      Alert.alert(t("success") || "Success", "Password reset successfully! Please log in with your new password.", [
         {
           text: "OK",
           onPress: () => router.replace("/(auth)/login"),
@@ -116,34 +101,22 @@ export default function ForgotPasswordScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Hy-Safe</Text>
         <Text style={styles.subtitle}>
-          {step === 1 ? t("forgotPasswordSubtitle") : t("resetPasswordSubtitle")}
+          {step === 1 ? "Enter your registered email address or phone number to receive an OTP code." : t("resetPasswordSubtitle")}
         </Text>
-
-        {__DEV__ && receivedOtp && (
-          <View style={styles.sandboxBanner}>
-            <Feather name="info" size={16} color="#0369A1" style={{ marginRight: 8 }} />
-            <Text style={styles.sandboxText}>
-              [Sandbox Mode] OTP Code: <Text style={styles.sandboxCode}>{receivedOtp}</Text>
-            </Text>
-          </View>
-        )}
 
         {step === 1 ? (
           /* Step 1: Request OTP */
           <View style={styles.stepContainer}>
             <View style={styles.inputContainer}>
-              <View style={styles.countryCode}>
-                <Text style={styles.flag}>🇮🇳</Text>
-                <Text style={styles.code}>+91</Text>
-              </View>
+              <Feather name="mail" size={20} color={COLORS.primary} style={styles.iconStyle} />
               <TextInput
-                style={styles.input}
-                placeholder={t("phoneNumberPlaceholder")}
+                style={styles.inputWithoutCountryCode}
+                placeholder="Email or Phone Number"
                 placeholderTextColor={COLORS.textLight}
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="phone-pad"
-                maxLength={10}
+                value={identifier}
+                onChangeText={setIdentifier}
+                autoCapitalize="none"
+                keyboardType="email-address"
               />
             </View>
 

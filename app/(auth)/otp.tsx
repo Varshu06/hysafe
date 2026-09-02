@@ -38,7 +38,7 @@ export default function OtpScreen() {
       }
       
       if (index === 5 && text && newOtp.every(d => d !== '')) {
-         verifyOtp(newOtp.join(''));
+          verifyOtpCode(newOtp.join(''));
       }
   };
 
@@ -48,14 +48,18 @@ export default function OtpScreen() {
       }
   };
 
-  const verifyOtp = async (otpValue: string) => {
+  const verifyOtpCode = async (otpValue: string) => {
       setLoading(true);
       try {
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          const phoneNumber = params.phone as string;
-          await login({ phone: phoneNumber, password: 'otp-login' });
-      } catch (error) {
-          alert('Invalid OTP');
+          const identifier = (params.phone || params.email || '') as string;
+          const { verifyOtp } = require('../../src/services/auth.service');
+          await verifyOtp(identifier, otpValue);
+          router.push({
+            pathname: '/(auth)/forgot-password',
+            params: { email: identifier, otp: otpValue, step: '2' },
+          });
+      } catch (error: any) {
+          alert(error.message || 'Invalid OTP code');
       } finally {
           setLoading(false);
       }
@@ -83,7 +87,7 @@ export default function OtpScreen() {
               {otp.map((digit, index) => (
                   <TextInput
                       key={index}
-                      ref={ref => inputs.current[index] = ref}
+                      ref={ref => { inputs.current[index] = ref; }}
                       style={[styles.otpBox, digit ? styles.otpBoxFilled : null]}
                       maxLength={1}
                       keyboardType="number-pad"

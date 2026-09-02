@@ -18,17 +18,15 @@ export default function PaymentMethodsScreen() {
   const returnTo =
     typeof params.returnTo === "string" ? params.returnTo : undefined;
 
-  const [selected, setSelected] = useState<PaymentMethodValue>("online"); // default to UPI
+  const [selected, setSelected] = useState<PaymentMethodValue>("offline"); // Cash on Delivery only
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const stored = await AsyncStorage.getItem(PAYMENT_METHOD_KEY);
-        if (stored === "online" || stored === "offline") {
-          setSelected(stored);
-        }
+        await AsyncStorage.setItem(PAYMENT_METHOD_KEY, "offline");
+        setSelected("offline");
       } catch (e) {
         // ignore
       } finally {
@@ -41,8 +39,8 @@ export default function PaymentMethodsScreen() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await AsyncStorage.setItem(PAYMENT_METHOD_KEY, selected);
-      Alert.alert("Saved", "Default payment method updated.", [
+      await AsyncStorage.setItem(PAYMENT_METHOD_KEY, "offline");
+      Alert.alert("Saved", "Cash on Delivery is set as your default payment method.", [
         {
           text: "OK",
           onPress: () =>
@@ -125,21 +123,15 @@ export default function PaymentMethodsScreen() {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Choose default payment</Text>
+        <Text style={styles.sectionTitle}>Payment Method</Text>
         <Text style={styles.sectionSubtitle}>
-          This will be used as the default option during checkout.
+          Cash on Delivery is currently the active payment method. Online payments will be available in future releases.
         </Text>
 
         <Option
-          value="online"
-          title="UPI"
-          subtitle="Pay instantly using UPI apps"
-          iconName="smartphone"
-        />
-        <Option
           value="offline"
           title="Cash on Delivery"
-          subtitle="Pay after delivery"
+          subtitle="Pay cash to agent upon delivery"
           iconName="dollar-sign"
         />
 

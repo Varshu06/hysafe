@@ -24,15 +24,10 @@ export interface GoogleUserInfo {
  * Sign in with Google
  */
 export const signInWithGoogle = async (): Promise<GoogleUserInfo> => {
-  // Select the appropriate Client ID based on platform
-  const GOOGLE_CLIENT_ID = Platform.OS === 'android' 
-    ? GOOGLE_CLIENT_ID_ANDROID 
-    : GOOGLE_CLIENT_ID_WEB;
-  
-  // Check if Google Client ID is configured
-  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('YOUR_') || GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
-    throw new Error('Google OAuth is not configured. Please configure your Google Client ID in constants.ts to use Google sign-in.');
-  }
+  throw new Error('Google Sign-In is disabled for this launch.');
+};
+
+export const signInWithGoogleDisabled = async (): Promise<GoogleUserInfo> => {
   
   console.log(`📱 Using ${Platform.OS} Client ID for Google OAuth`);
 
@@ -55,7 +50,7 @@ export const signInWithGoogle = async (): Promise<GoogleUserInfo> => {
       // For Web/iOS: Try Expo proxy first, fallback to localhost
       try {
         // Try Expo proxy (requires Expo account)
-        const proxyUri = AuthSession.makeRedirectUri({ useProxy: true });
+        const proxyUri = AuthSession.makeRedirectUri({ useProxy: true } as any);
         if (proxyUri && proxyUri.startsWith('https://auth.expo.io')) {
           redirectUri = proxyUri;
           useProxy = true;
@@ -84,7 +79,7 @@ export const signInWithGoogle = async (): Promise<GoogleUserInfo> => {
       responseType: AuthSession.ResponseType.Token, // Implicit flow - token in URL hash
       redirectUri,
       useProxy: false, // Set to false for both Android and Web to avoid PKCE issues
-    });
+    } as any);
 
     // Get authorization URL
     const authUrl = await request.makeAuthUrlAsync(discovery);
@@ -97,7 +92,7 @@ export const signInWithGoogle = async (): Promise<GoogleUserInfo> => {
     );
 
     console.log('🔗 Auth result type:', result.type);
-    console.log('🔗 Auth result URL:', result.url);
+    console.log('🔗 Auth result URL:', result.type === 'success' ? result.url : undefined);
     
     if (result.type === 'success' && result.url) {
       console.log('🔗 Success! Parsing response URL...');

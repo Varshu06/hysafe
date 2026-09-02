@@ -127,10 +127,46 @@ export default function AddressSearchScreen() {
       let geocodeResults: any[] = [];
       try {
         const results = await Location.geocodeAsync(text);
-        geocodeResults = results.map((result, index) => ({
+        const detailedResults = await Promise.all(
+          results.map(async (result) => {
+            try {
+              const addresses = await Location.reverseGeocodeAsync({
+                latitude: result.latitude,
+                longitude: result.longitude,
+              });
+              const addr = addresses[0];
+              if (addr) {
+                return {
+                  latitude: result.latitude,
+                  longitude: result.longitude,
+                  name: addr.name || addr.street || text,
+                  street: addr.street || '',
+                  city: addr.city || '',
+                  region: addr.region || '',
+                  postalCode: addr.postalCode || '',
+                  country: addr.country || '',
+                };
+              }
+            } catch (err) {
+              // ignore
+            }
+            return {
+              latitude: result.latitude,
+              longitude: result.longitude,
+              name: text,
+              street: '',
+              city: '',
+              region: '',
+              postalCode: '',
+              country: '',
+            };
+          })
+        );
+
+        geocodeResults = detailedResults.map((result, index) => ({
           id: `search-${index}-${Date.now()}`,
           type: 'Search Result',
-          address: result.name || result.street || text,
+          address: result.name || text,
           fullAddress: [
             result.name,
             result.street,

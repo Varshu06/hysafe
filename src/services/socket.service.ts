@@ -13,12 +13,13 @@ class SocketService {
       this.disconnect();
     }
 
+    let connectionToken = token;
     // Get token from storage if not provided
-    if (!token) {
-      token = await storage.getToken();
+    if (!connectionToken) {
+      connectionToken = (await storage.getToken()) || undefined;
     }
 
-    if (!token) {
+    if (!connectionToken) {
       console.warn('SocketService: No token available, cannot connect');
       return;
     }
@@ -26,7 +27,7 @@ class SocketService {
     try {
       this.socket = io(SOCKET_URL, {
         auth: {
-          token,
+          token: connectionToken,
         },
         // Try polling first, then upgrade to websocket if available
         transports: ['polling', 'websocket'],

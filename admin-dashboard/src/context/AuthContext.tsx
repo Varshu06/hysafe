@@ -26,10 +26,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const storedUser = storage.getUser();
 
     if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUserState(storedUser);
-
-      socketService.connect();
+      if (storedUser.role === 'admin') {
+        setToken(storedToken);
+        setUserState(storedUser);
+        socketService.connect();
+      } else {
+        storage.clearAll();
+      }
     }
 
     setIsLoading(false);
@@ -40,6 +43,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authService.login({ phone, password });
       const { token, user } = response;
+
+      if (!user || user.role !== 'admin') {
+        throw new Error('Access denied. Admin credentials required to access this dashboard.');
+      }
 
       storage.setToken(token);
       storage.setUser(user);

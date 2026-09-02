@@ -13,8 +13,8 @@ const emptyForm = {
   quantity: "",
   minStock: "",
   price: "",
-  // default delivery charge to 0
-  deliveryCharge: 0,
+  // default delivery charge to ""
+  deliveryCharge: "",
   // availability toggle (true = available)
   available: true,
 };

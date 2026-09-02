@@ -16,6 +16,7 @@ import {
   NativeSyntheticEvent,
 } from "react-native";
 import { Button } from "../../src/components/ui/Button";
+import { useAuth } from "../../src/context/AuthContext";
 import {
   getOngoingOrders,
   updateDeliveryStatus,
@@ -42,6 +43,7 @@ const FILTERS: { key: FilterType; label: string }[] = [
 
 export default function OngoingOrdersScreen() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [ongoingOrders, setOngoingOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
@@ -49,27 +51,34 @@ export default function OngoingOrdersScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    refreshOngoingOrders();
-    // Set initial scroll position to match current filter
-    const initialIndex = FILTERS.findIndex((f) => f.key === filter);
-    if (initialIndex !== -1 && scrollViewRef.current) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({
-          x: initialIndex * (SCREEN_WIDTH - 40),
-          animated: false,
-        });
-      }, 100);
+    if (isAuthenticated && user?.role === "staff") {
+      refreshOngoingOrders();
+      // Set initial scroll position to match current filter
+      const initialIndex = FILTERS.findIndex((f) => f.key === filter);
+      if (initialIndex !== -1 && scrollViewRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({
+            x: initialIndex * (SCREEN_WIDTH - 40),
+            animated: false,
+          });
+        }, 100);
+      }
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   // Refresh orders when component comes into focus (e.g., after login)
   useFocusEffect(
     useCallback(() => {
-      refreshOngoingOrders();
-    }, []),
+      if (isAuthenticated && user?.role === "staff") {
+        refreshOngoingOrders();
+      }
+    }, [isAuthenticated, user]),
   );
 
   const refreshOngoingOrders = async () => {
+    if (!isAuthenticated || user?.role !== "staff") {
+      return;
+    }
     setIsLoading(true);
     try {
       const orders = await getOngoingOrders();

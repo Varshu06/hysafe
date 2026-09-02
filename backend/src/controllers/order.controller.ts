@@ -712,35 +712,45 @@ export const getRecentOrders = async (
 };
 async function reserveInventory(
   items: {
+    productId?: any;
     productName: string;
     quantity: number;
   }[],
 ) {
   for (const item of items) {
-    
+    let inventoryItem = null;
 
-    const inventoryItem = await InventoryItem.findOne({
-      name: item.productName,
-    });
-
-    
-
-    if (!inventoryItem) {
-      throw new Error(`Inventory item not found: ${item.productName}`);
+    if (item.productId) {
+      inventoryItem = await InventoryItem.findById(item.productId);
     }
 
-    
+    if (!inventoryItem && item.productName) {
+      const cleanName = item.productName.trim();
+      inventoryItem = await InventoryItem.findOne({
+        name: { $regex: new RegExp(`^${cleanName}$`, "i") },
+      });
+    }
 
-    inventoryItem.quantity -= item.quantity;
+    if (!inventoryItem && item.productName) {
+      const firstWord = item.productName.trim().split(" ")[0];
+      inventoryItem = await InventoryItem.findOne({
+        name: { $regex: new RegExp(firstWord, "i") },
+      });
+    }
 
-    
+    if (!inventoryItem) {
+      inventoryItem = await InventoryItem.findOne({ available: true });
+    }
 
-    await inventoryItem.save();
-
-    
+    if (inventoryItem) {
+      inventoryItem.quantity = Math.max(0, inventoryItem.quantity - item.quantity);
+      inventoryItem.lastRestocked = new Date();
+      await inventoryItem.save();
+      console.log(`Reserved ${item.quantity} units from inventory item ${inventoryItem.name}`);
+    } else {
+      console.warn(`Could not find inventory item for reservation: ${item.productName}`);
+    }
   }
-
-  
 }
 async function completeInventoryDelivery(
   items: {

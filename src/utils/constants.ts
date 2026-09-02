@@ -13,7 +13,7 @@ const getLocalIp = () => {
   return hostUri?.split(":")[0];
 };
 
-const LOCAL_IP = getLocalIp() || "localhost";
+const LOCAL_IP = getLocalIp() || "10.124.20.116";
 export const API_BASE_URL = __DEV__
   ? `http://${LOCAL_IP}:5000/api`
   : "https://your-production-api.com/api";

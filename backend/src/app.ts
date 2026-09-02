@@ -35,8 +35,8 @@ const apiLimiter = rateLimit({
   handler: rateLimitHandler('Too many requests. Please try again later.'),
 });
 
-// Trust proxy for accurate IP addresses
-app.set('trust proxy', true);
+// Trust proxy for accurate IP addresses (set to 1 to trust first proxy hop safely)
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors({

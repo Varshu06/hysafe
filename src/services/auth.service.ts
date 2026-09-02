@@ -226,13 +226,16 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 /**
  * Initiate forgot password flow
  */
-export const forgotPassword = async (phone: string): Promise<{ message: string, otp?: string }> => {
+export const forgotPassword = async (identifier: string): Promise<{ message: string, email?: string, devOtp?: string }> => {
   if (MOCK_AUTH) {
     await new Promise(resolve => setTimeout(resolve, 1000));
-    return { message: 'OTP sent successfully (MOCK)', otp: '123456' };
+    return { message: 'OTP sent successfully (MOCK)', devOtp: '123456' };
   }
   try {
-    const response = await api.post<{ message: string, otp?: string }>('/auth/forgot-password', { phone });
+    const response = await api.post<{ message: string, email?: string, devOtp?: string }>('/auth/forgot-password', {
+      email: identifier,
+      phone: identifier,
+    });
     return response.data;
   } catch (error: any) {
     console.error('Forgot password API error:', error);
@@ -241,16 +244,34 @@ export const forgotPassword = async (phone: string): Promise<{ message: string, 
 };
 
 /**
- * Reset password
+ * Verify OTP
  */
-export const resetPassword = async (phone: string, otp: string, newPassword: string): Promise<{ message: string }> => {
+export const verifyOtp = async (identifier: string, otp: string): Promise<{ message: string }> => {
+  try {
+    const response = await api.post<{ message: string }>('/auth/verify-otp', {
+      email: identifier,
+      phone: identifier,
+      otp,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Verify OTP API error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Invalid OTP code');
+  }
+};
+
+/**
+ * Reset password with OTP
+ */
+export const resetPassword = async (identifier: string, otp: string, newPassword: string): Promise<{ message: string }> => {
   if (MOCK_AUTH) {
     await new Promise(resolve => setTimeout(resolve, 1000));
     return { message: 'Password reset successful (MOCK)' };
   }
   try {
     const response = await api.post<{ message: string }>('/auth/reset-password', {
-      phone,
+      email: identifier,
+      phone: identifier,
       otp,
       newPassword,
     });

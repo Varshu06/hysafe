@@ -47,7 +47,7 @@ export function DeliveryConfirmModal({
   }, [paymentMode, transactionId, codCollected]);
 
   useEffect(() => {
-    setPaymentMode(isCOD ? "offline" : "online");
+    setPaymentMode("offline");
   }, [isCOD]);
 
   const handleConfirm = () => {
@@ -91,44 +91,8 @@ export function DeliveryConfirmModal({
               : "UPI/Online payment"}
           </Text> */}
           <View style={{ marginBottom: 12 }}>
-            {/* Online Payment */}
-            <TouchableOpacity
-              onPress={() => setPaymentMode("online")}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 15,
-              }}
-            >
-              <View
-                style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  borderWidth: 2,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginRight: 10,
-                }}
-              >
-                {paymentMode === "online" && (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      backgroundColor: "black",
-                    }}
-                  />
-                )}
-              </View>
-
-              <Text>Online Payment</Text>
-            </TouchableOpacity>
-
             {/* Cash On Delivery */}
-            <TouchableOpacity
-              onPress={() => setPaymentMode("offline")}
+            <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -141,25 +105,24 @@ export function DeliveryConfirmModal({
                   height: 20,
                   borderRadius: 10,
                   borderWidth: 2,
+                  borderColor: COLORS.primary,
                   justifyContent: "center",
                   alignItems: "center",
                   marginRight: 10,
                 }}
               >
-                {paymentMode === "offline" && (
-                  <View
-                    style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: 5,
-                      backgroundColor: "black",
-                    }}
-                  />
-                )}
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    backgroundColor: COLORS.primary,
+                  }}
+                />
               </View>
 
-              <Text>Cash On Delivery</Text>
-            </TouchableOpacity>
+              <Text style={{ fontWeight: "700", color: COLORS.text }}>Cash On Delivery</Text>
+            </View>
           </View>
           {paymentMode === "offline" ? (
             <TouchableOpacity

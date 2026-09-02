@@ -16,13 +16,13 @@ import { InventoryPage } from '@pages/InventoryPage';
 import { Loading } from '@components/Common';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
   if (isLoading) {
     return <Loading />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || user?.role !== 'admin') {
     return <Navigate to="/login" replace />;
   }
 
