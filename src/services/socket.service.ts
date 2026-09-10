@@ -24,6 +24,11 @@ class SocketService {
       return;
     }
 
+    if (!SOCKET_URL) {
+      console.warn('SocketService: SOCKET_URL is not configured, cannot connect');
+      return;
+    }
+
     try {
       this.socket = io(SOCKET_URL, {
         auth: {

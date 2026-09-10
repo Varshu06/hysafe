@@ -180,7 +180,7 @@
   "otpPlaceholder": "Enter 6-digit OTP",
   "newPasswordPlaceholder": "New Password",
   "confirmNewPasswordPlaceholder": "Confirm New Password",
-  "otpSentSuccess": "OTP sent successfully (Use '123456' for testing)",
+  "otpSentSuccess": "If an account exists with an email address, a verification code has been sent.",
   "passwordResetSuccess": "Password reset successfully!",
   "emailPlaceholder": "Email Address *",
   "pleaseEnterEmail": "Please enter your email address",

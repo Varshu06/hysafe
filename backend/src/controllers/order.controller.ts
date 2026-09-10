@@ -1,13 +1,19 @@
+import mongoose from "mongoose";
 import { Response } from "express";
 import { Order } from "../models/Order.model";
 import { CustomerProfile } from "../models/CustomerProfile.model";
 import { User } from "../models/User.model";
 import { Staff } from "../models/Staff.model";
-import { Inventory } from "../models/Inventory.model";
 import { InventoryItem } from "../models/InventoryItem.model";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { emitNewOrder, emitOrderStatusUpdate, } from "../services/socket.service";
+import { emitNewOrder, emitOrderStatusUpdate } from "../services/socket.service";
 import { sendNotificationToStaff } from "../services/notification.service";
+import { runTransaction } from "../utils/transaction.util";
+import {
+  reserveInventoryAtomic,
+  restoreInventoryAtomic,
+  validateStatusTransition,
+} from "../utils/orderInventory.util";
 
 // Create order
 export const createOrder = async (req: AuthRequest, res: Response) => {
@@ -21,7 +27,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
   try {
     const {
-      quantity,
       items,
       deliveryAddress,
       location,
@@ -37,12 +42,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const customerId = req.user._id;
 
-    // Validation
-    if (!quantity || quantity < 1) {
-      return res.status(400).json({ message: "Quantity must be at least 1" });
-    }
-
-    if (!deliveryAddress) {
+    if (!deliveryAddress || typeof deliveryAddress !== "string" || !deliveryAddress.trim()) {
       return res.status(400).json({ message: "Delivery address is required" });
     }
 
@@ -58,19 +58,31 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index] as any;
       const quantity = Number(item.quantity);
+      const productIdStr = String(item.productId || "").trim();
 
-      if (!item.productId || !Number.isFinite(quantity) || quantity < 1) {
-        throw new Error(`Invalid item at index ${index}`);
+      if (!productIdStr || !mongoose.Types.ObjectId.isValid(productIdStr)) {
+        return res.status(400).json({ message: `Invalid product ID format at item index ${index}` });
       }
 
-      const inventoryItem = await InventoryItem.findById(item.productId);
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        return res.status(400).json({ message: `Quantity must be a positive integer for item index ${index}` });
+      }
+
+      // Exact product ID lookup (NO name, regex, or any-product fallback)
+      const inventoryItem = await InventoryItem.findById(productIdStr);
 
       if (!inventoryItem) {
-        return res.status(400).json({ message: "Invalid productId" });
+        return res.status(400).json({ message: `Product not found for ID: ${productIdStr}` });
       }
 
-      if (!inventoryItem.available || inventoryItem.quantity < quantity) {
-        return res.status(400).json({ message: "Product is unavailable" });
+      if (!inventoryItem.available) {
+        return res.status(400).json({ message: `Product "${inventoryItem.name}" is currently unavailable` });
+      }
+
+      if (inventoryItem.quantity < quantity) {
+        return res.status(400).json({
+          message: `Insufficient stock for "${inventoryItem.name}". Requested: ${quantity}, Available: ${inventoryItem.quantity}`,
+        });
       }
 
       normalizedItems.push({
@@ -86,15 +98,22 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "At least one item is required" });
     }
 
+    // Reconcile order quantity: Authoritative calculation of total order quantity
+    const totalOrderQuantity = normalizedItems.reduce(
+      (sum: number, item: OrderItem) => sum + item.quantity,
+      0,
+    );
+
+    if (totalOrderQuantity < 1) {
+      return res.status(400).json({ message: "Total order quantity must be at least 1" });
+    }
+
     // Compute subtotal (sum of price * quantity)
     const subtotal = normalizedItems.reduce(
       (total: number, item: OrderItem) => total + item.price * item.quantity,
       0,
     );
 
-    // Determine single delivery charge for the order.
-    // Use the maximum deliveryCharge among items (preserves existing product-level charge logic
-    // while ensuring it's applied once per order).
     const orderDeliveryCharge = normalizedItems.reduce(
       (max: number, item: OrderItem) => Math.max(max, Number(item.deliveryCharge || 0)),
       0,
@@ -102,44 +121,40 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     const totalPrice = subtotal + orderDeliveryCharge;
 
-    if (!Number.isFinite(totalPrice)) {
-      return res.status(400).json({ message: "Invalid order total" });
+    if (!Number.isFinite(totalPrice) || totalPrice < 0) {
+      return res.status(400).json({ message: "Invalid order total price" });
     }
 
-    // Create order
+    // Create order (Pending state)
     const order = await Order.create({
       customerId,
       customerProfileId: profile?._id,
-      quantity,
+      quantity: totalOrderQuantity,
       items: normalizedItems,
       totalPrice,
       price: totalPrice,
       deliveryCharge: orderDeliveryCharge,
       status: "pending",
-      paymentMethod:
-        paymentMethod || profile?.defaultPaymentMethod || "offline",
-      paymentStatus: paymentMethod === "online" ? "pending" : "pending",
+      paymentMethod: "offline", // Standard COD / offline delivery model
+      paymentStatus: "pending",
       deliveryAddress,
       location,
       notes,
       deliverySlot: deliverySlot ? new Date(deliverySlot) : undefined,
-      isEventOrder: isEventOrder || false,
+      isEventOrder: Boolean(isEventOrder),
       eventName,
       receiverName: receiverName || profile?.name || req.user.name,
       receiverPhone: receiverPhone || req.user.phone,
       paymentTerms: paymentTerms || profile?.paymentTerms || "one-time",
     });
 
-    // Populate order for socket emission
     const populatedOrder = await Order.findById(order._id).populate(
       "customerId",
       "name phone",
     );
 
-    // Emit socket event for new order
     if (populatedOrder) {
       emitNewOrder(populatedOrder);
-      // Send push notification to online staff
       await sendNotificationToStaff(populatedOrder);
     }
 
@@ -154,6 +169,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       .json({ message: error.message || "Failed to create order" });
   }
 };
+
 
 // Get my orders (customer)
 export const getMyOrders = async (req: AuthRequest, res: Response) => {
@@ -255,43 +271,58 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Only allow cancellation if order is pending or accepted
-    if (order.status !== "pending" && order.status !== "accepted") {
+    if (!validateStatusTransition(order.status, "cancelled")) {
       return res.status(400).json({
-        message: `Cannot cancel order with status: ${order.status}`,
+        message: `Cannot cancel order with current status: ${order.status}`,
       });
     }
 
-    // Update order status
     const previousStatus = order.status;
-    order.status = "cancelled";
-    await order.save();
 
-    // Update inventory: Release reserved stock if order was accepted (not pending)
-    if (previousStatus === "accepted") {
-      await updateInventoryOnOrderCancel(order.items);
-    }
+    const resultOrder = await runTransaction(async (session) => {
+      const updatedOrder = await Order.findOneAndUpdate(
+        {
+          _id: id,
+          customerId: req.user._id,
+          status: previousStatus,
+        },
+        {
+          $set: { status: "cancelled" },
+        },
+        { session, new: true },
+      );
+
+      if (!updatedOrder) {
+        throw new Error("Order status could not be updated or was modified concurrently");
+      }
+
+      // Restore inventory atomically if order was previously accepted
+      if (previousStatus === "accepted") {
+        await restoreInventoryAtomic(updatedOrder.items, session);
+      }
+
+      return updatedOrder;
+    });
 
     res.json({
       message: "Order cancelled successfully",
-      order,
+      order: resultOrder,
     });
   } catch (error: any) {
     console.error("Cancel order error:", error);
     res
-      .status(500)
+      .status(400)
       .json({ message: error.message || "Failed to cancel order" });
   }
 };
 
 export const assignOrderStaff = async (req: AuthRequest, res: Response) => {
   try {
-    console.log("assignOrderStaff called");
     const { id } = req.params;
     const { staffId } = req.body;
 
-    if (!staffId) {
-      return res.status(400).json({ message: "staffId is required" });
+    if (!staffId || typeof staffId !== "string") {
+      return res.status(400).json({ message: "A valid staffId string is required" });
     }
 
     const order = await Order.findById(id);
@@ -300,41 +331,66 @@ export const assignOrderStaff = async (req: AuthRequest, res: Response) => {
     }
 
     const staffProfile = await Staff.findOne({
-      $or: [{ _id: staffId }, { userId: staffId }],
+      $or: [
+        ...(mongoose.Types.ObjectId.isValid(staffId) ? [{ _id: staffId }, { userId: staffId }] : []),
+      ],
     });
 
     const staffUser = await User.findOne({
-      _id: staffProfile?.userId || staffId,
+      _id: staffProfile?.userId || (mongoose.Types.ObjectId.isValid(staffId) ? staffId : null),
       role: "staff",
     }).select("_id name phone");
+
     if (!staffUser) {
       return res.status(404).json({ message: "Staff member not found" });
     }
 
-    order.assignedStaffId = staffUser._id as any;
-    if (order.status === "pending") {
+    const previousStatus = order.status;
 
-      await reserveInventory(order.items);
-
-      order.status = "accepted";
-      order.acceptedAt = new Date();
+    if (previousStatus !== "pending" && !validateStatusTransition(previousStatus, "accepted")) {
+      return res.status(400).json({ message: `Cannot assign staff to order in status: ${previousStatus}` });
     }
 
-    await order.save();
+    const updatedOrder = await runTransaction(async (session) => {
+      if (previousStatus === "pending") {
+        // Atomically reserve inventory
+        await reserveInventoryAtomic(order.items, session);
+      }
 
-    const populatedOrder = await Order.findById(order._id)
+      const assigned = await Order.findOneAndUpdate(
+        { _id: id, status: previousStatus },
+        {
+          $set: {
+            assignedStaffId: staffUser._id as any,
+            ...(previousStatus === "pending" && {
+              status: "accepted",
+              acceptedAt: new Date(),
+            }),
+          },
+        },
+        { session, new: true },
+      );
+
+      if (!assigned) {
+        throw new Error("Order status was updated concurrently by another request");
+      }
+
+      return assigned;
+    });
+
+    const populatedOrder = await Order.findById(updatedOrder._id)
       .populate("customerId", "name phone email")
       .populate("assignedStaffId", "name phone");
 
     res.json({
       success: true,
       message: "Staff assigned successfully",
-      data: populatedOrder || order,
+      data: populatedOrder || updatedOrder,
     });
   } catch (error: any) {
     console.error("Assign staff error:", error);
     res
-      .status(500)
+      .status(400)
       .json({ message: error.message || "Failed to assign staff" });
   }
 };
@@ -344,7 +400,6 @@ export const updateOrderStatusByAdmin = async (
   res: Response,
 ) => {
   try {
-    console.log("updateOrderStatusByAdmin called");
     const { id } = req.params;
     const { status } = req.body;
 
@@ -367,44 +422,80 @@ export const updateOrderStatusByAdmin = async (
     }
 
     const previousStatus = order.status;
-    order.status = status;
-    // Reserve stock when order is accepted
-    if (
-      previousStatus === "pending" &&
-      status === "accepted"
-    ) {
-      await reserveInventory(order.items);
+
+    if (previousStatus === status) {
+      return res.status(400).json({ message: `Order is already in status "${status}"` });
     }
 
-    // Complete delivery
-    if (
-      previousStatus !== "delivered" &&
-      status === "delivered"
-    ) {
-      await completeInventoryDelivery(order.items);
+    if (!validateStatusTransition(previousStatus, status)) {
+      return res.status(400).json({
+        message: `Invalid state transition from "${previousStatus}" to "${status}"`,
+      });
     }
 
-    // Return stock if accepted order gets cancelled
-    if (
-      previousStatus === "accepted" &&
-      status === "cancelled"
-    ) {
-      await updateInventoryOnOrderCancel(order.items);
-    }
+    const totalOrderQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
-    if (status === "accepted" && !order.acceptedAt) {
-      order.acceptedAt = new Date();
-    }
-    if (status === "out_for_delivery" && !order.outForDeliveryAt) {
-      order.outForDeliveryAt = new Date();
-    }
-    if (status === "delivered" && !order.deliveredAt) {
-      order.deliveredAt = new Date();
-    }
+    const updatedOrder = await runTransaction(async (session) => {
+      // 1. Stock Reservation (pending -> accepted)
+      if (previousStatus === "pending" && status === "accepted") {
+        await reserveInventoryAtomic(order.items, session);
+      }
 
-    await order.save();
+      // 2. Cancellation restoration
+      if ((previousStatus === "accepted" || previousStatus === "out_for_delivery") && status === "cancelled") {
+        await restoreInventoryAtomic(order.items, session);
+      }
 
-    const populatedOrder = await Order.findById(order._id)
+      // 3. Driver cansInHand side effects
+      if (order.assignedStaffId) {
+        if (previousStatus === "accepted" && status === "out_for_delivery") {
+          await Staff.findOneAndUpdate(
+            { userId: order.assignedStaffId },
+            { $inc: { cansInHand: totalOrderQuantity } },
+            { session },
+          );
+        } else if (previousStatus === "out_for_delivery" && status === "delivered") {
+          await Staff.findOneAndUpdate(
+            { userId: order.assignedStaffId },
+            { $inc: { cansInHand: -totalOrderQuantity } },
+            { session },
+          );
+        } else if (previousStatus === "out_for_delivery" && status === "cancelled") {
+          await Staff.findOneAndUpdate(
+            { userId: order.assignedStaffId },
+            { $inc: { cansInHand: -totalOrderQuantity } },
+            { session },
+          );
+        }
+      }
+
+      const timestamps: Record<string, any> = {};
+      if (status === "accepted" && !order.acceptedAt) timestamps.acceptedAt = new Date();
+      if (status === "out_for_delivery" && !order.outForDeliveryAt) timestamps.outForDeliveryAt = new Date();
+      if (status === "delivered") {
+        if (!order.deliveredAt) timestamps.deliveredAt = new Date();
+        timestamps.paymentStatus = "paid";
+      }
+
+      const result = await Order.findOneAndUpdate(
+        { _id: id, status: previousStatus },
+        {
+          $set: {
+            status,
+            ...timestamps,
+          },
+        },
+        { session, new: true },
+      );
+
+      if (!result) {
+        throw new Error("Order status update failed due to concurrent modification");
+      }
+
+      return result;
+    });
+
+    const populatedOrder = await Order.findById(updatedOrder._id)
       .populate("customerId", "name phone email")
       .populate("assignedStaffId", "name phone");
 
@@ -415,15 +506,16 @@ export const updateOrderStatusByAdmin = async (
     res.json({
       success: true,
       message: "Order status updated successfully",
-      data: populatedOrder || order,
+      data: populatedOrder || updatedOrder,
     });
   } catch (error: any) {
     console.error("Admin update order status error:", error);
     res
-      .status(500)
+      .status(400)
       .json({ message: error.message || "Failed to update order status" });
   }
 };
+
 export const getOrderStats = async (
   req: AuthRequest,
   res: Response
@@ -709,87 +801,4 @@ export const getRecentOrders = async (
       message: "Failed to fetch recent orders",
     });
   }
-};
-async function reserveInventory(
-  items: {
-    productId?: any;
-    productName: string;
-    quantity: number;
-  }[],
-) {
-  for (const item of items) {
-    let inventoryItem = null;
-
-    if (item.productId) {
-      inventoryItem = await InventoryItem.findById(item.productId);
-    }
-
-    if (!inventoryItem && item.productName) {
-      const cleanName = item.productName.trim();
-      inventoryItem = await InventoryItem.findOne({
-        name: { $regex: new RegExp(`^${cleanName}$`, "i") },
-      });
-    }
-
-    if (!inventoryItem && item.productName) {
-      const firstWord = item.productName.trim().split(" ")[0];
-      inventoryItem = await InventoryItem.findOne({
-        name: { $regex: new RegExp(firstWord, "i") },
-      });
-    }
-
-    if (!inventoryItem) {
-      inventoryItem = await InventoryItem.findOne({ available: true });
-    }
-
-    if (inventoryItem) {
-      inventoryItem.quantity = Math.max(0, inventoryItem.quantity - item.quantity);
-      inventoryItem.lastRestocked = new Date();
-      await inventoryItem.save();
-      console.log(`Reserved ${item.quantity} units from inventory item ${inventoryItem.name}`);
-    } else {
-      console.warn(`Could not find inventory item for reservation: ${item.productName}`);
-    }
-  }
-}
-async function completeInventoryDelivery(
-  items: {
-    productName: string;
-    quantity: number;
-  }[],
-) {
-  // Stock was already deducted when the order was accepted.
-  // Nothing more needs to be deducted on delivery.
-  console.log(
-    `Order delivered. Inventory already updated during acceptance.`,
-  );
-}
-// Helper function to update inventory when order is cancelled (customer cancellation)
-async function updateInventoryOnOrderCancel(
-  items: {
-    productName: string;
-    quantity: number;
-  }[],
-) {
-  for (const item of items) {
-    const inventoryItem = await InventoryItem.findOne({
-      name: item.productName,
-    });
-
-    if (!inventoryItem) {
-      console.warn(
-        `Inventory item not found: ${item.productName}`,
-      );
-      continue;
-    }
-
-    inventoryItem.quantity += item.quantity;
-    inventoryItem.lastRestocked = new Date();
-
-    await inventoryItem.save();
-
-    console.log(
-      `Returned ${item.quantity} ${item.productName} back to inventory.`,
-    );
-  }
-}
+};

@@ -2,9 +2,13 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IOtp extends Document {
   identifier: string; // Phone or Email
-  otp: string;
+  otpHash: string;
   expiresAt: Date;
   createdAt: Date;
+  attempts: number;
+  maxAttempts: number;
+  isUsed: boolean;
+  isVerified: boolean;
 }
 
 const OtpSchema: Schema = new Schema({
@@ -13,7 +17,7 @@ const OtpSchema: Schema = new Schema({
     required: true,
     index: true,
   },
-  otp: {
+  otpHash: {
     type: String,
     required: true,
   },
@@ -26,6 +30,23 @@ const OtpSchema: Schema = new Schema({
     default: Date.now,
     expires: 600, // Automatically expire document from MongoDB after 10 minutes (600s)
   },
+  attempts: {
+    type: Number,
+    default: 0,
+  },
+  maxAttempts: {
+    type: Number,
+    default: 5,
+  },
+  isUsed: {
+    type: Boolean,
+    default: false,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 export const Otp = mongoose.model<IOtp>('Otp', OtpSchema);
+

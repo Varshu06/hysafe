@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(2, 132, 199, 0.3)",
   },
   headerWave: {

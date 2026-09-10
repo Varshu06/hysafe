@@ -69,6 +69,8 @@ export const signInWithGoogleDisabled = async (): Promise<GoogleUserInfo> => {
     
     console.log('🔗 Final redirect URI:', redirectUri);
 
+    const GOOGLE_CLIENT_ID = Platform.OS === 'android' ? GOOGLE_CLIENT_ID_ANDROID : GOOGLE_CLIENT_ID_WEB;
+
     // Create auth request with token flow (implicit flow)
     // Note: Token flow (implicit) doesn't support PKCE - only Code flow does
     // For Android: Don't use proxy (uses package name verification)
@@ -174,7 +176,8 @@ export const signInWithGoogleDisabled = async (): Promise<GoogleUserInfo> => {
  */
 export const authenticateWithGoogle = async (googleUser: GoogleUserInfo) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/google`, {
+    const origin = API_BASE_URL.replace(/\/api\/?$/, '');
+    const response = await fetch(`${origin}/api/auth/google`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

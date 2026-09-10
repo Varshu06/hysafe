@@ -8,10 +8,19 @@ export interface JWTPayload {
 }
 
 const getJwtSecret = (): string => {
-  const secret = process.env.JWT_SECRET;
+  const secret = process.env.JWT_SECRET?.trim();
 
   if (!secret) {
     throw new Error('JWT_SECRET is required and must be set before starting the server');
+  }
+
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    if (secret === 'your--secret-key' || secret === 'secret' || secret.length < 32) {
+      throw new Error(
+        'SECURITY ERROR: In production mode (NODE_ENV=production), JWT_SECRET cannot use default/weak placeholders and must be at least 32 characters long.'
+      );
+    }
   }
 
   return secret;

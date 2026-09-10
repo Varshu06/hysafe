@@ -1,6 +1,8 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import helmet from 'helmet';
+import mongoose from 'mongoose';
 import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes';
 import orderRoutes from './routes/order.routes';
@@ -10,10 +12,17 @@ import inventoryRoutes from './routes/inventory.routes';
 import { errorHandler } from './middleware/error.middleware';
 import { corsOriginValidator } from './config/cors';
 
-dotenv.config();
-
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Security Headers (Helmet)
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 const rateLimitHandler = (message: string) => (_req: express.Request, res: express.Response) => {
   res.status(429).json({ message });
@@ -43,8 +52,8 @@ app.use(cors({
   origin: corsOriginValidator,
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -54,11 +63,15 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/inventory', inventoryRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'HySafe Backend Server is running',
+// Health check endpoint for uptime monitoring and load balancers
+app.get('/api/health', (_req, res) => {
+  const isDbConnected = mongoose.connection.readyState === 1;
+  res.status(isDbConnected ? 200 : 503).json({
+    status: isDbConnected ? 'OK' : 'DEGRADED',
+    message: isDbConnected ? 'HySafe Backend Server is healthy' : 'Database connection unavailable',
+    database: isDbConnected ? 'connected' : 'disconnected',
+    environment: process.env.NODE_ENV || 'development',
+    uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
   });
 });

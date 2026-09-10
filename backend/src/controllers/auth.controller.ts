@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { User } from '../models/User.model';
 import { CustomerProfile } from '../models/CustomerProfile.model';
@@ -9,6 +10,12 @@ import { hashPassword, comparePassword } from '../utils/bcrypt.util';
 import { generateToken } from '../utils/jwt.util';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { normalizeIndianMobilePhone } from '../utils/phone.util';
+
+const hashOtp = (otp: string): string => {
+  const salt = process.env.OTP_SALT || 'hysafe_secure_otp_salt_2026';
+  return crypto.createHash('sha256').update(otp + salt).digest('hex');
+};
+
 
 // Register
 export const register = async (req: Request, res: Response) => {
@@ -329,17 +336,18 @@ export const googleAuth = async (req: Request, res: Response) => {
     } else {
       // Create new user with Google account
       // Generate a random phone number placeholder (user can update later)
-      const randomPhone = `9${Math.floor(Math.random() * 1000000000)}`;
+      const randomPhone = `9${crypto.randomInt(100000000, 1000000000)}`;
       
       user = await User.create({
         email: email.toLowerCase(),
         phone: randomPhone,
         name: name || 'Google User',
-        password: await hashPassword(Math.random().toString(36)), // Random password
+        password: await hashPassword(crypto.randomBytes(16).toString('hex')), // Random password
         googleId,
         picture,
         role: 'customer',
       });
+
 
       // Create customer profile
       await CustomerProfile.create({
@@ -429,6 +437,11 @@ export const forgotPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email or phone number is required' });
     }
 
+    const genericSuccessResponse = {
+      success: true,
+      message: 'If an account exists, a verification code has been sent.',
+    };
+
     const normalizedPhone = normalizeIndianMobilePhone(identifier);
     const user = await User.findOne({
       $or: [
@@ -437,35 +450,76 @@ export const forgotPassword = async (req: Request, res: Response) => {
       ],
     });
 
+    // Account Enumeration Prevention: Return same generic response if user doesn't exist
     if (!user) {
-      return res.status(404).json({ message: 'No account found with this email or phone number' });
+      console.log(`[FORGOT PASSWORD] Reset requested for non-existing identifier: ${identifier}`);
+      return res.json(genericSuccessResponse);
     }
 
-    // Generate random 6-digit OTP
-    const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const possibleIdentifiers = [
+      user.email,
+      user.phone,
+      identifier,
+    ].filter(Boolean) as string[];
+
+    // Rate Limiting / Cooldown Check: Ensure 60s cooldown per user request
+    const existingRecentOtp = await Otp.findOne({
+      identifier: { $in: possibleIdentifiers },
+      createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
+    });
+
+    if (existingRecentOtp) {
+      console.log(`[FORGOT PASSWORD] Cooldown active for identifier: ${user.email || user.phone}`);
+      return res.status(429).json({
+        message: 'Please wait 60 seconds before requesting another verification code.',
+      });
+    }
+
+    // Phone-Only User Check (No SMS provider integrated currently)
+    if (!user.email && user.phone) {
+      console.log(`[FORGOT PASSWORD] Reset requested for phone-only account (${user.phone}). SMS provider unavailable.`);
+      return res.json(genericSuccessResponse);
+    }
+
+    const targetEmail = user.email;
+    if (!targetEmail) {
+      return res.json(genericSuccessResponse);
+    }
+
+    // Cryptographically secure 6-digit OTP generation using Node's crypto module
+    const generatedOtp = crypto.randomInt(100000, 1000000).toString();
+    const otpHash = hashOtp(generatedOtp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP in DB (overwrite existing OTP for this identifier if any)
-    await Otp.deleteMany({ identifier: user.email || user.phone });
+    console.log(`🔑 [FORGOT PASSWORD] New OTP generated for ${targetEmail}: ${generatedOtp} (Valid until ${expiresAt.toLocaleTimeString()})`);
+
+    // Remove existing OTPs for this user's identifiers and store hashed OTP
+    await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
     await Otp.create({
-      identifier: user.email || user.phone,
-      otp: generatedOtp,
+      identifier: targetEmail,
+      otpHash,
       expiresAt,
+      attempts: 0,
+      maxAttempts: 5,
+      isUsed: false,
+      isVerified: false,
     });
 
-    const targetEmail = user.email || (identifier.includes('@') ? identifier : 'susiazaria@gmail.com');
+    // Send email with OTP code (Resend API / SMTP)
+    const emailDelivered = await sendOtpEmail(targetEmail, generatedOtp);
 
-    // Send email with OTP code from susiazaria@gmail.com
-    await sendOtpEmail(targetEmail, generatedOtp);
+    if (!emailDelivered) {
+      // Clean up stored OTP if email delivery failed
+      await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
+      return res.status(500).json({
+        message: 'Password reset service is currently unavailable. Please try again later.',
+      });
+    }
 
-    res.json({
-      success: true,
-      message: `OTP verification code sent to ${targetEmail}`,
-      email: targetEmail,
-    });
+    return res.json(genericSuccessResponse);
   } catch (error: any) {
-    console.error('Forgot password error:', error);
-    res.status(500).json({ message: error.message || 'Failed to process forgot password request' });
+    console.error('Forgot password error:', error.message || error);
+    res.status(500).json({ message: 'Failed to process forgot password request' });
   }
 };
 
@@ -476,8 +530,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
     const identifier = (email || phone || '').trim().toLowerCase();
     const cleanOtp = String(otp || '').trim();
 
-    if (!identifier || !cleanOtp) {
-      return res.status(400).json({ message: 'Email/Phone and OTP code are required' });
+    if (!identifier || !cleanOtp || cleanOtp.length !== 6) {
+      return res.status(400).json({ message: 'A valid email/phone and 6-digit OTP code are required' });
     }
 
     const normalizedPhone = normalizeIndianMobilePhone(identifier);
@@ -496,7 +550,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
     const otpRecord = await Otp.findOne({
       identifier: { $in: possibleIdentifiers },
-      otp: cleanOtp,
+      isUsed: false,
       expiresAt: { $gt: new Date() },
     });
 
@@ -504,13 +558,37 @@ export const verifyOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid or expired OTP code' });
     }
 
+    if (otpRecord.attempts >= otpRecord.maxAttempts) {
+      return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
+    }
+
+    const submittedHash = hashOtp(cleanOtp);
+    const isMatch = crypto.timingSafeEqual(
+      Buffer.from(otpRecord.otpHash),
+      Buffer.from(submittedHash)
+    );
+
+    if (!isMatch) {
+      otpRecord.attempts += 1;
+      await otpRecord.save();
+
+      if (otpRecord.attempts >= otpRecord.maxAttempts) {
+        return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
+      }
+
+      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+    }
+
+    otpRecord.isVerified = true;
+    await otpRecord.save();
+
     res.json({
       success: true,
       message: 'OTP verified successfully',
     });
   } catch (error: any) {
-    console.error('Verify OTP error:', error);
-    res.status(500).json({ message: error.message || 'Failed to verify OTP' });
+    console.error('Verify OTP error:', error.message || error);
+    res.status(500).json({ message: 'Failed to verify OTP' });
   }
 };
 
@@ -538,7 +616,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(404).json({ message: 'User account not found' });
+      return res.status(400).json({ message: 'Invalid request or reset code' });
     }
 
     const possibleIdentifiers = [
@@ -547,21 +625,40 @@ export const resetPassword = async (req: Request, res: Response) => {
       ...(user.phone ? [user.phone] : []),
     ];
 
+    const submittedHash = hashOtp(cleanOtp);
+    console.log(`[RESET PASSWORD] Attempting reset for ${identifier} with OTP: ${cleanOtp}`);
     const otpRecord = await Otp.findOne({
       identifier: { $in: possibleIdentifiers },
-      otp: cleanOtp,
+      otpHash: submittedHash,
+      isUsed: false,
       expiresAt: { $gt: new Date() },
     });
 
     if (!otpRecord) {
+      console.warn(`[RESET PASSWORD] No matching or unexpired OTP found in DB for: ${identifier} (Submitted: ${cleanOtp})`);
       return res.status(400).json({ message: 'Invalid or expired OTP code' });
     }
 
-    // Update password
+    if (otpRecord.attempts >= otpRecord.maxAttempts) {
+      return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
+    }
+
+    // Atomic consumption to prevent race conditions & double-use
+    const consumedOtp = await Otp.findOneAndUpdate(
+      { _id: otpRecord._id, isUsed: false },
+      { $set: { isUsed: true } },
+      { new: true }
+    );
+
+    if (!consumedOtp) {
+      return res.status(400).json({ message: 'OTP has already been used. Please request a new OTP code.' });
+    }
+
+    // Update user password with bcrypt hashing
     user.password = await hashPassword(String(newPassword));
     await user.save();
 
-    // Delete used OTP
+    // Invalidate / clear all OTP records for this user
     await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
 
     res.json({
@@ -569,7 +666,8 @@ export const resetPassword = async (req: Request, res: Response) => {
       message: 'Password reset successfully. You can now log in with your new password.',
     });
   } catch (error: any) {
-    console.error('Reset password error:', error);
-    res.status(500).json({ message: error.message || 'Failed to reset password' });
+    console.error('Reset password error:', error.message || error);
+    res.status(500).json({ message: 'Failed to reset password' });
   }
 };
+

@@ -379,24 +379,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  sandboxBanner: {
-    backgroundColor: "#F0F9FF",
-    borderWidth: 1,
-    borderColor: "#0284C7",
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    width: "100%",
-  },
-  sandboxText: {
-    color: "#0369A1",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  sandboxCode: {
-    fontWeight: "bold",
-    color: "#0284C7",
-  },
 });
+

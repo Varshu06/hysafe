@@ -1,15 +1,15 @@
 import nodemailer from 'nodemailer';
 
-const SENDER_EMAIL = (process.env.SMTP_USER || 'susiazaria@gmail.com').trim();
-const SENDER_PASS = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
-const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
-
 export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise<boolean> => {
-  console.log(`\n==================================================`);
-  console.log(`📧 [PASSWORD RESET OTP]`);
-  console.log(`   Recipient: ${recipientEmail}`);
-  console.log(`   OTP Code: ${otp}`);
-  console.log(`==================================================\n`);
+  const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
+  const SMTP_USER = (process.env.SMTP_USER || '').trim();
+  const SMTP_PASS = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
+  const SMTP_HOST = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+  const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
+  const SENDER_EMAIL = (process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || SMTP_USER || '').trim();
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  console.log(`[EMAIL SERVICE] Initiating password reset email delivery to ${recipientEmail}`);
 
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
@@ -25,10 +25,12 @@ export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise
     </div>
   `;
 
-  // 1. Resend API Email Delivery
+  // 1. Resend API Email Delivery (Recommended & Fastest)
   if (RESEND_API_KEY) {
     try {
-      console.log(`🚀 Sending email via Resend API to ${recipientEmail}...`);
+      console.log(`[EMAIL SERVICE] Sending email via Resend API to ${recipientEmail}...`);
+      // Use onboarding@resend.dev unless a custom verified domain is provided
+      const fromAddress = process.env.RESEND_FROM_EMAIL || 'Hy-Safe Support <onboarding@resend.dev>';
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -36,7 +38,7 @@ export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Hy-Safe Support <onboarding@resend.dev>',
+          from: fromAddress,
           to: [recipientEmail],
           subject: 'Hy-Safe Password Reset OTP Code',
           html: htmlContent,
@@ -45,60 +47,57 @@ export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise
 
       const data = await response.json() as any;
       if (response.ok) {
-        console.log(`✅ Resend Email sent successfully! Message ID: ${data.id}`);
+        console.log(`[EMAIL SERVICE] Resend Email sent successfully. Message ID: ${data.id}`);
         return true;
       } else {
-        console.error(`❌ Resend API Error:`, data);
+        console.error(`[EMAIL SERVICE] Resend API Error:`, data.message || data.error || 'Failed to send via Resend');
       }
     } catch (err: any) {
-      console.error(`❌ Resend fetch error:`, err.message);
+      console.error(`[EMAIL SERVICE] Resend network error:`, err.message);
     }
   }
 
-  // 2. Fallback SMTP / Ethereal Test Inbox
-  try {
-    let transporter: nodemailer.Transporter;
-
-    if (SENDER_PASS) {
-      transporter = nodemailer.createTransport({
-        service: 'gmail',
+  // 2. Production SMTP (Gmail / Custom SMTP fallback)
+  if (SMTP_USER && SMTP_PASS) {
+    try {
+      console.log(`[EMAIL SERVICE] Sending email via SMTP (${SMTP_HOST}) to ${recipientEmail}...`);
+      const transporter = nodemailer.createTransport({
+        service: SMTP_HOST.includes('gmail') ? 'gmail' : undefined,
+        host: !SMTP_HOST.includes('gmail') ? SMTP_HOST : undefined,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
         auth: {
-          user: SENDER_EMAIL,
-          pass: SENDER_PASS,
+          user: SMTP_USER,
+          pass: SMTP_PASS,
         },
       });
-    } else {
-      console.log(`⚠️ Neither RESEND_API_KEY nor valid SMTP_PASS is configured in backend/.env.`);
-      console.log(`   Creating temporary Ethereal test account for email delivery...`);
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
+
+      const mailOptions = {
+        from: SENDER_EMAIL || `"Hy-Safe Support" <${SMTP_USER}>`,
+        to: recipientEmail,
+        subject: 'Hy-Safe Password Reset OTP Code',
+        html: htmlContent,
+      };
+
+      await transporter.sendMail(mailOptions);
+      console.log(`[EMAIL SERVICE] SMTP Email sent successfully to ${recipientEmail}`);
+      return true;
+    } catch (error: any) {
+      console.error(`[EMAIL SERVICE] SMTP delivery failed:`, error.message);
     }
+  }
 
-    const mailOptions = {
-      from: `"Hy-Safe Support" <${SENDER_EMAIL}>`,
-      to: recipientEmail,
-      subject: 'Hy-Safe Password Reset OTP Code',
-      html: htmlContent,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ OTP Email sent successfully to ${recipientEmail}`);
-
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      console.log(`🔗 Live Email Preview URL: ${previewUrl}`);
-    }
-    return true;
-  } catch (error: any) {
-    console.error(`❌ Failed to send OTP email:`, error.message);
+  // 3. Development Fallback: Print OTP directly to console so development is never blocked
+  if (isDev) {
+    console.log(`\n======================================================`);
+    console.log(`🔑 [DEV MODE] PASSWORD RESET OTP FOR: ${recipientEmail}`);
+    console.log(`👉 OTP CODE: ${otp}`);
+    console.log(`⏱️  VALID FOR: 10 MINUTES`);
+    console.log(`======================================================\n`);
     return true;
   }
+
+  console.error(`[EMAIL SERVICE] No transactional email provider configured or delivery failed.`);
+  return false;
 };
+

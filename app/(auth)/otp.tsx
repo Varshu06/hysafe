@@ -2,23 +2,25 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useAuth } from '../../src/context/AuthContext';
 import { COLORS } from '../../src/utils/constants';
+import { forgotPassword, verifyOtp } from '../../src/services/auth.service';
 
 export default function OtpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { login } = useAuth();
+  const identifier = ((params.email || params.phone || '') as string).trim();
   
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [timer, setTimer] = useState(18);
+  const [timer, setTimer] = useState(60);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const inputs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
@@ -48,18 +50,34 @@ export default function OtpScreen() {
       }
   };
 
+  const handleResendOtp = async () => {
+      if (timer > 0 || !identifier) return;
+      try {
+          setResending(true);
+          const res = await forgotPassword(identifier);
+          Alert.alert('Notice', res.message || 'Verification code resent if account exists.');
+          setTimer(60);
+      } catch (error: any) {
+          Alert.alert('Error', error.message || 'Failed to resend code');
+      } finally {
+          setResending(false);
+      }
+  };
+
   const verifyOtpCode = async (otpValue: string) => {
+      if (!identifier) {
+          Alert.alert('Error', 'Missing user identifier. Please return to forgot password screen.');
+          return;
+      }
       setLoading(true);
       try {
-          const identifier = (params.phone || params.email || '') as string;
-          const { verifyOtp } = require('../../src/services/auth.service');
           await verifyOtp(identifier, otpValue);
           router.push({
             pathname: '/(auth)/forgot-password',
             params: { email: identifier, otp: otpValue, step: '2' },
           });
       } catch (error: any) {
-          alert(error.message || 'Invalid OTP code');
+          Alert.alert('Error', error.message || 'Invalid or expired OTP code');
       } finally {
           setLoading(false);
       }
@@ -81,7 +99,7 @@ export default function OtpScreen() {
 
       <View style={styles.content}>
           <Text style={styles.subtitle}>We have sent a verification code to</Text>
-          <Text style={styles.phone}>{params.phone || '+91-9342981893'}</Text>
+          <Text style={styles.phone}>{identifier || 'your registered account'}</Text>
 
           <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
@@ -99,14 +117,14 @@ export default function OtpScreen() {
               ))}
           </View>
           
-          <TouchableOpacity style={styles.resendLink} disabled={timer > 0}>
-              <Text style={[styles.resendText, timer > 0 && styles.disabledText]}>
-                 Didn't get the OTP? Resend SMS in {timer}s
+          <TouchableOpacity style={styles.resendLink} onPress={handleResendOtp} disabled={timer > 0 || resending}>
+              <Text style={[styles.resendText, (timer > 0 || resending) && styles.disabledText]}>
+                 {resending ? 'Resending code...' : timer > 0 ? `Resend code in ${timer}s` : 'Resend verification code'}
               </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.goBack} onPress={() => router.back()}>
-              <Text style={styles.goBackText}>Go back to login methods</Text>
+              <Text style={styles.goBackText}>Go back to login</Text>
           </TouchableOpacity>
 
           {loading && <ActivityIndicator style={{marginTop: 20}} color={COLORS.primary} />}
@@ -114,6 +132,7 @@ export default function OtpScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

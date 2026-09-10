@@ -226,20 +226,16 @@ export const changePassword = async (currentPassword: string, newPassword: strin
 /**
  * Initiate forgot password flow
  */
-export const forgotPassword = async (identifier: string): Promise<{ message: string, email?: string, devOtp?: string }> => {
-  if (MOCK_AUTH) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { message: 'OTP sent successfully (MOCK)', devOtp: '123456' };
-  }
+export const forgotPassword = async (identifier: string): Promise<{ message: string }> => {
   try {
-    const response = await api.post<{ message: string, email?: string, devOtp?: string }>('/auth/forgot-password', {
+    const response = await api.post<{ message: string }>('/auth/forgot-password', {
       email: identifier,
       phone: identifier,
     });
     return response.data;
   } catch (error: any) {
     console.error('Forgot password API error:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Failed to request OTP');
+    throw new Error(error.response?.data?.message || error.message || 'Failed to request password reset code');
   }
 };
 
@@ -256,7 +252,7 @@ export const verifyOtp = async (identifier: string, otp: string): Promise<{ mess
     return response.data;
   } catch (error: any) {
     console.error('Verify OTP API error:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Invalid OTP code');
+    throw new Error(error.response?.data?.message || error.message || 'Invalid or expired OTP code');
   }
 };
 
@@ -264,10 +260,6 @@ export const verifyOtp = async (identifier: string, otp: string): Promise<{ mess
  * Reset password with OTP
  */
 export const resetPassword = async (identifier: string, otp: string, newPassword: string): Promise<{ message: string }> => {
-  if (MOCK_AUTH) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return { message: 'Password reset successful (MOCK)' };
-  }
   try {
     const response = await api.post<{ message: string }>('/auth/reset-password', {
       email: identifier,
@@ -281,6 +273,7 @@ export const resetPassword = async (identifier: string, otp: string, newPassword
     throw new Error(error.response?.data?.message || error.message || 'Failed to reset password');
   }
 };
+
 
 
 

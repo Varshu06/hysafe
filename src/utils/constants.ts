@@ -14,13 +14,59 @@ const getLocalIp = () => {
 };
 
 const LOCAL_IP = getLocalIp() || "10.124.20.116";
-export const API_BASE_URL = __DEV__
-  ? `http://${LOCAL_IP}:5000/api`
-  : "https://your-production-api.com/api";
 
-export const SOCKET_URL = __DEV__
-  ? `http://${LOCAL_IP}:5000`
-  : "https://your-production-api.com";
+// Resolve API base URL:
+// 1. Explicit EXPO_PUBLIC_API_URL or Constants.expoConfig.extra.apiUrl (dev or prod)
+// 2. In __DEV__: fallback to local machine IP (http://${LOCAL_IP}:5000/api)
+// 3. In production: empty string if not supplied, with warning (no fake placeholder)
+const resolveApiBaseUrl = (): string => {
+  const envApiUrl =
+    process.env.EXPO_PUBLIC_API_URL ||
+    (Constants.expoConfig?.extra?.apiUrl as string | undefined);
+
+  if (envApiUrl && envApiUrl.trim()) {
+    return envApiUrl.trim();
+  }
+
+  if (__DEV__) {
+    return `http://${LOCAL_IP}:5000/api`;
+  }
+
+  console.warn(
+    "[HySafe] Production API_BASE_URL is not configured! Please supply EXPO_PUBLIC_API_URL or extra.apiUrl in your environment."
+  );
+  return "";
+};
+
+export const API_BASE_URL = resolveApiBaseUrl();
+
+// Resolve Socket URL:
+// 1. Explicit EXPO_PUBLIC_SOCKET_URL or Constants.expoConfig.extra.socketUrl
+// 2. Derived backend origin from API_BASE_URL (removes trailing /api)
+// 3. In __DEV__: fallback to http://${LOCAL_IP}:5000
+// 4. In production: empty string if not configured (no fake placeholder)
+const resolveSocketUrl = (): string => {
+  const envSocketUrl =
+    process.env.EXPO_PUBLIC_SOCKET_URL ||
+    (Constants.expoConfig?.extra?.socketUrl as string | undefined);
+
+  if (envSocketUrl && envSocketUrl.trim()) {
+    return envSocketUrl.trim();
+  }
+
+  if (API_BASE_URL) {
+    return API_BASE_URL.replace(/\/api\/?$/, "");
+  }
+
+  if (__DEV__) {
+    return `http://${LOCAL_IP}:5000`;
+  }
+
+  return "";
+};
+
+export const SOCKET_URL = resolveSocketUrl();
+
 
 export const COLORS = {
   primary: "#0284C7", // Ocean Blue (Sky 600)
@@ -39,15 +85,17 @@ export const COLORS = {
   grey: "#ddd",
 };
 
-// Factory/Pickup location coordinates (for 5km radius validation)
-// TODO: Update with actual factory location coordinates
+// Factory/Pickup location coordinates (for service radius validation)
+// Can be customized via EXPO_PUBLIC_FACTORY_LAT and EXPO_PUBLIC_FACTORY_LNG
 export const FACTORY_LOCATION = {
-  lat: 13.0827, // Example: Chennai coordinates
-  lng: 80.2707,
+  lat: Number(process.env.EXPO_PUBLIC_FACTORY_LAT || 13.0827),
+  lng: Number(process.env.EXPO_PUBLIC_FACTORY_LNG || 80.2707),
 };
 
-// Service radius in kilometers
-export const SERVICE_RADIUS_KM = 5;
+// Service radius in kilometers (can be overridden via EXPO_PUBLIC_SERVICE_RADIUS_KM)
+export const SERVICE_RADIUS_KM = Number(
+  process.env.EXPO_PUBLIC_SERVICE_RADIUS_KM || 5
+);
 
 // Google Maps API Key
 //
