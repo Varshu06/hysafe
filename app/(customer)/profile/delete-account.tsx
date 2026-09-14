@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../../src/components/ui/Button";
 import { useAuth } from "../../../src/context/AuthContext";
+import { deleteAccount } from "../../../src/services/customer.service";
 import { COLORS } from "../../../src/utils/constants";
 
 export default function DeleteAccountScreen() {
@@ -23,28 +24,45 @@ export default function DeleteAccountScreen() {
   const [working, setWorking] = useState(false);
 
   const handleRequestDelete = async () => {
+    if (working) return;
+
     if (confirmText.trim().toUpperCase() !== "DELETE") {
-      Alert.alert("Confirm", "Please type DELETE to continue.");
+      Alert.alert("Confirmation Required", "Please type DELETE in the box to proceed.");
       return;
     }
 
     Alert.alert(
-      "Final Confirmation",
-      "This will permanently delete your account (feature coming soon).",
+      "Permanent Account Deletion",
+      "Are you absolutely sure? This will permanently delete your account, delivery addresses, and recurring subscriptions. This action cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Continue",
+          text: "Delete Account",
           style: "destructive",
           onPress: async () => {
+            if (working) return;
             setWorking(true);
             try {
-              // TODO: integrate backend endpoint for account deletion
+              const res = await deleteAccount();
               Alert.alert(
-                "Coming soon",
-                "Account deletion will be available after API integration.",
+                "Account Deleted",
+                res?.message || "Your account has been permanently deleted.",
+                [
+                  {
+                    text: "OK",
+                    onPress: async () => {
+                      await logout();
+                      router.replace("/(auth)/login");
+                    },
+                  },
+                ],
+                { cancelable: false },
               );
-            } finally {
+            } catch (error: any) {
+              Alert.alert(
+                "Deletion Failed",
+                error.message || "Failed to delete account. Please try again.",
+              );
               setWorking(false);
             }
           },
@@ -75,8 +93,10 @@ export default function DeleteAccountScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>Delete your account</Text>
           <Text style={styles.subtitle}>
-            This action is permanent. Your order history and saved data will be
-            removed once this feature is enabled.
+            This action is permanent and cannot be undone. All your profile
+            information, saved addresses, and active recurring subscriptions will
+            be permanently erased. If you have an order currently in progress,
+            it must be delivered or cancelled first.
           </Text>
 
           <Text style={styles.label}>Type DELETE to confirm</Text>
@@ -87,17 +107,22 @@ export default function DeleteAccountScreen() {
             value={confirmText}
             onChangeText={setConfirmText}
             autoCapitalize="characters"
+            editable={!working}
           />
 
           <Button
-            title={working ? "Please wait..." : "Request Account Deletion"}
+            title={working ? "Deleting Account..." : "Permanently Delete Account"}
             variant="danger"
             onPress={handleRequestDelete}
-            disabled={working}
+            disabled={working || confirmText.trim().toUpperCase() !== "DELETE"}
             style={styles.deleteButton}
           />
 
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutLink}>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={styles.logoutLink}
+            disabled={working}
+          >
             <Text style={styles.logoutText}>Logout instead</Text>
           </TouchableOpacity>
         </View>

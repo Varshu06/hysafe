@@ -5,7 +5,7 @@ import {
   getCustomerStats,
   getCustomers,
 } from '../controllers/admin.controller';
-import { updateProfile, getProfile } from '../controllers/customer.controller';
+import { updateProfile, getProfile, deleteAccount } from '../controllers/customer.controller';
 import { getLoginActivity } from '../controllers/loginActivity.controller';
 import {
   createRecurringDelivery,
@@ -27,6 +27,7 @@ router.get('/stats', authenticate, requireRole('admin'), getCustomerStats);
 router.get('/profile', authenticate, requireRole('customer'), getProfile);
 router.put('/profile', authenticate, requireRole('customer'), updateProfile);
 router.get('/login-activity', authenticate, requireRole('customer'), getLoginActivity);
+router.delete('/account', authenticate, requireRole('customer'), deleteAccount);
 
 // Recurring deliveries
 router.post('/recurring-deliveries', authenticate, requireRole('customer'), createRecurringDelivery);

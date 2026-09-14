@@ -71,3 +71,21 @@ export const getLoginActivity = async (): Promise<LoginActivityResponse> => {
   }
 };
 
+/**
+ * Delete customer account permanently
+ */
+export const deleteAccount = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await api.delete<{ success: boolean; message: string }>('/customers/account');
+    return response.data;
+  } catch (error: any) {
+    console.error('Delete account error:', error);
+    const errorMessage =
+      error.response?.data?.message ||
+      error.message ||
+      'Failed to delete account. Please try again.';
+    throw new Error(errorMessage);
+  }
+};
+
+

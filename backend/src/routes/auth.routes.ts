@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { register, login, getProfile, changePassword, googleAuth, forgotPassword, verifyOtp, resetPassword } from '../controllers/auth.controller';
+import { deleteAccount } from '../controllers/customer.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validateBody } from '../middleware/validation.middleware';
 import { loginSchema, registerSchema } from '../validators/auth.validation';
@@ -38,6 +39,7 @@ router.post('/verify-otp', verifyOtpLimiter, verifyOtp);
 router.post('/reset-password', resetPasswordLimiter, resetPassword);
 router.get('/me', authenticate, getProfile);
 router.put('/change-password', authenticate, changePassword);
+router.delete('/account', authenticate, deleteAccount);
 
 export default router;
 
