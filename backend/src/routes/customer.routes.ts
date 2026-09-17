@@ -12,6 +12,7 @@ import {
   getRecurringDeliveries,
   updateRecurringDelivery,
   deleteRecurringDelivery,
+  processDueDeliveries,
 } from '../controllers/recurringDelivery.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/role.middleware';
@@ -32,6 +33,7 @@ router.delete('/account', authenticate, requireRole('customer'), deleteAccount);
 // Recurring deliveries
 router.post('/recurring-deliveries', authenticate, requireRole('customer'), createRecurringDelivery);
 router.get('/recurring-deliveries', authenticate, requireRole('customer'), getRecurringDeliveries);
+router.post('/recurring-deliveries/process-due', authenticate, requireRole('admin', 'customer'), processDueDeliveries);
 router.put('/recurring-deliveries/:id', authenticate, requireRole('customer'), updateRecurringDelivery);
 router.delete('/recurring-deliveries/:id', authenticate, requireRole('customer'), deleteRecurringDelivery);
 

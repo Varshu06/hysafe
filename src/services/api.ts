@@ -17,7 +17,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     // Log request details for debugging
     console.log('📤 API Request:', {
       method: config.method?.toUpperCase(),
@@ -26,7 +26,7 @@ api.interceptors.request.use(
       fullURL: `${config.baseURL}${config.url}`,
       data: config.data ? (config.method === 'post' || config.method === 'put' ? { ...config.data, password: '***' } : config.data) : undefined,
     });
-    
+
     return config;
   },
   (error) => {
@@ -65,7 +65,7 @@ api.interceptors.response.use(
         onUnauthorizedCallback();
       }
     }
-    
+
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       console.error('Request timeout:', error.message);
@@ -73,7 +73,7 @@ api.interceptors.response.use(
       timeoutError.isTimeout = true;
       throw timeoutError;
     }
-    
+
     // Handle network errors (no internet, server unreachable, etc.)
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
       console.error('Network error:', error.message, error.code);
@@ -81,7 +81,7 @@ api.interceptors.response.use(
       networkError.isNetworkError = true;
       throw networkError;
     }
-    
+
     // Handle CORS errors
     if (error.message?.includes('CORS') || error.code === 'ERR_CORS') {
       console.error('CORS error:', error.message);
@@ -89,12 +89,12 @@ api.interceptors.response.use(
       corsError.isCorsError = true;
       throw corsError;
     }
-    
+
     // Handle other axios errors
     if (error.code) {
       console.error('Axios error code:', error.code);
     }
-    
+
     return Promise.reject(error);
   }
 );

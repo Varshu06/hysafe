@@ -35,6 +35,8 @@ export interface IOrder extends Document {
   deliverySlot?: Date;
   isEventOrder?: boolean;
   eventName?: string;
+  isRecurring?: boolean;
+  recurringDeliveryId?: mongoose.Types.ObjectId;
   receiverName?: string;
   receiverPhone?: string;
   paymentTerms?: "one-time" | "weekly" | "monthly";
@@ -56,6 +58,11 @@ const OrderSchema = new Schema<IOrder>(
     customerProfileId: {
       type: Schema.Types.ObjectId,
       ref: "CustomerProfile",
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
     },
     items: {
       type: [
@@ -149,6 +156,14 @@ const OrderSchema = new Schema<IOrder>(
     eventName: {
       type: String,
     },
+    isRecurring: {
+      type: Boolean,
+      default: false,
+    },
+    recurringDeliveryId: {
+      type: Schema.Types.ObjectId,
+      ref: "RecurringDelivery",
+    },
     receiverName: {
       type: String,
     },
@@ -181,5 +196,6 @@ const OrderSchema = new Schema<IOrder>(
 OrderSchema.index({ customerId: 1, createdAt: -1 });
 OrderSchema.index({ assignedStaffId: 1, status: 1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
+OrderSchema.index({ recurringDeliveryId: 1 });
 
 export const Order = mongoose.model<IOrder>("Order", OrderSchema);

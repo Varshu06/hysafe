@@ -159,7 +159,7 @@ export default function CheckoutScreen() {
       month: "short",
       day: "numeric",
     });
-       const timeLabel = `${scheduledTime.hour}:${scheduledTime.minute} ${scheduledTime.ampm}`;
+    const timeLabel = `${scheduledTime.hour}:${scheduledTime.minute} ${scheduledTime.ampm}`;
     return `${dateLabel}, ${timeLabel}`;
   };
   const selectedAddress =
@@ -316,18 +316,19 @@ export default function CheckoutScreen() {
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
         location: selectedAddress.location,
         paymentMethod: "offline",
-           notes: deliveryInstructions || "",
-           deliveryCharge: deliveryCharge,
+        notes: deliveryInstructions || "",
+        deliveryCharge: deliveryCharge,
         deliverySlot: isScheduledDelivery
           ? new Date(
-              `${scheduledDate.toISOString().split("T")[0]}T${scheduledTime.hour}:${scheduledTime.minute}:00`,
-            ).toISOString()
+            `${scheduledDate.toISOString().split("T")[0]}T${scheduledTime.hour}:${scheduledTime.minute}:00`,
+          ).toISOString()
           : undefined,
         isEventOrder: isEventOrder,
         eventName: isEventOrder ? eventName : undefined,
         receiverName: receiverName,
         receiverPhone: receiverPhone ? `+91${receiverPhone}` : undefined,
         paymentTerms: paymentTerm || "one-time",
+        isRecurring: isRecurringDelivery,
       };
 
       const response = await createOrder(orderData);
@@ -583,7 +584,7 @@ export default function CheckoutScreen() {
                           style={[
                             styles.frequencyButton,
                             recurringFrequency === freq.value &&
-                              styles.frequencyButtonSelected,
+                            styles.frequencyButtonSelected,
                           ]}
                           onPress={() =>
                             setRecurringFrequency(freq.value as any)
@@ -593,7 +594,7 @@ export default function CheckoutScreen() {
                             style={[
                               styles.frequencyButtonText,
                               recurringFrequency === freq.value &&
-                                styles.frequencyButtonTextSelected,
+                              styles.frequencyButtonTextSelected,
                             ]}
                           >
                             {t(freq.label)}

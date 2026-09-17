@@ -39,6 +39,8 @@ export interface Order {
   deliverySlot?: string;
   isEventOrder?: boolean;
   eventName?: string;
+  isRecurring?: boolean;
+  recurringDeliveryId?: string;
   receiverName?: string;
   receiverPhone?: string;
   paymentTerms?: "one-time" | "weekly" | "monthly";

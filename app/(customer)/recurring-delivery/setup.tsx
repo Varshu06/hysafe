@@ -2,6 +2,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -13,11 +14,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddressPickerModal } from "../../../src/components/customer/AddressPickerModal";
 import { useAuth } from "../../../src/context/AuthContext";
+import { useProduct } from "../../../src/context/ProductContext";
+import { createRecurringDelivery } from "../../../src/services/recurring.service";
+import { RecurringFrequency } from "../../../src/types/recurring.types";
 import {
   addressStorage,
   SavedAddress,
 } from "../../../src/utils/addressStorage";
-import { RecurringFrequency } from "../../../src/types/recurring.types";
 import { COLORS } from "../../../src/utils/constants";
 
 type PaymentTerms = "one-time" | "weekly" | "monthly";
@@ -55,7 +58,10 @@ export default function RecurringDeliverySetupScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [quantity, setQuantity] = useState("20");
+  const { products, loading: loadingProducts } = useProduct();
+
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [quantity, setQuantity] = useState("5");
   const [frequency, setFrequency] = useState<RecurringFrequency>("daily");
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("monthly");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -65,6 +71,13 @@ export default function RecurringDeliverySetupScreen() {
   const [showAddressPicker, setShowAddressPicker] = useState(false);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Automatically select first product if none selected
+  useEffect(() => {
+    if (!selectedProductId && products.length > 0) {
+      setSelectedProductId(products[0].id);
+    }
+  }, [products, selectedProductId]);
 
   // Load saved addresses
   const loadAddresses = useCallback(async () => {
@@ -90,32 +103,69 @@ export default function RecurringDeliverySetupScreen() {
     (addr) => addr.id === selectedAddressId,
   );
 
+  const selectedProduct =
+    products.find((p) => p.id === selectedProductId) || products[0];
+
   const handleSave = async () => {
-    if (!quantity || parseInt(quantity) <= 0) {
-      Alert.alert("Error", "Please enter a valid quantity");
+    const parsedQty = parseInt(quantity, 10);
+    if (!parsedQty || parsedQty <= 0) {
+      Alert.alert("Invalid Quantity", "Please enter a valid quantity (minimum 1)");
       return;
     }
 
-    if (!selectedAddressId) {
-      Alert.alert("Error", "Please select a delivery address");
+    if (!selectedProduct) {
+      Alert.alert("Select Product", "Please choose a product for your recurring subscription");
+      return;
+    }
+
+    if (!selectedAddress) {
+      Alert.alert("Select Address", "Please select a delivery address");
       return;
     }
 
     setSaving(true);
     try {
-      // TODO: Integrate with API to save recurring delivery
+      await createRecurringDelivery({
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: parsedQty,
+        frequency,
+        deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
+        deliveryAddressId: selectedAddress.id,
+        paymentTerms,
+        specialInstructions: specialInstructions.trim() || undefined,
+      });
+
       Alert.alert(
-        "Success",
-        `Recurring delivery set up successfully!\n\n${quantity} cans will be delivered ${frequency === "daily" ? "daily" : frequency === "every-2-days" ? "every 2 days" : "weekly"}.\nPayment: ${paymentTerms === "monthly" ? "Monthly" : paymentTerms === "weekly" ? "Weekly" : "Pay per order"}`,
+        "Subscription Created!",
+        `Recurring delivery for ${parsedQty}x ${selectedProduct.name} has been set up successfully.\n\nFrequency: ${
+          frequency === "daily"
+            ? "Daily"
+            : frequency === "every-2-days"
+            ? "Every 2 Days"
+            : frequency === "weekly"
+            ? "Weekly"
+            : "Custom"
+        }\nPayment: ${
+          paymentTerms === "monthly"
+            ? "Monthly"
+            : paymentTerms === "weekly"
+            ? "Weekly"
+            : "Pay per order"
+        }`,
         [
           {
-            text: "OK",
-            onPress: () => router.back(),
+            text: "View Subscriptions",
+            onPress: () => router.replace("/(customer)/recurring-deliveries"),
           },
         ],
       );
-    } catch (error) {
-      Alert.alert("Error", "Failed to set up recurring delivery");
+    } catch (error: any) {
+      console.error("Failed to create recurring delivery:", error);
+      Alert.alert(
+        "Setup Failed",
+        error.message || "Failed to set up recurring delivery. Please try again."
+      );
     } finally {
       setSaving(false);
     }
@@ -140,22 +190,98 @@ export default function RecurringDeliverySetupScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
+        {/* Product Selection */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Delivery Details</Text>
+          <Text style={styles.sectionTitle}>1. Select Product</Text>
+          {loadingProducts ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : products.length === 0 ? (
+            <Text style={styles.helperText}>No products available at the moment.</Text>
+          ) : (
+            <View style={styles.productList}>
+              {products.map((p) => {
+                const isSelected = selectedProduct?.id === p.id;
+                return (
+                  <TouchableOpacity
+                    key={p.id}
+                    style={[
+                      styles.productCard,
+                      isSelected && styles.productCardSelected,
+                    ]}
+                    onPress={() => setSelectedProductId(p.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.productInfo}>
+                      <Text
+                        style={[
+                          styles.productName,
+                          isSelected && styles.productNameSelected,
+                        ]}
+                      >
+                        {p.name}
+                      </Text>
+                      {p.volume ? (
+                        <Text style={styles.productVolume}>{p.volume}</Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.productPriceContainer}>
+                      <Text
+                        style={[
+                          styles.productPrice,
+                          isSelected && styles.productPriceSelected,
+                        ]}
+                      >
+                        ₹{p.price}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={20}
+                          color={COLORS.primary}
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           {/* Quantity */}
-          <Text style={styles.label}>Quantity (cans) *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter quantity"
-            placeholderTextColor={COLORS.textLight}
-            value={quantity}
-            onChangeText={setQuantity}
-            keyboardType="number-pad"
-          />
+          <Text style={styles.label}>Quantity per Delivery *</Text>
+          <View style={styles.quantityContainer}>
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => {
+                const q = Math.max(1, (parseInt(quantity, 10) || 1) - 1);
+                setQuantity(String(q));
+              }}
+            >
+              <Text style={styles.qtyBtnText}>-</Text>
+            </TouchableOpacity>
+            <TextInput
+              style={styles.qtyInput}
+              placeholder="Qty"
+              placeholderTextColor={COLORS.textLight}
+              value={quantity}
+              onChangeText={setQuantity}
+              keyboardType="number-pad"
+            />
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => {
+                const q = (parseInt(quantity, 10) || 0) + 1;
+                setQuantity(String(q));
+              }}
+            >
+              <Text style={styles.qtyBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-          {/* Frequency */}
-          <Text style={styles.label}>Delivery Frequency *</Text>
+        {/* Delivery Frequency */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>2. Delivery Frequency</Text>
           <View style={styles.optionsGrid}>
             {FREQUENCY_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -192,6 +318,11 @@ export default function RecurringDeliverySetupScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Address and Notes */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>3. Delivery Location</Text>
 
           {/* Delivery Address */}
           <Text style={styles.label}>Delivery Address *</Text>
@@ -207,7 +338,9 @@ export default function RecurringDeliverySetupScreen() {
             />
             <View style={styles.addressContent}>
               <Text style={styles.addressText} numberOfLines={2}>
-                {selectedAddress?.address || "Select delivery address"}
+                {selectedAddress?.fullAddress ||
+                  selectedAddress?.address ||
+                  "Select delivery address"}
               </Text>
             </View>
             <Feather name="chevron-right" size={20} color={COLORS.textLight} />
@@ -217,7 +350,7 @@ export default function RecurringDeliverySetupScreen() {
           <Text style={styles.label}>Special Instructions (optional)</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Any special delivery instructions"
+            placeholder="e.g. Leave at door, call before delivery"
             placeholderTextColor={COLORS.textLight}
             value={specialInstructions}
             onChangeText={setSpecialInstructions}
@@ -226,10 +359,11 @@ export default function RecurringDeliverySetupScreen() {
           />
         </View>
 
+        {/* Payment Terms */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Payment Terms</Text>
+          <Text style={styles.sectionTitle}>4. Payment Terms</Text>
           <Text style={styles.helperText}>
-            Choose how you want to pay for recurring deliveries
+            Choose how you want to settle payments for recurring deliveries
           </Text>
 
           <View style={styles.optionsGrid}>
@@ -272,9 +406,9 @@ export default function RecurringDeliverySetupScreen() {
           {(paymentTerms === "monthly" || paymentTerms === "weekly") && (
             <View style={styles.paymentInfoBanner}>
               <Text style={styles.paymentInfoBannerText}>
-                💰 All deliveries will be billed{" "}
-                {paymentTerms === "monthly" ? "monthly" : "weekly"}. Payment due
-                dates will be shown in order details.
+                💰 All scheduled recurring deliveries will be billed{" "}
+                {paymentTerms === "monthly" ? "monthly" : "weekly"}. Payments will be
+                tracked in your order statement.
               </Text>
             </View>
           )}
@@ -285,9 +419,11 @@ export default function RecurringDeliverySetupScreen() {
           onPress={handleSave}
           disabled={saving}
         >
-          <Text style={styles.saveButtonText}>
-            {saving ? "Setting Up..." : "Set Up Recurring Delivery"}
-          </Text>
+          {saving ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.saveButtonText}>Set Up Recurring Delivery</Text>
+          )}
         </TouchableOpacity>
 
         <View style={styles.bottomSpacer} />
@@ -300,9 +436,7 @@ export default function RecurringDeliverySetupScreen() {
         onClose={() => setShowAddressPicker(false)}
         onSelect={async (addr) => {
           setSelectedAddressId(addr.id);
-          // Save as selected address
           await addressStorage.setSelectedAddressId(addr.id);
-          // Refresh addresses in case user added a new one
           const addresses = await addressStorage.getAllAddresses(user);
           setSavedAddresses(addresses);
         }}
@@ -374,7 +508,87 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: COLORS.text,
+    marginBottom: 14,
+  },
+  productList: {
+    gap: 10,
     marginBottom: 16,
+  },
+  productCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+  },
+  productCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: "#EFF6FF",
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  productNameSelected: {
+    color: COLORS.primary,
+  },
+  productVolume: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
+  productPriceContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: COLORS.text,
+  },
+  productPriceSelected: {
+    color: COLORS.primary,
+  },
+  quantityContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 6,
+  },
+  qtyBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+  },
+  qtyBtnText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.text,
+  },
+  qtyInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    borderRadius: 10,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
   },
   label: {
     fontSize: 13,
@@ -394,7 +608,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   textArea: {
-    minHeight: 80,
+    minHeight: 70,
     textAlignVertical: "top",
     paddingTop: 12,
   },
@@ -402,24 +616,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginTop: 8,
+    marginTop: 4,
   },
   optionCard: {
-    width: "31%",
+    width: "48%",
     backgroundColor: "#F8FAFC",
     borderRadius: 12,
     padding: 12,
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: COLORS.border,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
     position: "relative",
   },
   optionCardSelected: {
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#EFF6FF",
     borderColor: COLORS.primary,
   },
   optionLabel: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "600",
     color: COLORS.text,
     marginBottom: 2,
@@ -428,7 +642,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   optionDescription: {
-    fontSize: 10,
+    fontSize: 11,
     color: COLORS.textLight,
     textAlign: "center",
   },
@@ -437,18 +651,18 @@ const styles = StyleSheet.create({
   },
   selectedIndicator: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: COLORS.primary,
     justifyContent: "center",
     alignItems: "center",
   },
   selectedCheck: {
     color: "white",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
   },
   addressButton: {
@@ -474,7 +688,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   paymentInfoBanner: {
-    backgroundColor: "#E0F2FE",
+    backgroundColor: "#EFF6FF",
     borderLeftWidth: 3,
     borderLeftColor: COLORS.primary,
     padding: 12,
@@ -482,9 +696,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   paymentInfoBannerText: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.primary,
     fontWeight: "500",
+    lineHeight: 18,
   },
   saveButton: {
     backgroundColor: COLORS.primary,
@@ -502,6 +717,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   bottomSpacer: {
-    height: 24,
+    height: 32,
   },
 });

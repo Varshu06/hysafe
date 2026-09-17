@@ -35,6 +35,8 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       deliverySlot,
       isEventOrder,
       eventName,
+      isRecurring,
+      recurringDeliveryId,
       receiverName,
       receiverPhone,
       paymentTerms,
@@ -143,6 +145,10 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       deliverySlot: deliverySlot ? new Date(deliverySlot) : undefined,
       isEventOrder: Boolean(isEventOrder),
       eventName,
+      isRecurring: Boolean(isRecurring),
+      recurringDeliveryId: recurringDeliveryId && mongoose.Types.ObjectId.isValid(recurringDeliveryId)
+        ? new mongoose.Types.ObjectId(recurringDeliveryId)
+        : undefined,
       receiverName: receiverName || profile?.name || req.user.name,
       receiverPhone: receiverPhone || req.user.phone,
       paymentTerms: paymentTerms || profile?.paymentTerms || "one-time",
@@ -801,4 +807,4 @@ export const getRecentOrders = async (
       message: "Failed to fetch recent orders",
     });
   }
-};
+};

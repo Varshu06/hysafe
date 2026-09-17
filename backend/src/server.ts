@@ -4,6 +4,7 @@ import app from './app';
 import { connectDatabase } from './config/database';
 import { initializeSocket } from './services/socket.service';
 import { validateJwtConfiguration } from './utils/jwt.util';
+import { startRecurringDeliveryScheduler } from './services/recurringDelivery.service';
 
 const PORT = process.env.PORT || 5000;
 
@@ -25,7 +26,10 @@ const startServer = async () => {
   try {
     // Connect to database first
     await connectDatabase();
-    
+
+    // Start recurring delivery scheduler
+    startRecurringDeliveryScheduler();
+
     // Start server - listen on all interfaces (0.0.0.0) to allow network access
     const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
     httpServer.listen(port, '0.0.0.0', () => {

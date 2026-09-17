@@ -79,7 +79,7 @@ class SocketService {
 
   private attachPendingListeners(): void {
     if (!this.socket) return;
-    
+
     this.pendingListeners.forEach((callbacks, event) => {
       callbacks.forEach(callback => {
         this.socket!.on(event, callback);
