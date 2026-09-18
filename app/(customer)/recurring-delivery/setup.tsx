@@ -1,6 +1,7 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -27,31 +28,66 @@ type PaymentTerms = "one-time" | "weekly" | "monthly";
 
 const FREQUENCY_OPTIONS: {
   value: RecurringFrequency;
-  label: string;
-  description: string;
+  labelKey: string;
+  defaultLabel: string;
+  defaultDescription: string;
 }[] = [
-  { value: "daily", label: "Daily", description: "Every day" },
+  {
+    value: "daily",
+    labelKey: "Daily",
+    defaultLabel: "Daily",
+    defaultDescription: "Every day",
+  },
+  {
+    value: "2-per-week",
+    labelKey: "twoPerWeek",
+    defaultLabel: "2 per week",
+    defaultDescription: "2 deliveries/week",
+  },
+  {
+    value: "3-per-week",
+    labelKey: "threePerWeek",
+    defaultLabel: "3 per week",
+    defaultDescription: "3 deliveries/week",
+  },
   {
     value: "every-2-days",
-    label: "Every 2 Days",
-    description: "Alternate days",
+    labelKey: "Every 2 Days",
+    defaultLabel: "Every 2 Days",
+    defaultDescription: "Alternate days",
   },
-  { value: "weekly", label: "Weekly", description: "Once a week" },
-  { value: "custom", label: "Custom", description: "Custom schedule" },
+  {
+    value: "weekly",
+    labelKey: "Weekly",
+    defaultLabel: "Weekly",
+    defaultDescription: "Once a week",
+  },
 ];
 
 const PAYMENT_TERMS_OPTIONS: {
   value: PaymentTerms;
-  label: string;
-  description: string;
+  labelKey: string;
+  defaultLabel: string;
+  defaultDescription: string;
 }[] = [
   {
     value: "one-time",
-    label: "Pay Per Order",
-    description: "Pay for each delivery",
+    labelKey: "payPerOrder",
+    defaultLabel: "Pay Per Order",
+    defaultDescription: "Pay for each delivery",
   },
-  { value: "weekly", label: "Weekly", description: "Pay weekly" },
-  { value: "monthly", label: "Monthly", description: "Pay monthly" },
+  {
+    value: "weekly",
+    labelKey: "Weekly",
+    defaultLabel: "Weekly",
+    defaultDescription: "Pay weekly",
+  },
+  {
+    value: "monthly",
+    labelKey: "monthlyBill",
+    defaultLabel: "Monthly",
+    defaultDescription: "Pay monthly",
+  },
 ];
 
 export default function RecurringDeliverySetupScreen() {
@@ -59,11 +95,11 @@ export default function RecurringDeliverySetupScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { products, loading: loadingProducts } = useProduct();
+  const { t } = useTranslation();
 
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [quantity, setQuantity] = useState("5");
-  const [frequency, setFrequency] = useState<RecurringFrequency>("daily");
-  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("monthly");
+  const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({});
+  const [frequency, setFrequency] = useState<RecurringFrequency>("3-per-week");
+  const [paymentTerms, setPaymentTerms] = useState<PaymentTerms>("weekly");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
@@ -72,12 +108,26 @@ export default function RecurringDeliverySetupScreen() {
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Automatically select first product if none selected
+  // Automatically select first product with 1 quantity if none selected
   useEffect(() => {
-    if (!selectedProductId && products.length > 0) {
-      setSelectedProductId(products[0].id);
+    if (products.length > 0 && Object.keys(selectedQuantities).length === 0) {
+      setSelectedQuantities({ [products[0].id]: 1 });
     }
-  }, [products, selectedProductId]);
+  }, [products]);
+
+  const updateProductQuantity = (productId: string, delta: number) => {
+    setSelectedQuantities((prev) => {
+      const current = prev[productId] || 0;
+      const next = Math.max(0, current + delta);
+      const updated = { ...prev };
+      if (next === 0) {
+        delete updated[productId];
+      } else {
+        updated[productId] = next;
+      }
+      return updated;
+    });
+  };
 
   // Load saved addresses
   const loadAddresses = useCallback(async () => {
@@ -103,59 +153,102 @@ export default function RecurringDeliverySetupScreen() {
     (addr) => addr.id === selectedAddressId,
   );
 
-  const selectedProduct =
-    products.find((p) => p.id === selectedProductId) || products[0];
+  // Multi-item calculations
+  const selectedItems = products
+    .filter((p) => (selectedQuantities[p.id] || 0) > 0)
+    .map((p) => ({
+      product: p,
+      quantity: selectedQuantities[p.id] || 0,
+    }));
+
+  const totalCans = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotalPerDelivery = selectedItems.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0
+  );
+  const maxDeliveryCharge = selectedItems.reduce(
+    (max, item) => Math.max(max, item.product.deliveryCharge || 0),
+    0
+  );
+  const singleDeliveryCost = subtotalPerDelivery + maxDeliveryCharge;
+
+  let deliveryCount = 1;
+  if (paymentTerms === "weekly") {
+    if (frequency === "daily") deliveryCount = 7;
+    else if (frequency === "3-per-week") deliveryCount = 3;
+    else if (frequency === "2-per-week") deliveryCount = 2;
+    else if (frequency === "every-2-days") deliveryCount = 3;
+    else if (frequency === "weekly") deliveryCount = 1;
+    else deliveryCount = 1;
+  } else if (paymentTerms === "monthly") {
+    if (frequency === "daily") deliveryCount = 30;
+    else if (frequency === "3-per-week") deliveryCount = 12;
+    else if (frequency === "2-per-week") deliveryCount = 8;
+    else if (frequency === "every-2-days") deliveryCount = 15;
+    else if (frequency === "weekly") deliveryCount = 4;
+    else deliveryCount = 4;
+  } else {
+    deliveryCount = 1;
+  }
+
+  const billAmount = singleDeliveryCost * deliveryCount;
+
+  const billTitle =
+    paymentTerms === "weekly"
+      ? (t("weeklyBill") || "Weekly bill")
+      : paymentTerms === "monthly"
+      ? (t("monthlyBill") || "Monthly bill")
+      : (t("orderBill") || "Order bill");
 
   const handleSave = async () => {
-    const parsedQty = parseInt(quantity, 10);
-    if (!parsedQty || parsedQty <= 0) {
-      Alert.alert("Invalid Quantity", "Please enter a valid quantity (minimum 1)");
-      return;
-    }
-
-    if (!selectedProduct) {
-      Alert.alert("Select Product", "Please choose a product for your recurring subscription");
+    if (selectedItems.length === 0) {
+      Alert.alert(t("error") || "Select Products", "Please add at least one product for your recurring subscription");
       return;
     }
 
     if (!selectedAddress) {
-      Alert.alert("Select Address", "Please select a delivery address");
+      Alert.alert(t("error") || "Select Address", "Please select a delivery address");
       return;
     }
+
+    const itemsPayload = selectedItems.map((item) => ({
+      productId: item.product.id,
+      productName: item.product.name,
+      quantity: item.quantity,
+      price: item.product.price,
+      deliveryCharge: item.product.deliveryCharge || 0,
+      volume: item.product.volume,
+    }));
+
+    const summaryProductNames = itemsPayload
+      .map((i) => `${i.quantity}x ${i.productName}`)
+      .join(", ");
 
     setSaving(true);
     try {
       await createRecurringDelivery({
-        productId: selectedProduct.id,
-        productName: selectedProduct.name,
-        quantity: parsedQty,
+        productId: itemsPayload[0].productId,
+        productName: summaryProductNames,
+        quantity: totalCans,
+        items: itemsPayload,
         frequency,
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
         deliveryAddressId: selectedAddress.id,
         paymentTerms,
         specialInstructions: specialInstructions.trim() || undefined,
+        deliveryCount,
+        billAmount,
+        paymentMethod: "offline",
+        paymentStatus: "pending",
+        confirmationStatus: "confirmed",
       });
 
       Alert.alert(
-        "Subscription Created!",
-        `Recurring delivery for ${parsedQty}x ${selectedProduct.name} has been set up successfully.\n\nFrequency: ${
-          frequency === "daily"
-            ? "Daily"
-            : frequency === "every-2-days"
-            ? "Every 2 Days"
-            : frequency === "weekly"
-            ? "Weekly"
-            : "Custom"
-        }\nPayment: ${
-          paymentTerms === "monthly"
-            ? "Monthly"
-            : paymentTerms === "weekly"
-            ? "Weekly"
-            : "Pay per order"
-        }`,
+        t("confirmed") || "Confirmed",
+        `${billTitle}: ₹${billAmount}\n${deliveryCount} ${t("deliveries") || "deliveries"}\n${t("offlineCod") || "Offline/COD"}\n\nStatus: ${t("confirmed") || "Confirmed"}\n${t("paymentStatus") || "Payment Status"}: ${t("paymentPending") || "Payment pending"}\n\n${t("paymentDueNotice") || "Payment is due on your first delivery day."}`,
         [
           {
-            text: "View Subscriptions",
+            text: t("viewDetails") || "View Subscriptions",
             onPress: () => router.replace("/(customer)/recurring-deliveries"),
           },
         ],
@@ -163,7 +256,7 @@ export default function RecurringDeliverySetupScreen() {
     } catch (error: any) {
       console.error("Failed to create recurring delivery:", error);
       Alert.alert(
-        "Setup Failed",
+        t("error") || "Setup Failed",
         error.message || "Failed to set up recurring delivery. Please try again."
       );
     } finally {
@@ -192,7 +285,20 @@ export default function RecurringDeliverySetupScreen() {
       >
         {/* Product Selection */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>1. Select Product</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>1. {t("selectProduct") || "Select Products"}</Text>
+            {selectedItems.length > 0 && (
+              <View style={styles.itemCountBadge}>
+                <Text style={styles.itemCountBadgeText}>
+                  {selectedItems.length} {t("items") || "items"} ({totalCans} cans)
+                </Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.helperText}>
+            Choose one or more items and adjust quantities for each recurring delivery
+          </Text>
+
           {loadingProducts ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : products.length === 0 ? (
@@ -200,16 +306,15 @@ export default function RecurringDeliverySetupScreen() {
           ) : (
             <View style={styles.productList}>
               {products.map((p) => {
-                const isSelected = selectedProduct?.id === p.id;
+                const itemQty = selectedQuantities[p.id] || 0;
+                const isSelected = itemQty > 0;
                 return (
-                  <TouchableOpacity
+                  <View
                     key={p.id}
                     style={[
                       styles.productCard,
                       isSelected && styles.productCardSelected,
                     ]}
-                    onPress={() => setSelectedProductId(p.id)}
-                    activeOpacity={0.7}
                   >
                     <View style={styles.productInfo}>
                       <Text
@@ -220,68 +325,74 @@ export default function RecurringDeliverySetupScreen() {
                       >
                         {p.name}
                       </Text>
-                      {p.volume ? (
-                        <Text style={styles.productVolume}>{p.volume}</Text>
-                      ) : null}
+                      <View style={styles.productMetaRow}>
+                        {p.volume ? (
+                          <Text style={styles.productVolume}>{p.volume}</Text>
+                        ) : null}
+                        <Text
+                          style={[
+                            styles.productPrice,
+                            isSelected && styles.productPriceSelected,
+                          ]}
+                        >
+                          ₹{p.price}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.productPriceContainer}>
-                      <Text
-                        style={[
-                          styles.productPrice,
-                          isSelected && styles.productPriceSelected,
-                        ]}
+
+                    {isSelected ? (
+                      <View style={styles.itemQtyContainer}>
+                        <TouchableOpacity
+                          style={styles.itemQtyBtn}
+                          onPress={() => updateProductQuantity(p.id, -1)}
+                          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        >
+                          <Text style={styles.itemQtyBtnText}>-</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.itemQtyValue}>{itemQty}</Text>
+                        <TouchableOpacity
+                          style={styles.itemQtyBtn}
+                          onPress={() => updateProductQuantity(p.id, 1)}
+                          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        >
+                          <Text style={styles.itemQtyBtnText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.addBtn}
+                        onPress={() => updateProductQuantity(p.id, 1)}
+                        activeOpacity={0.7}
                       >
-                        ₹{p.price}
-                      </Text>
-                      {isSelected && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={20}
-                          color={COLORS.primary}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
+                        <Feather name="plus" size={14} color={COLORS.primary} />
+                        <Text style={styles.addBtnText}>{t("add") || "ADD"}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 );
               })}
             </View>
           )}
 
-          {/* Quantity */}
-          <Text style={styles.label}>Quantity per Delivery *</Text>
-          <View style={styles.quantityContainer}>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={() => {
-                const q = Math.max(1, (parseInt(quantity, 10) || 1) - 1);
-                setQuantity(String(q));
-              }}
-            >
-              <Text style={styles.qtyBtnText}>-</Text>
-            </TouchableOpacity>
-            <TextInput
-              style={styles.qtyInput}
-              placeholder="Qty"
-              placeholderTextColor={COLORS.textLight}
-              value={quantity}
-              onChangeText={setQuantity}
-              keyboardType="number-pad"
-            />
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={() => {
-                const q = (parseInt(quantity, 10) || 0) + 1;
-                setQuantity(String(q));
-              }}
-            >
-              <Text style={styles.qtyBtnText}>+</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Selected Items Breakdown */}
+          {selectedItems.length > 0 && (
+            <View style={styles.selectedItemsSummary}>
+              <Text style={styles.selectedItemsSummaryTitle}>
+                Per Delivery Subtotal: ₹{subtotalPerDelivery}
+                {maxDeliveryCharge > 0 ? ` (+₹${maxDeliveryCharge} delivery)` : ""}
+              </Text>
+              {selectedItems.map((it) => (
+                <Text key={it.product.id} style={styles.selectedItemSummaryRow}>
+                  • {it.quantity}x {it.product.name} (₹{it.product.price * it.quantity})
+                </Text>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Delivery Frequency */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>2. Delivery Frequency</Text>
+          <Text style={styles.sectionTitle}>2. {t("frequency") || "Delivery Frequency"}</Text>
           <View style={styles.optionsGrid}>
             {FREQUENCY_OPTIONS.map((option) => (
               <TouchableOpacity
@@ -299,7 +410,7 @@ export default function RecurringDeliverySetupScreen() {
                     frequency === option.value && styles.optionLabelSelected,
                   ]}
                 >
-                  {option.label}
+                  {t(option.labelKey) || option.defaultLabel}
                 </Text>
                 <Text
                   style={[
@@ -308,7 +419,7 @@ export default function RecurringDeliverySetupScreen() {
                       styles.optionDescriptionSelected,
                   ]}
                 >
-                  {option.description}
+                  {option.defaultDescription}
                 </Text>
                 {frequency === option.value && (
                   <View style={styles.selectedIndicator}>
@@ -322,10 +433,10 @@ export default function RecurringDeliverySetupScreen() {
 
         {/* Address and Notes */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>3. Delivery Location</Text>
+          <Text style={styles.sectionTitle}>3. {t("deliveryAddress") || "Delivery Location"}</Text>
 
           {/* Delivery Address */}
-          <Text style={styles.label}>Delivery Address *</Text>
+          <Text style={styles.label}>{t("deliveryAddress") || "Delivery Address"} *</Text>
           <TouchableOpacity
             style={styles.addressButton}
             onPress={() => setShowAddressPicker(true)}
@@ -347,7 +458,7 @@ export default function RecurringDeliverySetupScreen() {
           </TouchableOpacity>
 
           {/* Special Instructions */}
-          <Text style={styles.label}>Special Instructions (optional)</Text>
+          <Text style={styles.label}>{t("specialInstructions") || "Special Instructions"} ({t("optional") || "optional"})</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="e.g. Leave at door, call before delivery"
@@ -361,9 +472,9 @@ export default function RecurringDeliverySetupScreen() {
 
         {/* Payment Terms */}
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>4. Payment Terms</Text>
+          <Text style={styles.sectionTitle}>4. {t("paymentTerms") || "Payment Terms"}</Text>
           <Text style={styles.helperText}>
-            Choose how you want to settle payments for recurring deliveries
+            {t("selectPaymentTerm") || "Choose how you want to settle payments for recurring deliveries"}
           </Text>
 
           <View style={styles.optionsGrid}>
@@ -383,7 +494,7 @@ export default function RecurringDeliverySetupScreen() {
                     paymentTerms === option.value && styles.optionLabelSelected,
                   ]}
                 >
-                  {option.label}
+                  {t(option.labelKey) || option.defaultLabel}
                 </Text>
                 <Text
                   style={[
@@ -392,7 +503,7 @@ export default function RecurringDeliverySetupScreen() {
                       styles.optionDescriptionSelected,
                   ]}
                 >
-                  {option.description}
+                  {option.defaultDescription}
                 </Text>
                 {paymentTerms === option.value && (
                   <View style={styles.selectedIndicator}>
@@ -402,16 +513,57 @@ export default function RecurringDeliverySetupScreen() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
 
-          {(paymentTerms === "monthly" || paymentTerms === "weekly") && (
-            <View style={styles.paymentInfoBanner}>
-              <Text style={styles.paymentInfoBannerText}>
-                💰 All scheduled recurring deliveries will be billed{" "}
-                {paymentTerms === "monthly" ? "monthly" : "weekly"}. Payments will be
-                tracked in your order statement.
+        {/* 5. Bill Summary */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>5. {t("totalBill") || "Bill Summary"}</Text>
+
+          <View style={styles.billBox}>
+            <View style={styles.billMainRow}>
+              <View>
+                <Text style={styles.billPeriodTitle}>{billTitle}</Text>
+                <Text style={styles.billAmount}>₹{billAmount}</Text>
+              </View>
+              <View style={styles.deliveryBadge}>
+                <Feather name="truck" size={14} color={COLORS.primary} />
+                <Text style={styles.deliveryBadgeText}>
+                  {deliveryCount} {t("deliveries") || "deliveries"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.billDivider} />
+
+            <View style={styles.billDetailRow}>
+              <Text style={styles.billDetailLabel}>
+                {t("paymentMethod") || "Payment Method"}
+              </Text>
+              <Text style={styles.billDetailValue}>
+                {t("offlineCod") || "Offline/COD"}
               </Text>
             </View>
-          )}
+
+            <View style={styles.billDetailRow}>
+              <Text style={styles.billDetailLabel}>
+                {t("paymentTerms") || "Billing Period"}
+              </Text>
+              <Text style={styles.billDetailValue}>
+                {paymentTerms === "weekly"
+                  ? (t("Weekly") || "Weekly")
+                  : paymentTerms === "monthly"
+                  ? (t("monthlyBill") || "Monthly")
+                  : (t("payPerOrder") || "Pay per order")}
+              </Text>
+            </View>
+
+            <View style={styles.dueNoticeBox}>
+              <Ionicons name="information-circle" size={18} color="#0284C7" />
+              <Text style={styles.dueNoticeText}>
+                {t("paymentDueNotice") || "Payment is due on your first delivery day."}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -422,7 +574,7 @@ export default function RecurringDeliverySetupScreen() {
           {saving ? (
             <ActivityIndicator size="small" color="white" />
           ) : (
-            <Text style={styles.saveButtonText}>Set Up Recurring Delivery</Text>
+            <Text style={styles.saveButtonText}>{t("confirmBill") || "Confirm Bill"}</Text>
           )}
         </TouchableOpacity>
 
@@ -504,6 +656,25 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  itemCountBadge: {
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  itemCountBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
@@ -542,7 +713,12 @@ const styles = StyleSheet.create({
   productVolume: {
     fontSize: 12,
     color: COLORS.textLight,
-    marginTop: 2,
+  },
+  productMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
   },
   productPriceContainer: {
     flexDirection: "row",
@@ -556,6 +732,72 @@ const styles = StyleSheet.create({
   },
   productPriceSelected: {
     color: COLORS.primary,
+  },
+  itemQtyContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    padding: 2,
+  },
+  itemQtyBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  itemQtyBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "white",
+    lineHeight: 18,
+  },
+  itemQtyValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: COLORS.primary,
+    minWidth: 20,
+    textAlign: "center",
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: "#EFF6FF",
+  },
+  addBtnText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: COLORS.primary,
+  },
+  selectedItemsSummary: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  selectedItemsSummaryTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  selectedItemSummaryRow: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginTop: 2,
   },
   quantityContainer: {
     flexDirection: "row",
@@ -715,6 +957,83 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  billBox: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 16,
+  },
+  billMainRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  billPeriodTitle: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    fontWeight: "600",
+  },
+  billAmount: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: COLORS.primary,
+    marginTop: 4,
+  },
+  deliveryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  deliveryBadgeText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.primary,
+  },
+  billDivider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 14,
+  },
+  billDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  billDetailLabel: {
+    fontSize: 13,
+    color: COLORS.textLight,
+  },
+  billDetailValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: COLORS.text,
+  },
+  dueNoticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#E0F2FE",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+  },
+  dueNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0369A1",
+    lineHeight: 18,
   },
   bottomSpacer: {
     height: 32,

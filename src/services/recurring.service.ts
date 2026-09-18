@@ -1,10 +1,11 @@
 import api from './api';
-import { RecurringFrequency } from '../types/recurring.types';
+import { RecurringFrequency, RecurringDeliveryItem } from '../types/recurring.types';
 
 export interface CreateRecurringDeliveryData {
-  productId: string;
-  productName: string;
-  quantity: number;
+  productId?: string;
+  productName?: string;
+  quantity?: number;
+  items?: RecurringDeliveryItem[];
   frequency: RecurringFrequency;
   deliveryAddress: string;
   deliveryAddressId?: string;
@@ -12,12 +13,18 @@ export interface CreateRecurringDeliveryData {
   specialInstructions?: string;
   startDate?: string;
   endDate?: string;
+  deliveryCount?: number;
+  billAmount?: number;
+  paymentMethod?: 'offline' | 'online';
+  paymentStatus?: 'pending' | 'paid';
+  confirmationStatus?: 'confirmed' | 'pending';
 }
 
 export interface UpdateRecurringDeliveryData {
   productId?: string;
   productName?: string;
   quantity?: number;
+  items?: RecurringDeliveryItem[];
   frequency?: RecurringFrequency;
   deliveryAddress?: string;
   deliveryAddressId?: string;
@@ -27,6 +34,11 @@ export interface UpdateRecurringDeliveryData {
   startDate?: string;
   endDate?: string;
   nextDeliveryDate?: string;
+  deliveryCount?: number;
+  billAmount?: number;
+  paymentMethod?: 'offline' | 'online';
+  paymentStatus?: 'pending' | 'paid';
+  confirmationStatus?: 'confirmed' | 'pending';
 }
 
 export interface RecurringDelivery {
@@ -36,6 +48,7 @@ export interface RecurringDelivery {
   productId: string;
   productName: string;
   quantity: number;
+  items?: RecurringDeliveryItem[];
   frequency: RecurringFrequency;
   startDate: string;
   endDate?: string;
@@ -45,6 +58,11 @@ export interface RecurringDelivery {
   deliveryAddressId?: string;
   specialInstructions?: string;
   nextDeliveryDate?: string;
+  deliveryCount?: number;
+  billAmount?: number;
+  paymentMethod?: 'offline' | 'online';
+  paymentStatus?: 'pending' | 'paid';
+  confirmationStatus?: 'confirmed' | 'pending';
   createdAt: string;
   updatedAt: string;
 }

@@ -1,11 +1,22 @@
-export type RecurringFrequency = 'daily' | 'every-2-days' | 'weekly' | 'custom';
+export type RecurringFrequency = 'daily' | '2-per-week' | '3-per-week' | 'every-2-days' | 'weekly' | 'custom';
+
+export interface RecurringDeliveryItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  price?: number;
+  deliveryCharge?: number;
+  volume?: string;
+}
 
 export interface RecurringDelivery {
+  _id?: string;
   id: string;
   customerId: string;
   productId: string;
   productName: string;
-  quantity: number; // e.g., 20 cans
+  quantity: number; // total cans
+  items?: RecurringDeliveryItem[];
   frequency: RecurringFrequency;
   startDate: Date;
   endDate?: Date; // Optional end date
@@ -15,6 +26,11 @@ export interface RecurringDelivery {
   deliveryAddressId?: string;
   specialInstructions?: string;
   nextDeliveryDate?: Date;
+  deliveryCount?: number;
+  billAmount?: number;
+  paymentMethod?: 'offline' | 'online';
+  paymentStatus?: 'pending' | 'paid';
+  confirmationStatus?: 'confirmed' | 'pending';
   createdAt: Date;
   updatedAt: Date;
 }

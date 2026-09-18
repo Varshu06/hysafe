@@ -1,6 +1,7 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -26,6 +27,7 @@ export default function RecurringDeliveriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [recurringDeliveries, setRecurringDeliveries] = useState<
     RecurringDelivery[]
   >([]);
@@ -128,11 +130,15 @@ export default function RecurringDeliveriesScreen() {
   const formatFrequency = (frequency: string) => {
     switch (frequency) {
       case "daily":
-        return "Daily";
+        return t("Daily") || "Daily";
+      case "3-per-week":
+        return `3 ${t("deliveriesPerWeek") || "deliveries/week"}`;
+      case "2-per-week":
+        return `2 ${t("deliveriesPerWeek") || "deliveries/week"}`;
       case "every-2-days":
-        return "Every 2 Days";
+        return t("Every 2 Days") || "Every 2 Days";
       case "weekly":
-        return "Weekly";
+        return t("Weekly") || "Weekly";
       default:
         return frequency;
     }
@@ -270,24 +276,36 @@ export default function RecurringDeliveriesScreen() {
                       Quantity: {delivery.quantity} cans
                     </Text>
                   </View>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      delivery.isActive
-                        ? styles.statusBadgeActive
-                        : styles.statusBadgeInactive,
-                    ]}
-                  >
-                    <Text
+                  <View style={styles.headerBadges}>
+                    <View
                       style={[
-                        styles.statusText,
+                        styles.statusBadge,
                         delivery.isActive
-                          ? styles.statusTextActive
-                          : styles.statusTextInactive,
+                          ? styles.statusBadgeActive
+                          : styles.statusBadgeInactive,
                       ]}
                     >
-                      {delivery.isActive ? "Active" : "Paused"}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.statusText,
+                          delivery.isActive
+                            ? styles.statusTextActive
+                            : styles.statusTextInactive,
+                        ]}
+                      >
+                        {delivery.isActive ? "Active" : "Paused"}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, styles.statusBadgeConfirmed]}>
+                      <Text style={[styles.statusText, styles.statusTextConfirmed]}>
+                        {t("confirmed") || "Confirmed"}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, styles.statusBadgePending]}>
+                      <Text style={[styles.statusText, styles.statusTextPending]}>
+                        {t("paymentPending") || "Payment pending"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
@@ -305,6 +323,47 @@ export default function RecurringDeliveriesScreen() {
                       </Text>
                     </Text>
                   </View>
+
+                  {delivery.billAmount ? (
+                    <View style={styles.detailRow}>
+                      <Feather
+                        name="dollar-sign"
+                        size={15}
+                        color={COLORS.primary}
+                      />
+                      <Text style={styles.detailText}>
+                        {delivery.paymentTerms === "weekly"
+                          ? (t("weeklyBill") || "Weekly bill")
+                          : delivery.paymentTerms === "monthly"
+                          ? (t("monthlyBill") || "Monthly bill")
+                          : (t("orderBill") || "Order bill")}
+                        : <Text style={styles.detailHighlight}>₹{delivery.billAmount}</Text>
+                        {" "}({delivery.deliveryCount || (delivery.frequency === "3-per-week" ? 3 : delivery.frequency === "2-per-week" ? 2 : 1)} {t("deliveries") || "deliveries"})
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <View style={styles.detailRow}>
+                    <Feather
+                      name="credit-card"
+                      size={15}
+                      color={COLORS.textLight}
+                    />
+                    <Text style={styles.detailText}>
+                      {t("paymentMethod") || "Payment Method"}:{" "}
+                      <Text style={styles.detailHighlight}>
+                        {t("offlineCod") || "Offline/COD"}
+                      </Text>
+                    </Text>
+                  </View>
+
+                  <View style={styles.paymentNoticeBox}>
+                    <Ionicons name="information-circle" size={16} color="#0284C7" />
+                    <Text style={styles.paymentNoticeText}>
+                      {t("paymentDueShort") || "Payment due on your first delivery day."}
+                    </Text>
+                  </View>
+
                   <View style={styles.detailRow}>
                     <Feather
                       name="calendar"
@@ -326,20 +385,6 @@ export default function RecurringDeliveriesScreen() {
                     />
                     <Text style={styles.detailText} numberOfLines={2}>
                       {delivery.deliveryAddress}
-                    </Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Feather
-                      name="credit-card"
-                      size={15}
-                      color={COLORS.textLight}
-                    />
-                    <Text style={styles.detailText}>
-                      Payment Terms:{" "}
-                      {delivery.paymentTerms
-                        ? delivery.paymentTerms.charAt(0).toUpperCase() +
-                          delivery.paymentTerms.slice(1)
-                        : "Pay per order"}
                     </Text>
                   </View>
                 </View>
@@ -552,9 +597,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textLight,
   },
+  headerBadges: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    justifyContent: "flex-end",
+    maxWidth: "50%",
+  },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 12,
   },
   statusBadgeActive: {
@@ -563,8 +615,26 @@ const styles = StyleSheet.create({
   statusBadgeInactive: {
     backgroundColor: "#FEF3C7",
   },
+  statusBadgeConfirmed: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  statusTextConfirmed: {
+    color: "#059669",
+    fontWeight: "700",
+  },
+  statusBadgePending: {
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  statusTextPending: {
+    color: "#D97706",
+    fontWeight: "700",
+  },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
   },
   statusTextActive: {
@@ -572,6 +642,24 @@ const styles = StyleSheet.create({
   },
   statusTextInactive: {
     color: "#D97706",
+  },
+  paymentNoticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  paymentNoticeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0284C7",
+    flex: 1,
   },
   deliveryDetails: {
     gap: 8,

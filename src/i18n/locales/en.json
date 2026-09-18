@@ -184,5 +184,21 @@
   "passwordResetSuccess": "Password reset successfully!",
   "emailPlaceholder": "Email Address *",
   "pleaseEnterEmail": "Please enter your email address",
-  "pleaseEnterValidEmail": "Please enter a valid email address"
+  "pleaseEnterValidEmail": "Please enter a valid email address",
+  "twoPerWeek": "2 per week",
+  "threePerWeek": "3 per week",
+  "payPerOrder": "Pay per order",
+  "weeklyBill": "Weekly bill",
+  "monthlyBill": "Monthly bill",
+  "orderBill": "Order bill",
+  "deliveries": "deliveries",
+  "deliveriesPerWeek": "deliveries/week",
+  "offlineCod": "Offline/COD",
+  "paymentDueNotice": "Payment is due on your first delivery day.",
+  "paymentDueShort": "Payment due on your first delivery day.",
+  "confirmBill": "Confirm Bill",
+  "confirmed": "Confirmed",
+  "paymentPending": "Payment pending",
+  "subscriptionConfirmed": "Subscription Confirmed!",
+  "subscriptionConfirmedDesc": "Your recurring delivery has been confirmed. Payment is pending and due on your first delivery day."
 }

@@ -15,9 +15,9 @@ export const createRecurringDelivery = async (req: AuthRequest, res: Response) =
     }
 
     const {
-      productId,
-      productName,
-      quantity,
+      productId: inputProductId,
+      productName: inputProductName,
+      quantity: inputQuantity,
       frequency,
       deliveryAddress,
       deliveryAddressId,
@@ -25,7 +25,26 @@ export const createRecurringDelivery = async (req: AuthRequest, res: Response) =
       specialInstructions,
       startDate: requestedStartDate,
       endDate: requestedEndDate,
+      deliveryCount,
+      billAmount,
+      paymentMethod,
+      paymentStatus,
+      confirmationStatus,
+      items: inputItems,
     } = req.body;
+
+    let items = Array.isArray(inputItems) && inputItems.length > 0 ? inputItems : [];
+    let productId = inputProductId;
+    let productName = inputProductName;
+    let quantity = inputQuantity;
+
+    if (items.length > 0) {
+      if (!productId) productId = items[0].productId;
+      if (!productName) productName = items.map((i: any) => `${i.quantity}x ${i.productName}`).join(', ');
+      if (!quantity) quantity = items.reduce((sum: number, i: any) => sum + (Number(i.quantity) || 1), 0);
+    } else if (productId && productName && quantity) {
+      items = [{ productId, productName, quantity: Number(quantity) || 1 }];
+    }
 
     // Validation
     if (!productId || !productName || !quantity || !frequency || !deliveryAddress) {
@@ -47,6 +66,7 @@ export const createRecurringDelivery = async (req: AuthRequest, res: Response) =
       productId,
       productName,
       quantity,
+      items,
       frequency,
       startDate,
       endDate,
@@ -56,6 +76,11 @@ export const createRecurringDelivery = async (req: AuthRequest, res: Response) =
       deliveryAddressId,
       specialInstructions,
       nextDeliveryDate,
+      deliveryCount: deliveryCount || 1,
+      billAmount: billAmount || 0,
+      paymentMethod: paymentMethod || 'offline',
+      paymentStatus: paymentStatus || 'pending',
+      confirmationStatus: confirmationStatus || 'confirmed',
     });
 
     res.status(201).json({

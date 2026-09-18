@@ -20,6 +20,14 @@ export const calculateNextDeliveryDate = (
     case 'daily':
       nextDate.setDate(nextDate.getDate() + 1);
       break;
+    case '3-per-week':
+      // 3 deliveries per week: approx every 2 days
+      nextDate.setDate(nextDate.getDate() + 2);
+      break;
+    case '2-per-week':
+      // 2 deliveries per week: approx every 3 days
+      nextDate.setDate(nextDate.getDate() + 3);
+      break;
     case 'every-2-days':
       nextDate.setDate(nextDate.getDate() + 2);
       break;
@@ -88,29 +96,58 @@ export const processDueRecurringDeliveries = async (): Promise<ProcessResult> =>
 
         const profile = await CustomerProfile.findOne({ userId: delivery.customerId });
 
-        // 2. Fetch inventory item details
-        let inventoryItem: any = null;
-        if (mongoose.Types.ObjectId.isValid(delivery.productId)) {
-          inventoryItem = await InventoryItem.findById(delivery.productId);
-        }
+        // 2. Build order items (support both multiple items and single item)
+        let orderItems: any[] = [];
+        let totalItemsPrice = 0;
+        let maxDeliveryCharge = 0;
+        let totalOrderQty = 0;
 
-        const itemPrice = Number(inventoryItem?.price ?? 80); // Default to standard can price if missing
-        const itemDeliveryCharge = Number(inventoryItem?.deliveryCharge ?? 0);
-        const subtotal = itemPrice * delivery.quantity;
-        const totalPrice = subtotal + itemDeliveryCharge;
+        if (delivery.items && delivery.items.length > 0) {
+          for (const it of delivery.items) {
+            let invItem: any = null;
+            if (mongoose.Types.ObjectId.isValid(it.productId)) {
+              invItem = await InventoryItem.findById(it.productId);
+            }
+            const pPrice = Number(it.price || invItem?.price || 80);
+            const pDeliv = Number(it.deliveryCharge ?? invItem?.deliveryCharge ?? 0);
+            if (pDeliv > maxDeliveryCharge) maxDeliveryCharge = pDeliv;
+            const pQty = Number(it.quantity) || 1;
+            totalOrderQty += pQty;
+            totalItemsPrice += pPrice * pQty;
 
-        const resolvedProductId = inventoryItem
-          ? inventoryItem._id
-          : mongoose.Types.ObjectId.isValid(delivery.productId)
-          ? new mongoose.Types.ObjectId(delivery.productId)
-          : new mongoose.Types.ObjectId();
+            const resId = invItem
+              ? invItem._id
+              : mongoose.Types.ObjectId.isValid(it.productId)
+              ? new mongoose.Types.ObjectId(it.productId)
+              : new mongoose.Types.ObjectId();
 
-        // 3. Create the automated order
-        const order = await Order.create({
-          customerId: delivery.customerId,
-          customerProfileId: profile?._id,
-          quantity: delivery.quantity,
-          items: [
+            orderItems.push({
+              productId: resId,
+              productName: it.productName || invItem?.name || 'Water Item',
+              quantity: pQty,
+              price: pPrice,
+              deliveryCharge: pDeliv,
+            });
+          }
+        } else {
+          let inventoryItem: any = null;
+          if (mongoose.Types.ObjectId.isValid(delivery.productId)) {
+            inventoryItem = await InventoryItem.findById(delivery.productId);
+          }
+
+          const itemPrice = Number(inventoryItem?.price ?? 80);
+          const itemDeliveryCharge = Number(inventoryItem?.deliveryCharge ?? 0);
+          maxDeliveryCharge = itemDeliveryCharge;
+          totalOrderQty = delivery.quantity;
+          totalItemsPrice = itemPrice * delivery.quantity;
+
+          const resolvedProductId = inventoryItem
+            ? inventoryItem._id
+            : mongoose.Types.ObjectId.isValid(delivery.productId)
+            ? new mongoose.Types.ObjectId(delivery.productId)
+            : new mongoose.Types.ObjectId();
+
+          orderItems = [
             {
               productId: resolvedProductId,
               productName: delivery.productName || inventoryItem?.name || 'Water Can',
@@ -118,10 +155,20 @@ export const processDueRecurringDeliveries = async (): Promise<ProcessResult> =>
               price: itemPrice,
               deliveryCharge: itemDeliveryCharge,
             },
-          ],
+          ];
+        }
+
+        const totalPrice = totalItemsPrice + maxDeliveryCharge;
+
+        // 3. Create the automated order
+        const order = await Order.create({
+          customerId: delivery.customerId,
+          customerProfileId: profile?._id,
+          quantity: totalOrderQty,
+          items: orderItems,
           totalPrice,
           price: totalPrice,
-          deliveryCharge: itemDeliveryCharge,
+          deliveryCharge: maxDeliveryCharge,
           status: 'pending',
           paymentMethod: 'offline',
           paymentStatus: 'pending',
