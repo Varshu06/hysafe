@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 import { COLORS } from "../../utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 export type StatusType =
   | "pending"
@@ -52,6 +52,7 @@ const getStatusConfig = (status: string) => {
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, style }) => {
+  const { t } = useTranslation();
   const config = getStatusConfig(status);
 
   return (

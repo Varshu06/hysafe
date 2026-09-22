@@ -1,5 +1,5 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -22,6 +22,7 @@ interface ActiveOrderCardProps {
 }
 
 export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
+  const { t } = useTranslation();
   const animationProgress = useRef(new Animated.Value(0)).current;
   const [timelineWidth, setTimelineWidth] = useState(0);
 

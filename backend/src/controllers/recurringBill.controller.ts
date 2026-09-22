@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { RecurringBill } from '../models/RecurringBill.model';
 import { canCustomerConfirmBill, canRecordRecurringBillPayment, isFullBillPayment, isOfflinePaymentMethod } from '../services/recurringBilling.service';
+import { processDueRecurringDeliveries } from '../services/recurringDelivery.service';
 
 const populateBill = (query: any) => query
   .populate('customerId', 'name phone email')
@@ -39,6 +40,7 @@ export const confirmRecurringBill = async (req: AuthRequest, res: Response) => {
     bill.status = 'confirmed';
     bill.confirmedAt = new Date();
     await bill.save();
+    processDueRecurringDeliveries().catch((err) => console.error('[RecurringBillController] Order generation failed:', err));
   }
   res.json({ message: 'Recurring bill confirmed. Payment is still pending.', recurringBill: bill });
 };

@@ -1,5 +1,5 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -37,6 +37,7 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({
   descriptors,
   navigation,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const indicatorAnim = useRef(new Animated.Value(0)).current;
 

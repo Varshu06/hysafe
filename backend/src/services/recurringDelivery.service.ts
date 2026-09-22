@@ -94,9 +94,11 @@ const advanceDelivery = async (delivery: IRecurringDelivery, scheduledFor: Date)
 
 export const processDueRecurringDeliveries = async (): Promise<ProcessResult> => {
   const now = new Date();
+  const endOfToday = new Date(now);
+  endOfToday.setHours(23, 59, 59, 999);
   const result: ProcessResult = { processed: 0, succeeded: 0, failed: 0, ordersCreated: [], errors: [] };
   try {
-    const dueDeliveries = await RecurringDelivery.find({ isActive: true, nextDeliveryDate: { $lte: now } });
+    const dueDeliveries = await RecurringDelivery.find({ isActive: true, nextDeliveryDate: { $lte: endOfToday } });
     result.processed = dueDeliveries.length;
     for (const delivery of dueDeliveries) {
       try {

@@ -2,9 +2,10 @@ import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 export default function StaffLayout() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (

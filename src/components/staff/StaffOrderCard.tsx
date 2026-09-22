@@ -17,6 +17,7 @@ type Props = {
   etaMin?: number | null;
   slot?: string;
   notes?: string;
+  isRecurring?: boolean;
   compact?: boolean;
   compactShowAddress?: boolean;
   onPress?: () => void;
@@ -42,6 +43,7 @@ export function StaffOrderCard({
   etaMin,
   slot,
   notes,
+  isRecurring,
   compact = false,
   compactShowAddress = false,
   onPress,
@@ -57,6 +59,23 @@ export function StaffOrderCard({
     return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }, [createdAt]);
 
+  const formattedSlot = useMemo(() => {
+    if (!slot) return null;
+    const parsed = new Date(slot);
+    if (!isNaN(parsed.getTime()) && String(slot).includes('T')) {
+      return (
+        parsed.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }) +
+        ' • ' +
+        parsed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      );
+    }
+    return slot;
+  }, [slot]);
+
   const distanceText =
     distanceKm == null ? '-- km' : `${distanceKm < 1 ? distanceKm.toFixed(1) : distanceKm.toFixed(1)} km`;
   const etaText = etaMin == null ? '-- min' : `${etaMin} min`;
@@ -65,7 +84,15 @@ export function StaffOrderCard({
     <TouchableOpacity style={styles.card} activeOpacity={0.9} onPress={onPress} disabled={!onPress}>
       <View style={styles.topRow}>
         <View style={styles.badgeRow}>
-          <StatusBadge status={status} />
+          <View style={styles.badgeGroup}>
+            <StatusBadge status={status} />
+            {isRecurring ? (
+              <View style={styles.recurringChip}>
+                <Feather name="repeat" size={11} color="#0284C7" />
+                <Text style={styles.recurringChipText}>Recurring</Text>
+              </View>
+            ) : null}
+          </View>
           {paymentLabel ? (
             <View style={styles.payChip}>
               <Text style={styles.payChipText}>{paymentLabel}</Text>
@@ -101,11 +128,11 @@ export function StaffOrderCard({
         </View>
       </View>
 
-      {!compact && slot ? (
+      {formattedSlot ? (
         <View style={styles.slotRow}>
-          <Feather name="calendar" size={14} color="#64748B" />
+          <Feather name="calendar" size={14} color="#0284C7" />
           <Text style={styles.slotText} numberOfLines={1}>
-            {slot}
+            Scheduled: {formattedSlot}
           </Text>
         </View>
       ) : null}
@@ -119,42 +146,36 @@ export function StaffOrderCard({
         </View>
       ) : null}
 
-      {compact && compactShowAddress ? (
+      <View style={styles.infoRow}>
+        <Feather name="map-pin" size={16} color="#94A3B8" />
+        <Text style={styles.infoText} numberOfLines={2}>
+          {deliveryAddress || 'Address not available'}
+        </Text>
+      </View>
+
+      {!compact && pickupAddress ? (
         <View style={styles.infoRow}>
-          <Feather name="map-pin" size={16} color="#94A3B8" />
+          <Feather name="package" size={16} color="#94A3B8" />
           <Text style={styles.infoText} numberOfLines={2}>
-            {deliveryAddress || 'Address not available'}
+            {pickupAddress}
           </Text>
         </View>
       ) : null}
 
-      {!compact ? (
-        <>
-          <View style={styles.infoRow}>
-            <Feather name="map-pin" size={16} color="#94A3B8" />
-            <Text style={styles.infoText} numberOfLines={2}>
-              {deliveryAddress || 'Address not available'}
-            </Text>
-          </View>
-
-          {pickupAddress ? (
-            <View style={styles.infoRow}>
-              <Feather name="package" size={16} color="#94A3B8" />
-              <Text style={styles.infoText} numberOfLines={2}>
-                {pickupAddress}
-              </Text>
-            </View>
-          ) : null}
-
-          {notes ? (
-            <View style={styles.notesRow}>
-              <Feather name="message-circle" size={14} color="#94A3B8" />
-              <Text style={styles.notesText} numberOfLines={2}>
-                {notes}
-              </Text>
-            </View>
-          ) : null}
-        </>
+      {notes ? (
+        <View style={[styles.notesRow, isRecurring && styles.recurringNotesRow]}>
+          <Feather
+            name={isRecurring ? "repeat" : "message-circle"}
+            size={14}
+            color={isRecurring ? "#0284C7" : "#64748B"}
+          />
+          <Text
+            style={[styles.notesText, isRecurring && styles.recurringNotesText]}
+            numberOfLines={2}
+          >
+            {notes}
+          </Text>
+        </View>
       ) : null}
 
       {extra ? <View style={styles.extra}>{extra}</View> : null}
@@ -189,6 +210,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
     gap: 8,
+  },
+  badgeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  recurringChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E0F2FE',
+    borderWidth: 1,
+    borderColor: '#7DD3FC',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  recurringChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284C7',
+    textTransform: 'uppercase',
   },
   payChip: {
     backgroundColor: '#E0F2FE',
@@ -287,6 +331,14 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
     marginTop: 2,
   },
+  recurringNotesRow: {
+    backgroundColor: '#F0F9FF',
+    padding: 10,
+    borderRadius: 10,
+    borderTopWidth: 1,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
   notesText: {
     flex: 1,
     fontSize: 12,
@@ -294,6 +346,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
     flexShrink: 1,
+  },
+  recurringNotesText: {
+    color: '#0284C7',
+    fontWeight: '800',
   },
   extra: {
     marginTop: 10,

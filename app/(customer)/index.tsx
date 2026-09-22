@@ -19,13 +19,14 @@ import { useProduct } from "../../src/context/ProductContext";
 // import { PRODUCTS } from "../../src/data/dummy";
 import { Order } from "../../src/types/order.types";
 import { COLORS } from "../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Product } from "@/types/product.types";
 import { ProductImages } from "@/data/dummy";
 import { normalizeImageSource } from "../../src/utils/image";
 // import { Product } from "../types/product.types";
 
 export default function CustomerHomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { addToCart, getQuantity, incrementQuantity, decrementQuantity } =
     useCart();

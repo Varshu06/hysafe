@@ -4,16 +4,19 @@
 // For iOS simulator, use 'localhost'
 // For physical device, use your computer's IP
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 const getLocalIp = () => {
   const hostUri =
     Constants.expoConfig?.hostUri ||
+    (Constants as any).expoGoConfig?.debuggerHost ||
+    (Constants as any).manifest?.debuggerHost ||
     Constants.manifest2?.extra?.expoClient?.hostUri;
 
   return hostUri?.split(":")[0];
 };
 
-const LOCAL_IP = getLocalIp() || "10.124.20.116";
+const LOCAL_IP = getLocalIp() || "10.124.21.42";
 
 // Resolve API base URL:
 // 1. Explicit EXPO_PUBLIC_API_URL or Constants.expoConfig.extra.apiUrl (dev or prod)
@@ -30,7 +33,7 @@ const resolveApiBaseUrl = (): string => {
 
   if (__DEV__) {
     // Expo Web runs in the browser, so localhost points to this computer.
-    if (typeof window !== "undefined") {
+    if (Platform.OS === "web") {
       return "http://localhost:5000/api";
     }
 
@@ -64,6 +67,9 @@ const resolveSocketUrl = (): string => {
   }
 
   if (__DEV__) {
+    if (Platform.OS === "web") {
+      return "http://localhost:5000";
+    }
     return `http://${LOCAL_IP}:5000`;
   }
 

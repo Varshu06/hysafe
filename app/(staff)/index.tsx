@@ -30,11 +30,12 @@ import { ReasonModal } from "../../src/components/staff/ReasonModal";
 import { haversineKm, etaMinutes } from "../../src/utils/geo";
 import { storage } from "../../src/utils/storage";
 import { socketService } from "../../src/services/socket.service";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 // Push notifications temporarily disabled
 // import { registerForPushNotifications, setupNotificationListeners } from '../../src/services/notification.service';
 
 export default function NewOrdersScreen() {
+  const { t } = useTranslation();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   // Placeholder state until OrderContext is fully implemented for staff
@@ -144,6 +145,9 @@ export default function NewOrdersScreen() {
           const transformedOrder = {
             ...order,
             id: order._id,
+            isRecurring: Boolean(order.isRecurring || order.recurringDeliveryId),
+            deliverySlot: order.deliverySlot,
+            notes: order.notes,
             customer:
               order.customerId?.name || order.customer?.name || "Customer",
             customerPhone:
@@ -383,6 +387,7 @@ export default function NewOrdersScreen() {
       <StaffOrderCard
         status={item.status}
         id={String(id)}
+        isRecurring={Boolean(item.isRecurring || item.recurringDeliveryId)}
         createdAt={item.createdAt}
         quantity={item.quantity || 1}
         items={item.items}
@@ -391,6 +396,8 @@ export default function NewOrdersScreen() {
         paymentLabel={paymentLabel}
         distanceKm={dist}
         etaMin={eta}
+        slot={item.deliverySlot}
+        notes={item.notes}
         compact
         compactShowAddress
         onPress={() => router.push(`/(staff)/order-details/${id}`)}

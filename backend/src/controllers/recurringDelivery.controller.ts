@@ -40,6 +40,7 @@ export const createRecurringDelivery = async (req: AuthRequest, res: Response) =
       deliveryCount: 1, billAmount: 0, paymentMethod: 'offline', paymentStatus: 'pending', confirmationStatus: 'pending',
     });
     const recurringBill = await getOrCreateInitialRecurringBill(recurringDelivery);
+    processDueRecurringDeliveries().catch((err) => console.error('[RecurringController] Order generation failed:', err));
     res.status(201).json({ message: 'Recurring delivery created successfully', recurringDelivery, recurringBill });
   } catch (error: any) {
     console.error('Error creating recurring delivery:', error);

@@ -16,7 +16,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { COLORS } from "../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 type CustomerType = "home" | "shop" | "hotel" | "bank" | "event";
 
@@ -54,6 +54,7 @@ const CUSTOMER_TYPES: {
 ];
 
 export default function SignupScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { register } = useAuth();
   const [name, setName] = useState("");

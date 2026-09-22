@@ -15,9 +15,10 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { COLORS } from "../../src/utils/constants";
 import { forgotPassword, resetPassword } from "../../src/services/auth.service";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState(1); // 1 = Enter Phone, 2 = Verify OTP & Reset Password
   const [identifier, setIdentifier] = useState("");

@@ -29,7 +29,7 @@ import {
   DeliveryConfirmModal,
   PaymentMethod,
 } from "../../src/components/staff/DeliveryConfirmModal";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -42,6 +42,7 @@ const FILTERS: { key: FilterType; label: string }[] = [
 ];
 
 export default function OngoingOrdersScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const [ongoingOrders, setOngoingOrders] = useState<any[]>([]);
@@ -230,6 +231,7 @@ export default function OngoingOrdersScreen() {
       <StaffOrderCard
         status={item.status}
         id={String(id)}
+        isRecurring={Boolean(item.isRecurring || item.recurringDeliveryId)}
         createdAt={item.createdAt}
         quantity={item.quantity || 1}
         items={item.items}

@@ -15,11 +15,12 @@ import { useAuth } from "../../src/context/AuthContext";
 import { useOrder } from "../../src/context/OrderContext";
 import { Order } from "../../src/types/order.types";
 import { COLORS } from "../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 type TabType = "active" | "history";
 
 export default function OrdersScreen() {
+  const { t } = useTranslation();
   const { isAuthenticated } = useAuth();
   const { orders, isLoading, refreshOrders } = useOrder();
   const router = useRouter();

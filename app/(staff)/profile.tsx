@@ -19,15 +19,23 @@ import { getAssignedOrders, getOngoingOrders } from "../../src/services/staff.se
 import { COLORS } from "../../src/utils/constants";
 import { StaffHeader } from "../../src/components/staff/StaffHeader";
 import { storage } from "../../src/utils/storage";
-import { getProfile } from "../../src/services/auth.service";
 import { useTranslation } from "react-i18next";
+import { changeLanguage as setAppLanguage } from "../../src/i18n";
 
 export default function ProfileScreen() {
   const { user, logout, isAuthenticated } = useAuth();
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [language, setLanguage] = useState<"en" | "ta">("ta");
+  const [language, setLanguage] = useState<"en" | "ta">(
+    (i18n.language?.startsWith("ta") ? "ta" : "en") as "en" | "ta"
+  );
+
+  useEffect(() => {
+    if (i18n.language) {
+      setLanguage(i18n.language.startsWith("ta") ? "ta" : "en");
+    }
+  }, [i18n.language]);
 
   const [staff, setStaff] = useState({
     name: user?.name || user?.email || "Staff Member",
@@ -161,8 +169,8 @@ export default function ProfileScreen() {
     [isOnline],
   );
 
-  const changeLanguage = (lang: "en" | "ta") => {
-    i18n.changeLanguage(lang);
+  const changeLanguage = async (lang: "en" | "ta") => {
+    await setAppLanguage(lang);
     setVisible(false);
     setLanguage(lang);
   };

@@ -16,11 +16,12 @@ import { useCart } from "../../../src/context/CartContext";
 import { useProduct } from "../../../src/context/ProductContext";
 import { getProducts } from "../../../src/services/product.service";
 import { COLORS } from "../../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Product } from "@/types/product.types";
 const PAGE_SIZE = 5;
 
 export default function ProductsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { addToCart, removeFromCart, getQuantity, getTotalItems } = useCart();

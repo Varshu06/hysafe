@@ -16,11 +16,12 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "../../src/context/AuthContext";
 import { COLORS } from "../../src/utils/constants";
-import { changeLanguage, t } from "i18next";
+import { useTranslation } from "react-i18next";
+import { changeLanguage, getSavedLanguage } from "@/i18n";
 import LanguageSelectionModal from "@/components/auth/LanguageSelectionModal";
-import { getSavedLanguage } from "@/i18n";
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { login, refreshProfile } = useAuth();
   const [phone, setPhone] = useState("");

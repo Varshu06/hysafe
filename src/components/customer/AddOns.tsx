@@ -14,7 +14,7 @@ import { PRODUCTS } from "../../data/dummy";
 import { COLORS } from "../../utils/constants";
 import { normalizeImageSource } from "../../utils/image";
 import { Product } from "@/types/product.types";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 interface AddOnItemProps {
   item: {
@@ -105,6 +105,7 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
 };
 
 export const AddOns = () => {
+  const { t } = useTranslation();
   const { addToCart, getQuantity } = useCart();
 
   const handleAddItem = (item: AddOnItemProps['item']) => {

@@ -211,6 +211,34 @@ export default function StaffOrderDetailsScreen() {
     await Linking.openURL(url);
   };
 
+  const isRecurring = Boolean(order?.isRecurring || order?.recurringDeliveryId);
+
+  const paymentLabel = useMemo(() => {
+    return String(order?.paymentMethod || "offline").toLowerCase() === "online"
+      ? "UPI"
+      : "COD";
+  }, [order?.paymentMethod]);
+
+  const formattedSlot = useMemo(() => {
+    if (!order?.deliverySlot) return null;
+    const parsed = new Date(order.deliverySlot);
+    if (!isNaN(parsed.getTime()) && String(order.deliverySlot).includes("T")) {
+      return (
+        parsed.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }) +
+        " • " +
+        parsed.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      );
+    }
+    return order.deliverySlot;
+  }, [order?.deliverySlot]);
+
   const canAcceptReject =
     order && String(order.status).toLowerCase() === "pending";
   const canPick = order && String(order.status).toLowerCase() === "accepted";
@@ -243,13 +271,35 @@ export default function StaffOrderDetailsScreen() {
             <View style={styles.card}>
               <View style={styles.cardTop}>
                 <View style={styles.badgeRow}>
-                  <StatusBadge status={order?.status || "pending"} />
+                  <View style={styles.badgeGroup}>
+                    <StatusBadge status={order?.status || "pending"} />
+                    {isRecurring ? (
+                      <View style={styles.recurringChip}>
+                        <Feather name="repeat" size={11} color="#0284C7" />
+                        <Text style={styles.recurringChipText}>Recurring</Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <View style={styles.payChip}>
                     <Text style={styles.payChipText}>{paymentLabel}</Text>
                   </View>
                 </View>
                 <Text style={styles.meta}>#{order?._id || order?.id}</Text>
               </View>
+
+              {isRecurring ? (
+                <View style={styles.recurringNoticeCard}>
+                  <View style={styles.recurringNoticeHeader}>
+                    <Feather name="repeat" size={16} color="#0284C7" />
+                    <Text style={styles.recurringNoticeTitle}>
+                      Scheduled Recurring Delivery
+                    </Text>
+                  </View>
+                  <Text style={styles.recurringNoticeDesc}>
+                    This delivery is automated based on the customer's recurring schedule.
+                  </Text>
+                </View>
+              ) : null}
 
               <View style={styles.qtyContainer}>
                 {order?.items && order.items.length > 0 ? (
@@ -319,7 +369,7 @@ export default function StaffOrderDetailsScreen() {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Payment</Text>
+                <Text style={styles.sectionTitle}>Payment & Schedule</Text>
                 <View style={styles.infoRow}>
                   <Feather name="credit-card" size={16} color="#94A3B8" />
                   <Text style={styles.infoText}>
@@ -330,18 +380,39 @@ export default function StaffOrderDetailsScreen() {
                       : ""}
                   </Text>
                 </View>
-                {order?.deliverySlot ? (
+                {order?.paymentTerms && order.paymentTerms !== "one-time" ? (
                   <View style={styles.infoRow}>
-                    <Feather name="calendar" size={16} color="#94A3B8" />
-                    <Text style={styles.infoText}>{order.deliverySlot}</Text>
+                    <Feather name="file-text" size={16} color="#0284C7" />
+                    <Text style={[styles.infoText, { color: "#0284C7", fontWeight: "800" }]}>
+                      Terms: {String(order.paymentTerms).toUpperCase()} BILLING
+                    </Text>
+                  </View>
+                ) : null}
+                {formattedSlot ? (
+                  <View style={styles.infoRow}>
+                    <Feather name="calendar" size={16} color="#0284C7" />
+                    <Text style={[styles.infoText, { color: "#0284C7", fontWeight: "800" }]}>
+                      Scheduled: {formattedSlot}
+                    </Text>
                   </View>
                 ) : null}
               </View>
 
               {order?.notes ? (
-                <View style={styles.notesBox}>
-                  <Feather name="message-circle" size={14} color="#94A3B8" />
-                  <Text style={styles.notesText}>{order.notes}</Text>
+                <View style={[styles.notesBox, isRecurring && styles.recurringNotesBox]}>
+                  <Feather
+                    name={isRecurring ? "repeat" : "message-circle"}
+                    size={16}
+                    color={isRecurring ? "#0284C7" : "#94A3B8"}
+                  />
+                  <View style={{ flex: 1 }}>
+                    {isRecurring ? (
+                      <Text style={styles.notesLabel}>Customer Instructions / Recurring Note:</Text>
+                    ) : null}
+                    <Text style={[styles.notesText, isRecurring && styles.recurringNotesText]}>
+                      {order.notes}
+                    </Text>
+                  </View>
                 </View>
               ) : null}
             </View>
@@ -452,6 +523,54 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
+  badgeGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  recurringChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#E0F2FE",
+    borderWidth: 1,
+    borderColor: "#7DD3FC",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  recurringChipText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#0284C7",
+    textTransform: "uppercase",
+  },
+  recurringNoticeCard: {
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  recurringNoticeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  recurringNoticeTitle: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#0284C7",
+  },
+  recurringNoticeDesc: {
+    fontSize: 12,
+    color: "#0369A1",
+    fontWeight: "600",
+    lineHeight: 16,
+  },
   payChip: {
     backgroundColor: "#E0F2FE",
     borderWidth: 1,
@@ -513,11 +632,30 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
   },
+  recurringNotesBox: {
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    borderRadius: 10,
+    padding: 12,
+    borderTopWidth: 1,
+    marginTop: 10,
+  },
+  notesLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#0284C7",
+    marginBottom: 4,
+  },
   notesText: {
     flex: 1,
     color: COLORS.textLight,
     fontSize: 12,
     lineHeight: 18,
+    fontWeight: "700",
+  },
+  recurringNotesText: {
+    color: "#0369A1",
     fontWeight: "700",
   },
   quickRow: {

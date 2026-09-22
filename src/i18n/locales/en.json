@@ -63,6 +63,7 @@
   "Bank/Office": "Bank/Office",
   "Event": "Event",
   "Event/Weddings": "Event/Weddings",
+  "Events/Weddings": "Events/Weddings",
   "wholesaleBenefits": "You'll get wholesale pricing on all products!",
   "products": "Products",
   "viewMore": "View More",
@@ -200,5 +201,7 @@
   "confirmed": "Confirmed",
   "paymentPending": "Payment pending",
   "subscriptionConfirmed": "Subscription Confirmed!",
-  "subscriptionConfirmedDesc": "Your recurring delivery has been confirmed. Payment is pending and due on your first delivery day."
+  "subscriptionConfirmedDesc": "Your recurring delivery has been confirmed. Payment is pending and due on your first delivery day.",
+  "success": "Success",
+  "resetPassword": "Reset Password"
 }

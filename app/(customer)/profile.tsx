@@ -17,7 +17,8 @@ import { useAuth } from "../../src/context/AuthContext";
 import { COLORS } from "../../src/utils/constants";
 import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { changeLanguage as setAppLanguage } from "../../src/i18n";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -25,7 +26,15 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [language, setLanguage] = useState<"en" | "ta">("ta");
+  const [language, setLanguage] = useState<"en" | "ta">(
+    (i18n.language?.startsWith("ta") ? "ta" : "en") as "en" | "ta"
+  );
+
+  useEffect(() => {
+    if (i18n.language) {
+      setLanguage(i18n.language.startsWith("ta") ? "ta" : "en");
+    }
+  }, [i18n.language]);
 
   const getInitials = (value?: string) => {
     const s = (value || "").trim();
@@ -92,8 +101,8 @@ export default function ProfileScreen() {
     );
   };
 
-  const changeLanguage = (lang: "en" | "ta") => {
-    i18n.changeLanguage(lang);
+  const changeLanguage = async (lang: "en" | "ta") => {
+    await setAppLanguage(lang);
     setVisible(false);
     setLanguage(lang);
   };

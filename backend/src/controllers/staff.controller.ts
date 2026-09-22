@@ -15,6 +15,7 @@ import {
   restoreInventoryAtomic,
   validateStatusTransition,
 } from "../utils/orderInventory.util";
+import { processDueRecurringDeliveries } from "../services/recurringDelivery.service";
 
 // Toggle online/offline status
 export const toggleStatus = async (req: AuthRequest, res: Response) => {
@@ -59,6 +60,11 @@ export const toggleStatus = async (req: AuthRequest, res: Response) => {
 // Get available orders (pending, not assigned)
 export const getAvailableOrders = async (req: AuthRequest, res: Response) => {
   try {
+    // Ensure any due recurring deliveries for today are materialized into orders
+    await processDueRecurringDeliveries().catch((err) =>
+      console.error("[StaffController] Error processing due recurring deliveries on demand:", err)
+    );
+
     const orders = await Order.find({
       status: "pending",
       $or: [{ assignedStaffId: { $exists: false } }, { assignedStaffId: null }],

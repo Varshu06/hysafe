@@ -21,9 +21,10 @@ import { PRODUCTS } from "../../../src/data/dummy";
 import { getOrderById, cancelOrder } from "../../../src/services/order.service";
 import { Order } from "../../../src/types/order.types";
 import { COLORS } from "../../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 export default function OrderDetailsScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();

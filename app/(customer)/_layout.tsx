@@ -1,9 +1,10 @@
 import { Tabs } from "expo-router";
 import { CustomTabBar } from "../../src/components/ui/CustomTabBar";
 import { COLORS } from "../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 
 export default function CustomerLayout() {
+  const { t } = useTranslation();
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}

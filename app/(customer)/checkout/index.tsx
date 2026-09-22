@@ -33,12 +33,13 @@ import {
   FACTORY_LOCATION,
   SERVICE_RADIUS_KM,
 } from "../../../src/utils/constants";
-import { t } from "i18next";
+import { useTranslation } from "react-i18next";
 import { Order } from "../../../src/types/order.types";
 import { Product } from "../../../src/types/product.types";
 import { useProduct } from "../../../src/context/ProductContext";
 
 export default function CheckoutScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
