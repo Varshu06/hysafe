@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../src/components/ui/Button";
 import { useAuth } from "../../src/context/AuthContext";
+import { getProfile } from "../../src/services/auth.service";
 import { getAssignedOrders, getOngoingOrders } from "../../src/services/staff.service";
 import { COLORS } from "../../src/utils/constants";
 import { StaffHeader } from "../../src/components/staff/StaffHeader";

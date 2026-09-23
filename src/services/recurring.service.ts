@@ -65,6 +65,7 @@ export interface RecurringDelivery {
   startDate: string;
   endDate?: string;
   isActive: boolean;
+  status?: 'active' | 'paused' | 'cancelled';
   billingFrequency: 'per_order' | 'weekly' | 'monthly';
   offlinePaymentMethod?: 'cash' | 'shop';
   deliveryAddress: string;
