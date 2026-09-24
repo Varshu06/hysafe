@@ -21,7 +21,7 @@ import {
   updateDeliveryStatus,
 } from "../../../src/services/staff.service";
 import { getOrderById } from "../../../src/services/order.service";
-import { COLORS } from "../../../src/utils/constants";
+import { COLORS, SERVICE_LOCATION_ADDRESS } from "../../../src/utils/constants";
 import { StaffHeader } from "../../../src/components/staff/StaffHeader";
 import { StatusStepper } from "../../../src/components/staff/StatusStepper";
 import { ReasonModal } from "../../../src/components/staff/ReasonModal";
@@ -79,8 +79,7 @@ export default function StaffOrderDetailsScreen() {
               id: orderData._id,
               customer: (orderData as any).customerId?.name || "Customer",
               customerPhone: (orderData as any).customerId?.phone || "",
-              pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
-              pickupLocation: { lat: 13.0827, lng: 80.2707 },
+              pickupAddress: SERVICE_LOCATION_ADDRESS,
               location: orderData.location,
               codAmount: orderData.isRecurring
                 ? orderData.recurringBillId?.amount ?? orderData.totalPrice
@@ -159,8 +158,7 @@ export default function StaffOrderDetailsScreen() {
               id: orderData._id,
               customer: (orderData as any).customerId?.name || "Customer",
               customerPhone: (orderData as any).customerId?.phone || "",
-              pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
-              pickupLocation: { lat: 13.0827, lng: 80.2707 },
+              pickupAddress: SERVICE_LOCATION_ADDRESS,
               location: orderData.location,
               codAmount:
                 orderData.isRecurring

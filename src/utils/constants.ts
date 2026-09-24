@@ -96,6 +96,12 @@ export const COLORS = {
   grey: "#ddd",
 };
 
+export const BUSINESS_PHONE = "8778170446";
+export const BUSINESS_EMAIL = "hygieneandsafe@gmail.com";
+export const BUSINESS_ADDRESS =
+  "SLO-44-A, Mahiladi, Thirukarankudi, Nanguneri (TK), Tirunelveli District - 627115";
+export const SERVICE_LOCATION_ADDRESS = "8A, T.B Road, Valliyur - 627117";
+
 // Factory/Pickup location coordinates (for service radius validation)
 // Can be customized via EXPO_PUBLIC_FACTORY_LAT and EXPO_PUBLIC_FACTORY_LNG
 export const FACTORY_LOCATION = {

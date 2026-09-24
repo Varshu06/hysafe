@@ -82,7 +82,7 @@ export const CustomerHeader = () => {
       <TouchableOpacity style={styles.addressContainer} onPress={() => router.push('/(customer)/address/search')}>
           <View style={styles.labelRow}>
             <Text style={styles.label}>
-              {isFetchingLocation ? 'Fetching...' : currentLocation ? 'Current Location' : (selectedAddress?.type || 'Home')}
+              {isFetchingLocation ? 'Fetching...' : (selectedAddress?.type || 'Select address')}
             </Text>
             {isFetchingLocation ? (
               <ActivityIndicator size="small" color={COLORS.text} style={styles.chevron} />

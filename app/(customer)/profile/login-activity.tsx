@@ -73,7 +73,7 @@ export default function LoginActivityScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
-          onPress={() => router.replace("/(customer)/profile")}
+          onPress={() => router.replace("/(customer)/profile/privacy-security")}
           style={styles.backButton}
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />

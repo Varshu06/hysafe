@@ -134,7 +134,7 @@ const OrderSchema = new Schema<IOrder>(
     },
     pickupAddress: {
       type: String,
-      default: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
+      default: "8A, T.B Road, Valliyur - 627117",
     },
     location: {
       lat: { type: Number },

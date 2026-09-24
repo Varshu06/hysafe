@@ -22,7 +22,7 @@ import {
   toggleStatus,
   updateDeliveryStatus,
 } from "../../src/services/staff.service";
-import { COLORS } from "../../src/utils/constants";
+import { COLORS, SERVICE_LOCATION_ADDRESS } from "../../src/utils/constants";
 import { StaffHeader } from "../../src/components/staff/StaffHeader";
 import { StaffOrderCard } from "../../src/components/staff/StaffOrderCard";
 import { Chip, ChipRow } from "../../src/components/staff/StaffChips";
@@ -152,8 +152,7 @@ export default function NewOrdersScreen() {
               order.customerId?.name || order.customer?.name || "Customer",
             customerPhone:
               order.customerId?.phone || order.customer?.phone || "",
-            pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
-            pickupLocation: { lat: 13.0827, lng: 80.2707 },
+            pickupAddress: SERVICE_LOCATION_ADDRESS,
             location: order.location,
             codAmount: order.isRecurring ? (order.recurringBillId?.amount ?? order.totalPrice) : (["offline", "cash", "shop"].includes(order.paymentMethod) ? order.totalPrice : 0),
           };

@@ -100,15 +100,15 @@ npx eas-cli build -p android --profile production
 
 ---
 
-## 4. Factory Coordinates & Service Radius Configuration
+## 4. Service Location & Radius Configuration
 
-If your plant/warehouse location changes, you can set custom coordinates via environment variables without modifying source code:
+The service/delivery location is **8A, T.B Road, Valliyur - 627117**. The customer app's checkout uses a 5 km straight-line radius from configured coordinates. Set the coordinates from the confirmed map pin for this exact service location; do not use the business mailing address or an approximate town-center coordinate.
 
 In your EAS build configuration (`eas.json`) or local `.env`:
 ```env
-EXPO_PUBLIC_FACTORY_LAT=13.0827
-EXPO_PUBLIC_FACTORY_LNG=80.2707
-EXPO_PUBLIC_SERVICE_RADIUS_KM=10
+EXPO_PUBLIC_FACTORY_LAT=<latitude from the confirmed Valliyur service-location pin>
+EXPO_PUBLIC_FACTORY_LNG=<longitude from the confirmed Valliyur service-location pin>
+EXPO_PUBLIC_SERVICE_RADIUS_KM=5
 ```
 
 ---

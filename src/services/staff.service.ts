@@ -1,5 +1,6 @@
 import api from "./api";
 import { PaymentMethod } from "@/components/staff/DeliveryConfirmModal";
+import { SERVICE_LOCATION_ADDRESS } from "../utils/constants";
 
 /**
  * Toggle staff online/offline status
@@ -42,8 +43,7 @@ export const getAssignedOrders = async (): Promise<any[]> => {
         order.customerId?.name || (order as any).customer?.name || "Customer",
       customerPhone:
         order.customerId?.phone || (order as any).customer?.phone || "",
-      pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai", // Default pickup
-      pickupLocation: { lat: 13.0827, lng: 80.2707 }, // Default factory location
+      pickupAddress: SERVICE_LOCATION_ADDRESS,
       location: order.location,
       codAmount: order.isRecurring ? (order.recurringBillId?.amount ?? order.totalPrice) : (["offline", "cash", "shop"].includes(order.paymentMethod) ? order.totalPrice : 0),
     }));
@@ -73,8 +73,7 @@ export const getOngoingOrders = async (): Promise<any[]> => {
         order.customerId?.name || (order as any).customer?.name || "Customer",
       customerPhone:
         order.customerId?.phone || (order as any).customer?.phone || "",
-      pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
-      pickupLocation: { lat: 13.0827, lng: 80.2707 },
+      pickupAddress: SERVICE_LOCATION_ADDRESS,
       location: order.location,
       codAmount: order.isRecurring ? (order.recurringBillId?.amount ?? order.totalPrice) : (["offline", "cash", "shop"].includes(order.paymentMethod) ? order.totalPrice : 0),
     }));
