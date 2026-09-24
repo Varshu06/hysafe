@@ -14,8 +14,10 @@ import { Button } from "../../../src/components/ui/Button";
 import { useAuth } from "../../../src/context/AuthContext";
 import { deleteAccount } from "../../../src/services/customer.service";
 import { COLORS } from "../../../src/utils/constants";
+import { useTranslation } from "react-i18next";
 
 export default function DeleteAccountScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
@@ -27,17 +29,17 @@ export default function DeleteAccountScreen() {
     if (working) return;
 
     if (confirmText.trim().toUpperCase() !== "DELETE") {
-      Alert.alert("Confirmation Required", "Please type DELETE in the box to proceed.");
+      Alert.alert(t("error"), t("typeDeleteConfirm"));
       return;
     }
 
     Alert.alert(
-      "Permanent Account Deletion",
-      "Are you absolutely sure? This will permanently delete your account, delivery addresses, and recurring subscriptions. This action cannot be undone.",
+      t("permanentDeleteTitle"),
+      t("permanentDeleteWarning"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: "Delete Account",
+          text: t("delete"),
           style: "destructive",
           onPress: async () => {
             if (working) return;
@@ -45,11 +47,11 @@ export default function DeleteAccountScreen() {
             try {
               const res = await deleteAccount();
               Alert.alert(
-                "Account Deleted",
-                res?.message || "Your account has been permanently deleted.",
+                t("success"),
+                res?.message || t("accountDeletedSuccess"),
                 [
                   {
-                    text: "OK",
+                    text: t("done"),
                     onPress: async () => {
                       await logout();
                       router.replace("/(auth)/login");
@@ -60,8 +62,8 @@ export default function DeleteAccountScreen() {
               );
             } catch (error: any) {
               Alert.alert(
-                "Deletion Failed",
-                error.message || "Failed to delete account. Please try again.",
+                t("error"),
+                error.message || t("deletionFailed"),
               );
               setWorking(false);
             }
@@ -85,21 +87,20 @@ export default function DeleteAccountScreen() {
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Delete Account</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+          {t("deleteAccountTitle")}
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.title}>Delete your account</Text>
+          <Text style={styles.title}>{t("deleteAccountHeading")}</Text>
           <Text style={styles.subtitle}>
-            This action is permanent and cannot be undone. All your profile
-            information, saved addresses, and active recurring subscriptions will
-            be permanently erased. If you have an order currently in progress,
-            it must be delivered or cancelled first.
+            {t("deleteAccountDescription")}
           </Text>
 
-          <Text style={styles.label}>Type DELETE to confirm</Text>
+          <Text style={styles.label}>{t("typeDeleteConfirm")}</Text>
           <TextInput
             style={styles.input}
             placeholder="DELETE"
@@ -111,7 +112,7 @@ export default function DeleteAccountScreen() {
           />
 
           <Button
-            title={working ? "Deleting Account..." : "Permanently Delete Account"}
+            title={working ? "..." : t("deleteAccountTitle")}
             variant="danger"
             onPress={handleRequestDelete}
             disabled={working || confirmText.trim().toUpperCase() !== "DELETE"}

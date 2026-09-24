@@ -41,6 +41,7 @@ export interface Order {
   eventName?: string;
   isRecurring?: boolean;
   recurringDeliveryId?: string;
+  recurringBillId?: any;
   receiverName?: string;
   receiverPhone?: string;
   paymentTerms?: "one-time" | "weekly" | "monthly";

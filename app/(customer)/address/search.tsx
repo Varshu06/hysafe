@@ -4,12 +4,14 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/context/AuthContext';
 import { addressStorage, SavedAddress } from '../../../src/utils/addressStorage';
 import { COLORS } from '../../../src/utils/constants';
 import { ensureForegroundLocationPermission, getCurrentPositionWithTimeout } from '../../../src/utils/location';
 
 export default function AddressSearchScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -33,9 +35,9 @@ export default function AddressSearchScreen() {
       if (addresses.length > 0 && !selectedAddressId) setSelectedAddressId(addresses[0].id);
     } catch (error) {
       console.error('Could not load saved addresses:', error);
-      Alert.alert('Addresses unavailable', 'Saved addresses could not be read from this device. Please try again.');
+      Alert.alert(t('error'), t('addressesUnavailable'));
     }
-  }, [user, selectedAddressId]);
+  }, [user, selectedAddressId, t]);
 
   useEffect(() => {
     loadAddresses();
@@ -54,9 +56,9 @@ export default function AddressSearchScreen() {
       // Request permission
       if (!(await ensureForegroundLocationPermission())) {
         Alert.alert(
-          'Permission Denied',
-          'Please enable location permissions in your device settings to use this feature.',
-          [{ text: 'OK' }]
+          t('permissionDenied'),
+          t('locationPermissionMessage'),
+          [{ text: t('done') }]
         );
         setIsLoadingLocation(false);
         return;
@@ -97,9 +99,9 @@ export default function AddressSearchScreen() {
         console.warn('Location error:', error);
       }
       Alert.alert(
-        'Location Unavailable',
-        'Unable to get your current location. Please make sure location services are enabled in your device settings, or manually search for your address.',
-        [{ text: 'OK' }]
+        t('locationUnavailable'),
+        t('locationUnavailableDesc'),
+        [{ text: t('ok') }]
       );
     } finally {
       setIsLoadingLocation(false);
@@ -274,16 +276,18 @@ export default function AddressSearchScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Feather name="chevron-left" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Enter your area or apartment name</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+          {t('chooseDeliveryLocation')}
+        </Text>
       </View>
 
       {/* Search Input */}
       <View style={styles.searchContainer}>
         <Feather name="search" size={20} color="#64748B" style={styles.searchIcon} />
         <TextInput 
-           placeholder="Try Jp nagar, siri gardeniam, etc." 
-           style={styles.searchInput}
+           placeholder={t('searchAreaPlaceholder')} 
            placeholderTextColor="#94A3B8"
+           style={styles.searchInput}
           value={searchText}
           onChangeText={handleSearch}
           returnKeyType="search"
@@ -317,7 +321,7 @@ export default function AddressSearchScreen() {
         <View style={styles.locationIconContainer}>
           <Ionicons name="locate-outline" size={22} color={COLORS.text} />
         </View>
-        <Text style={styles.locationText}>Use my current location</Text>
+        <Text style={styles.locationText}>{t('useCurrentLocation')}</Text>
         {isLoadingLocation ? (
           <ActivityIndicator size="small" color={COLORS.text} />
         ) : (
@@ -367,7 +371,7 @@ export default function AddressSearchScreen() {
           <View style={styles.addIconContainer}>
             <MaterialIcons name="add-location-alt" size={22} color={COLORS.text} />
           </View>
-          <Text style={styles.addNewText}>Add new address</Text>
+          <Text style={styles.addNewText}>{t('addNewAddress')}</Text>
         </TouchableOpacity>
       )}
 
@@ -376,7 +380,7 @@ export default function AddressSearchScreen() {
         <>
           <View style={styles.sectionDivider}>
             <View style={styles.sectionLine} />
-            <Text style={styles.sectionTitle}>Saved Address</Text>
+            <Text style={styles.sectionTitle}>{t('savedAddress')}</Text>
             <View style={styles.sectionLine} />
           </View>
           
@@ -394,7 +398,7 @@ export default function AddressSearchScreen() {
                   router.back();
                 } catch (error) {
                   console.error('Could not select saved address:', error);
-                  Alert.alert('Address not selected', 'Could not save your address selection on this device. Please try again.');
+                  Alert.alert(t('addressNotSelected'), t('addressNotSelectedDesc'));
                 }
               }}
             >
@@ -411,10 +415,10 @@ export default function AddressSearchScreen() {
               </View>
               <View style={styles.addressContent}>
                 <View style={styles.addressTypeRow}>
-                    <Text style={styles.addressType}>{addr.type}</Text>
+                    <Text style={styles.addressType}>{t(addr.type) || addr.type}</Text>
                   {isSelected && (
                     <View style={styles.selectedBadge}>
-                      <Text style={styles.selectedText}>Selected</Text>
+                      <Text style={styles.selectedText}>{t('selected')}</Text>
                     </View>
                   )}
                 </View>
@@ -438,7 +442,7 @@ export default function AddressSearchScreen() {
             style={styles.viewAllButton}
             onPress={() => setShowAllAddresses(true)}
           >
-            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllText}>{t('seeAll')}</Text>
             <Feather name="chevron-down" size={18} color={COLORS.text} />
           </TouchableOpacity>
         )}
@@ -465,11 +469,9 @@ export default function AddressSearchScreen() {
               style={styles.menuItem}
               onPress={async () => {
                 if (showMenuForAddress) {
-                  // Navigate to edit address (you can implement edit functionality)
                   const address = savedAddresses.find(a => a.id === showMenuForAddress);
                   if (address) {
                     setShowMenuForAddress(null);
-                    // Navigate to add/edit address screen with address data
                     router.push({
                       pathname: '/(customer)/address/add',
                       params: {
@@ -486,7 +488,7 @@ export default function AddressSearchScreen() {
               }}
             >
               <Feather name="edit-2" size={20} color={COLORS.text} />
-              <Text style={styles.menuItemText}>Edit</Text>
+              <Text style={styles.menuItemText}>{t('edit')}</Text>
             </TouchableOpacity>
             
             <View style={styles.menuDivider} />
@@ -496,12 +498,12 @@ export default function AddressSearchScreen() {
               onPress={async () => {
                 if (showMenuForAddress) {
                   Alert.alert(
-                    'Delete Address',
-                    'Are you sure you want to delete this address?',
+                    t('deleteAddress'),
+                    t('deleteAddressConfirm'),
                     [
-                      { text: 'Cancel', style: 'cancel', onPress: () => setShowMenuForAddress(null) },
+                      { text: t('cancel'), style: 'cancel', onPress: () => setShowMenuForAddress(null) },
                       {
-                        text: 'Delete',
+                        text: t('delete'),
                         style: 'destructive',
                         onPress: async () => {
                           try {
@@ -514,7 +516,7 @@ export default function AddressSearchScreen() {
                             setShowMenuForAddress(null);
                           } catch (error) {
                             console.error('Could not delete saved address:', error);
-                            Alert.alert('Address not deleted', 'Could not update saved addresses on this device. Please try again.');
+                            Alert.alert(t('error'), t('addressNotDeleted'));
                           }
                         },
                       },
@@ -524,7 +526,7 @@ export default function AddressSearchScreen() {
               }}
             >
               <Feather name="trash-2" size={20} color={COLORS.error} />
-              <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>Delete</Text>
+              <Text style={[styles.menuItemText, styles.menuItemTextDanger]}>{t('delete')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

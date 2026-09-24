@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../../src/components/ui/Button";
@@ -12,6 +13,7 @@ type PaymentMethodValue = "online" | "offline";
 const PAYMENT_METHOD_KEY = "@hysafe_default_payment_method";
 
 export default function PaymentMethodsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
@@ -40,9 +42,9 @@ export default function PaymentMethodsScreen() {
     setSaving(true);
     try {
       await AsyncStorage.setItem(PAYMENT_METHOD_KEY, "offline");
-      Alert.alert("Saved", "Cash on Delivery is set as your default payment method.", [
+      Alert.alert(t("Saved"), t("savedCodDefault"), [
         {
-          text: "OK",
+          text: t("ok"),
           onPress: () =>
             router.replace(
               returnTo === "checkout"
@@ -52,7 +54,7 @@ export default function PaymentMethodsScreen() {
         },
       ]);
     } catch (e) {
-      Alert.alert("Error", "Could not save payment method. Please try again.");
+      Alert.alert(t("Error"), t("couldNotSavePaymentMethod"));
     } finally {
       setSaving(false);
     }

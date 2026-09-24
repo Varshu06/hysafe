@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import React, { ReactNode, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../utils/constants';
 import { StatusBadge } from '../ui/StatusBadge';
 
@@ -52,6 +53,7 @@ export function StaffOrderCard({
   quickActions,
   items,
 }: Props) {
+  const { t } = useTranslation();
   const timeText = useMemo(() => {
     if (!createdAt) return '';
     const d = new Date(createdAt);
@@ -89,13 +91,15 @@ export function StaffOrderCard({
             {isRecurring ? (
               <View style={styles.recurringChip}>
                 <Feather name="repeat" size={11} color="#0284C7" />
-                <Text style={styles.recurringChipText}>Recurring</Text>
+                <Text style={styles.recurringChipText}>{t("recurring")}</Text>
               </View>
             ) : null}
           </View>
           {paymentLabel ? (
             <View style={styles.payChip}>
-              <Text style={styles.payChipText}>{paymentLabel}</Text>
+              <Text style={styles.payChipText} numberOfLines={1}>
+                {paymentLabel}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -132,7 +136,7 @@ export function StaffOrderCard({
         <View style={styles.slotRow}>
           <Feather name="calendar" size={14} color="#0284C7" />
           <Text style={styles.slotText} numberOfLines={1}>
-            Scheduled: {formattedSlot}
+            {t("scheduled")}: {formattedSlot}
           </Text>
         </View>
       ) : null}
@@ -173,7 +177,9 @@ export function StaffOrderCard({
             style={[styles.notesText, isRecurring && styles.recurringNotesText]}
             numberOfLines={2}
           >
-            {notes}
+            {notes.startsWith("Recurring Delivery:")
+              ? `${t("recurring")}: ${notes.replace("Recurring Delivery:", "").trim()}`
+              : notes}
           </Text>
         </View>
       ) : null}
@@ -238,16 +244,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0F2FE',
     borderWidth: 1,
     borderColor: '#BAE6FD',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    flexShrink: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'center',
+    maxWidth: '45%',
   },
   payChipText: {
-    fontSize: 12,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '800',
     color: '#0F172A',
-    lineHeight: 16,
+    lineHeight: 15,
   },
   metaText: {
     color: COLORS.textLight,

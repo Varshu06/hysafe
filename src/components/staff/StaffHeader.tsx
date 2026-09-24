@@ -15,7 +15,7 @@ export function StaffHeader({ title, onBack, right }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.header, { paddingTop: insets.top }]}>
-      <View style={styles.side}>
+      <View style={styles.sideLeft}>
         {onBack ? (
           <TouchableOpacity
             onPress={onBack}
@@ -26,16 +26,16 @@ export function StaffHeader({ title, onBack, right }: Props) {
           >
             <Feather name="arrow-left" size={22} color={COLORS.text} />
           </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
-        )}
+        ) : null}
       </View>
 
-      <Text style={styles.title} numberOfLines={2}>
+      <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
         {title}
       </Text>
 
-      <View style={[styles.side, styles.right]}>{right || <NotificationCenter topInset={insets.top} />}</View>
+      <View style={styles.sideRight}>
+        {right || <NotificationCenter topInset={insets.top} />}
+      </View>
     </View>
   );
 }
@@ -45,38 +45,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 14,
-    minHeight: 64,
+    minHeight: 56,
     backgroundColor: COLORS.secondary,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
     position: 'relative',
   },
-  side: {
-    width: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
+  sideLeft: {
     position: 'absolute',
-    left: 20,
-  },
-  right: {
-    alignItems: 'center',
-    position: 'absolute',
-    right: 20,
-  },
-  placeholder: {
-    width: 52,
-    height: 44,
-  },
-  backBtn: {
+    left: 16,
     width: 44,
     height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  sideRight: {
+    position: 'absolute',
+    right: 16,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -86,12 +88,11 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '800',
     color: COLORS.text,
     textAlign: 'center',
     lineHeight: 24,
-    flexShrink: 1,
-    paddingHorizontal: 8,
+    maxWidth: '70%',
   },
 });
 

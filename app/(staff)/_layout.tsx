@@ -33,7 +33,7 @@ export default function StaffLayout() {
         name="index"
         options={{
           title: "New Orders",
-          tabBarLabel: t("newOrders"),
+          tabBarLabel: t("new"),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Feather name="inbox" color={color} size={size ?? 20} />

@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   StyleSheet,
@@ -13,13 +14,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../../../src/utils/constants";
 
 export default function AppLockScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [enabled, setEnabled] = useState(false);
 
   const toggle = () => {
     setEnabled((prev) => !prev);
-    Alert.alert("Coming soon", "Biometric / PIN lock will be available soon.");
+    Alert.alert(t("comingSoon"), t("appLockComingSoon"));
   };
 
   return (

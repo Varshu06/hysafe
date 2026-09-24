@@ -136,7 +136,7 @@ export default function CustomerHomeScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Products Horizontal Scroll */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("products")}</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>{t("products")}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -177,7 +177,14 @@ export default function CustomerHomeScreen() {
                       style={styles.addButton}
                       onPress={() => handleAddProduct(product)}
                     >
-                      <Text style={styles.addButtonText}>{t("add")}</Text>
+                      <Text
+                        style={styles.addButtonText}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.8}
+                      >
+                        {t("add")}
+                      </Text>
                       <Text style={styles.plusIcon}>+</Text>
                     </TouchableOpacity>
                   )}
@@ -195,7 +202,7 @@ export default function CustomerHomeScreen() {
 
         {/* Active Orders */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("activeOrders")}</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleStandalone]}>{t("activeOrders")}</Text>
           {activeOrders.length > 0 ? (
             activeOrders
               .slice(0, 1)
@@ -215,12 +222,12 @@ export default function CustomerHomeScreen() {
         {/* Order History */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t("orderHistory")}</Text>
+            <Text style={styles.sectionTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t("orderHistory")}</Text>
             <TouchableOpacity
               style={styles.seeAllBtn}
               onPress={() => router.push("/(customer)/orders")}
             >
-              <Text style={styles.seeAllText}>{t("seeAll")}</Text>
+              <Text style={styles.seeAllText} numberOfLines={1}>{t("seeAll")}</Text>
             </TouchableOpacity>
           </View>
           {pastOrders.length > 0 ? (
@@ -261,24 +268,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 14,
+    gap: 10,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: COLORS.text,
+    lineHeight: 26,
+    paddingVertical: 2,
+    flex: 1,
+  },
+  sectionTitleStandalone: {
     marginBottom: 12,
   },
   seeAllBtn: {
     backgroundColor: "#102841",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
+    flexShrink: 0,
+    justifyContent: "center",
+    alignItems: "center",
   },
   seeAllText: {
     color: "white",
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingVertical: 1,
   },
   productsScroll: {
     paddingRight: 20,
@@ -312,6 +330,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
     lineHeight: 20,
+    paddingVertical: 2,
     flexShrink: 1,
   },
   priceRow: {
@@ -328,18 +347,20 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: "#102841",
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 10,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    height: 32,
+    justifyContent: "center",
+    gap: 4,
+    minHeight: 32,
   },
   addButtonText: {
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+    textAlign: "center",
   },
   plusIcon: {
     color: "white",
@@ -375,18 +396,21 @@ const styles = StyleSheet.create({
   },
   viewMoreBtn: {
     backgroundColor: "#102841",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
     alignSelf: "flex-end",
-    marginTop: 16,
-    minHeight: 44,
+    marginTop: 12,
+    minHeight: 36,
+    justifyContent: "center",
+    alignItems: "center",
   },
   viewMoreText: {
     color: "white",
     fontWeight: "bold",
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 18,
+    paddingVertical: 1,
     textAlign: "center",
   },
   bottomSpacer: {

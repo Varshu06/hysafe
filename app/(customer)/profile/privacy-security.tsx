@@ -1,12 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../../../src/utils/constants";
 import { useAuth } from "../../../src/context/AuthContext";
 
 export default function PrivacySecurityScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { logout } = useAuth();
@@ -78,7 +80,7 @@ export default function PrivacySecurityScreen() {
           subtitle="View recent login sessions"
           onPress={() => router.push("/(customer)/profile/login-activity")}
         />
-        <Row icon="log-out" title="Log Out" subtitle="Sign out of this account on this device" onPress={() => Alert.alert("Log Out", "Are you sure you want to log out?", [{ text: "Cancel", style: "cancel" }, { text: "Log Out", style: "destructive", onPress: () => void logout() }])} />
+        <Row icon="log-out" title={t("Logout")} subtitle={t("confirmLogout")} onPress={() => Alert.alert(t("Logout"), t("confirmLogout"), [{ text: t("cancel"), style: "cancel" }, { text: t("Logout"), style: "destructive", onPress: () => void logout() }])} />
 
         <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Data & Privacy</Text>
         <Text style={styles.rowSubtitle}>HySafe account data includes profile and contact information. Orders and recurring plans are stored with the service. Saved addresses are stored locally on this device; the selected address is sent with an order at checkout.</Text>

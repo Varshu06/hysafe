@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   ScrollView,
@@ -16,6 +17,7 @@ import { COLORS } from "../../../src/utils/constants";
 import { changePassword } from "../../../src/services/auth.service";
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -29,20 +31,20 @@ export default function ChangePasswordScreen() {
 
   const handleSave = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Missing fields", "Please fill all fields.");
+      Alert.alert(t("error"), t("pleaseFillAllFields"));
       return;
     }
     if (newPassword.length < 6) {
       Alert.alert(
-        "Weak password",
-        "New password must be at least 6 characters.",
+        t("error"),
+        t("newPasswordMinLength"),
       );
       return;
     }
     if (newPassword !== confirmPassword) {
       Alert.alert(
-        "Mismatch",
-        "New password and confirm password do not match.",
+        t("error"),
+        t("passwordsDoNotMatch"),
       );
       return;
     }
@@ -50,9 +52,9 @@ export default function ChangePasswordScreen() {
     setSaving(true);
     try {
       await changePassword(currentPassword, newPassword);
-      Alert.alert("Success", "Your password has been changed successfully.", [
+      Alert.alert(t("Success"), t("passwordChangedSuccess"), [
         {
-          text: "OK",
+          text: t("ok"),
           onPress: () => {
             setCurrentPassword("");
             setNewPassword("");
@@ -63,8 +65,8 @@ export default function ChangePasswordScreen() {
       ]);
     } catch (error: any) {
       Alert.alert(
-        "Error",
-        error.message || "Failed to change password. Please try again.",
+        t("Error"),
+        error.message || t("failedToChangePassword"),
       );
     } finally {
       setSaving(false);

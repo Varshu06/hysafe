@@ -141,10 +141,31 @@ export const WhyChooseUs = () => {
       </View>
 
       <View style={styles.promoContainer}>
-        <Text style={styles.promoTitle}>{t("pureWater")}</Text>
-        <Text style={styles.promoTitle}>{t("prompt")}</Text>
+        <Text
+          style={styles.promoTitle}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {t("pureWater")}
+        </Text>
+        <Text
+          style={styles.promoTitle}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {t("prompt")}
+        </Text>
         <View style={styles.deliveryRow}>
-          <Text style={styles.promoTitle}>{t("delivery")}</Text>
+          <Text
+            style={[styles.promoTitle, { flexShrink: 1 }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {t("delivery")}
+          </Text>
           <Text style={styles.promoIcon}>🚚</Text>
         </View>
       </View>
@@ -158,13 +179,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   promoContainer: {
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 16,
     color: COLORS.text,
+    lineHeight: 26,
+    paddingVertical: 2,
   },
   card: {
     backgroundColor: "#0F172A",
@@ -198,10 +221,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 6,
+    lineHeight: 28,
+    paddingVertical: 2,
   },
   desc: {
     color: "rgba(255,255,255,0.85)",
-    fontSize: 16,
+    fontSize: 15,
+    lineHeight: 22,
+    paddingVertical: 2,
   },
   dots: {
     flexDirection: "row",
@@ -219,19 +246,20 @@ const styles = StyleSheet.create({
     width: 24,
   },
   promoTitle: {
-    fontSize: 62,
+    fontSize: 32,
     fontWeight: "900",
     color: "#B8D4E8",
     opacity: 0.7,
-    lineHeight: 76,
+    lineHeight: 46,
+    paddingVertical: 2,
   },
   deliveryRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   promoIcon: {
-    fontSize: 62,
+    fontSize: 34,
     opacity: 0.7,
-    marginLeft: 14,
+    marginLeft: 10,
   },
 });

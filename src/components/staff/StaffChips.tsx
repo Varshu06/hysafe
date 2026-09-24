@@ -18,7 +18,14 @@ export function Chip({
       activeOpacity={0.85}
       disabled={!onPress}
     >
-      <Text style={[styles.text, active ? styles.activeText : styles.inactiveText]}>{label}</Text>
+      <Text
+        style={[styles.text, active ? styles.activeText : styles.inactiveText]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+      >
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -30,26 +37,30 @@ export function ChipRow({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'center',
+    gap: 8,
   },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+    flex: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 9,
+    borderRadius: 12,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeChip: {
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
   inactiveChip: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
   },
   text: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '800',
+    textAlign: 'center',
   },
   activeText: {
     color: COLORS.secondary,

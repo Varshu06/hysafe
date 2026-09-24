@@ -6,20 +6,24 @@ interface ButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'success';
+  size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: ViewStyle | ViewStyle[];
+  textStyle?: TextStyle | TextStyle[];
+  numberOfLines?: number;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
   variant = 'primary',
+  size = 'lg',
   disabled = false,
   loading = false,
   style,
   textStyle,
+  numberOfLines = 1,
 }) => {
   const getBackgroundColor = () => {
     if (disabled) return COLORS.textLight; // Use a distinct disabled color if preferred
@@ -39,8 +43,21 @@ export const Button: React.FC<ButtonProps> = ({
     return COLORS.secondary;
   };
 
+  const sizeButtonStyles = {
+    sm: styles.buttonSm,
+    md: styles.buttonMd,
+    lg: styles.buttonLg,
+  }[size];
+
+  const sizeTextStyles = {
+    sm: styles.textSm,
+    md: styles.textMd,
+    lg: styles.textLg,
+  }[size];
+
   const buttonStyles = [
     styles.button,
+    sizeButtonStyles,
     { backgroundColor: getBackgroundColor() },
     variant === 'outline' && { borderWidth: 1, borderColor: COLORS.primary },
     disabled && { opacity: 0.6 },
@@ -49,6 +66,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const textStyles = [
     styles.text,
+    sizeTextStyles,
     { color: getTextColor() },
     textStyle,
   ];
@@ -63,7 +81,14 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator color={getTextColor()} />
       ) : (
-        <Text style={textStyles}>{title}</Text>
+        <Text
+          style={textStyles}
+          numberOfLines={numberOfLines}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+        >
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -71,20 +96,46 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 50,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
   },
+  buttonSm: {
+    minHeight: 34,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  buttonMd: {
+    minHeight: 40,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  buttonLg: {
+    minHeight: 48,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
   text: {
-    fontSize: 16,
     fontWeight: '600',
     flexShrink: 1,
     textAlign: 'center',
-    lineHeight: 22,
+  },
+  textSm: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  textMd: {
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '700',
+  },
+  textLg: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '700',
   },
 });
 

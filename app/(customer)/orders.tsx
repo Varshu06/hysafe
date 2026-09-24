@@ -36,9 +36,9 @@ export default function OrdersScreen() {
   if (!isAuthenticated) {
     return (
       <View style={styles.container}>
-        <Text style={styles.emptyText}>Please login to view your orders</Text>
+        <Text style={styles.emptyText}>{t("pleaseLoginToViewOrders")}</Text>
         <Button
-          title="Login"
+          title={t("login")}
           onPress={() => router.push("/(auth)/login")}
           style={styles.loginButton}
         />
@@ -52,7 +52,7 @@ export default function OrdersScreen() {
     if (order.assignedStaff?.name) return order.assignedStaff.name;
     // For pending orders, show "Not Assigned", otherwise show a default name
     if (order.status === "pending") return t("notAssigned");
-    return "Delivery Partner"; // Fallback for assigned orders without name
+    return t("deliveryPartner"); // Fallback for assigned orders without name
   };
 
   const getStatusIcon = (status: string) => {
@@ -249,6 +249,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.text,
     textAlign: "center",
+    lineHeight: 26,
+    paddingVertical: 2,
   },
   placeholder: {
     width: 40,
@@ -285,6 +287,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: COLORS.textLight,
+    lineHeight: 20,
+    paddingVertical: 1,
+    textAlign: "center",
   },
   activeTabText: {
     color: "white",
@@ -324,12 +329,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#0F172A",
     textTransform: "capitalize",
+    lineHeight: 18,
+    paddingVertical: 1,
   },
   date: {
     color: "white",
     fontSize: 12,
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 8,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingVertical: 1,
   },
   price: {
     color: "white",
@@ -346,10 +356,12 @@ const styles = StyleSheet.create({
   },
   driverLabel: {
     color: "white",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
-    marginRight: 16,
+    marginRight: 10,
     flexShrink: 0,
+    lineHeight: 20,
+    paddingVertical: 1,
   },
   addressText: {
     color: "#94A3B8",
@@ -372,6 +384,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
     color: "#0F172A",
+    lineHeight: 18,
+    paddingVertical: 1,
   },
   emptyContainer: {
     flex: 1,

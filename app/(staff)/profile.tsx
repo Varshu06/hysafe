@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../src/components/ui/Button";
 import { useAuth } from "../../src/context/AuthContext";
+import { getProfile } from "../../src/services/auth.service";
 import { getAssignedOrders, getOngoingOrders } from "../../src/services/staff.service";
 import { COLORS } from "../../src/utils/constants";
 import { StaffHeader } from "../../src/components/staff/StaffHeader";
@@ -201,7 +202,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Status</Text>
+            <Text style={styles.statusLabel}>{t("status")}</Text>
             <View
               style={[
                 styles.statusPill,
@@ -214,7 +215,7 @@ export default function ProfileScreen() {
                   isOnline ? styles.statusOnlineText : styles.statusOfflineText,
                 ]}
               >
-                {statusLabel}
+                {t(statusLabel)}
               </Text>
             </View>
           </View>
@@ -225,19 +226,47 @@ export default function ProfileScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.pending}</Text>
-              <Text style={styles.statLabel}>{t("new")}</Text>
+              <Text
+                style={styles.statLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {t("new")}
+              </Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.ongoing}</Text>
-              <Text style={styles.statLabel}>{t("ongoing")}</Text>
+              <Text
+                style={styles.statLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {t("ongoing")}
+              </Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{stats.delivered}</Text>
-              <Text style={styles.statLabel}>{t("delivered")}</Text>
+              <Text
+                style={styles.statLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {t("delivered")}
+              </Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>₹{stats.cod}</Text>
-              <Text style={styles.statLabel}>COD</Text>
+              <Text
+                style={styles.statLabel}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                COD
+              </Text>
             </View>
           </View>
         </View>
@@ -424,6 +453,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     borderRadius: 14,
     paddingVertical: 12,
+    paddingHorizontal: 4,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -437,6 +467,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: COLORS.textLight,
+    textAlign: "center",
   },
   logoutButton: {
     marginTop: 20,

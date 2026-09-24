@@ -48,14 +48,14 @@ export const CustomerHeader = () => {
         address?.region,
       ].filter(Boolean).join(', ');
 
-      setCurrentLocation(fullAddress || 'Current Location');
+      setCurrentLocation(fullAddress || t('currentLocation'));
     } catch (error) {
       // Silently fail - will fallback to saved address
       console.warn('Failed to fetch current location:', error);
     } finally {
       setIsFetchingLocation(false);
     }
-  }, []);
+  }, [t]);
 
   // Load selected address
   const loadSelectedAddress = useCallback(async () => {
@@ -81,8 +81,8 @@ export const CustomerHeader = () => {
     <View style={styles.container}>
       <TouchableOpacity style={styles.addressContainer} onPress={() => router.push('/(customer)/address/search')}>
           <View style={styles.labelRow}>
-            <Text style={styles.label}>
-              {isFetchingLocation ? 'Fetching...' : (selectedAddress?.type || 'Select address')}
+            <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {isFetchingLocation ? t('fetching') : (selectedAddress?.type ? t(selectedAddress.type) : t('selectAddress'))}
             </Text>
             {isFetchingLocation ? (
               <ActivityIndicator size="small" color={COLORS.text} style={styles.chevron} />
@@ -92,8 +92,8 @@ export const CustomerHeader = () => {
           </View>
         <Text style={styles.address} numberOfLines={2}>
           {isFetchingLocation 
-            ? 'Getting your location...' 
-            : currentLocation || selectedAddress?.address || selectedAddress?.fullAddress || 'Select delivery address'}
+            ? t('gettingLocation') 
+            : currentLocation || selectedAddress?.address || selectedAddress?.fullAddress || t('selectDeliveryAddress')}
         </Text>
       </TouchableOpacity>
       
@@ -152,7 +152,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.text,
-    lineHeight: 18,
+    lineHeight: 20,
+    paddingVertical: 2,
   },
   chevron: {
     marginLeft: 4,
@@ -160,7 +161,8 @@ const styles = StyleSheet.create({
   address: {
     fontSize: 12,
     color: COLORS.textLight,
-    lineHeight: 16,
+    lineHeight: 18,
+    paddingVertical: 1,
   },
   actions: {
     flexDirection: 'row',

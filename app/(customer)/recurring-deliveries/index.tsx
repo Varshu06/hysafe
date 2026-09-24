@@ -84,21 +84,21 @@ export default function RecurringDeliveriesScreen() {
       if (isPausing) {
         await pauseRecurringDelivery(id);
         Alert.alert(
-          "Subscription Paused",
-          `Recurring delivery for ${delivery.productName} is now paused. You can resume it anytime.`
+          t("subscriptionPaused"),
+          t("subscriptionPausedMessage", { product: delivery.productName }),
         );
       } else {
         await resumeRecurringDelivery(id);
         Alert.alert(
-          "Subscription Resumed",
-          `Recurring delivery for ${delivery.productName} has been resumed. Next delivery scheduled.`
+          t("subscriptionResumed"),
+          t("subscriptionResumedMessage", { product: delivery.productName }),
         );
       }
       loadRecurringDeliveries();
     } catch (error: any) {
       Alert.alert(
-        "Error",
-        error.message || `Failed to ${isPausing ? "pause" : "resume"} delivery`
+        t("Error"),
+        error.message || t("failedToCancelRecurringDelivery"),
       );
     } finally {
       setActionLoadingId(null);
@@ -107,26 +107,26 @@ export default function RecurringDeliveriesScreen() {
 
   const handleDelete = async (id: string, productName: string) => {
     Alert.alert(
-      "Cancel Subscription",
-      `Are you sure you want to cancel your recurring subscription for ${productName}?`,
+      t("cancelSubscription"),
+      t("cancelSubscriptionConfirm", { product: productName }),
       [
-        { text: "Keep Subscription", style: "cancel" },
+        { text: t("keepSubscription"), style: "cancel" },
         {
-          text: "Yes, Cancel",
+          text: t("yesCancel"),
           style: "destructive",
           onPress: async () => {
             setActionLoadingId(id);
             try {
               await deleteRecurringDelivery(id, false);
               Alert.alert(
-                "Cancelled",
-                "Recurring delivery subscription has been cancelled."
+                t("cancelled"),
+                t("subscriptionCancelledSuccess"),
               );
               loadRecurringDeliveries();
             } catch (error: any) {
               Alert.alert(
-                "Error",
-                error.message || "Failed to cancel recurring delivery"
+                t("Error"),
+                error.message || t("failedToCancelRecurringDelivery"),
               );
             } finally {
               setActionLoadingId(null);

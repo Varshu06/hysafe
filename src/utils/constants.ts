@@ -16,7 +16,7 @@ const getLocalIp = () => {
   return hostUri?.split(":")[0];
 };
 
-const LOCAL_IP = getLocalIp() || "10.124.21.42";
+const LOCAL_IP = getLocalIp() || "192.168.1.13";
 
 // Resolve API base URL:
 // 1. Explicit EXPO_PUBLIC_API_URL or Constants.expoConfig.extra.apiUrl (dev or prod)

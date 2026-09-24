@@ -127,7 +127,7 @@ export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
                   <Feather name="check" size={12} color="white" />
                 )}
               </View>
-              <Text style={styles.timelineLabel}>{t(item.status)}</Text>
+              <Text style={styles.timelineLabel} numberOfLines={2}>{t(item.status)}</Text>
             </View>
           )) || (
             <>
@@ -135,14 +135,14 @@ export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
                 <View style={[styles.dot, styles.completedDot]}>
                   <Feather name="check" size={12} color="white" />
                 </View>
-                <Text style={styles.timelineLabel}>{t("picked")}</Text>
+                <Text style={styles.timelineLabel} numberOfLines={2}>{t("picked")}</Text>
               </View>
               <View style={styles.timelineItem}>
                 <View style={styles.spacer} />
               </View>
               <View style={styles.timelineItem}>
                 <View style={[styles.dot, styles.pendingDot]} />
-                <Text style={styles.timelineLabel}>{t("delivered")}</Text>
+                <Text style={styles.timelineLabel} numberOfLines={2}>{t("delivered")}</Text>
               </View>
             </>
           )}
@@ -177,7 +177,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     flexShrink: 1,
-    lineHeight: 22,
+    lineHeight: 24,
+    paddingVertical: 2,
   },
   timeline: {
     marginBottom: 24,
@@ -261,9 +262,10 @@ const styles = StyleSheet.create({
   timelineLabel: {
     color: "white",
     fontSize: 12,
-    width: 86,
+    width: 88,
     textAlign: "center",
-    lineHeight: 16,
+    lineHeight: 18,
+    paddingVertical: 1,
   },
   footer: {
     flexDirection: "row",
@@ -275,7 +277,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     flexShrink: 1,
-    lineHeight: 22,
+    lineHeight: 24,
+    paddingVertical: 2,
   },
   callButton: {
     width: 36,

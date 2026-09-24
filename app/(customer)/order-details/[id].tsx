@@ -49,30 +49,30 @@ export default function OrderDetailsScreen() {
     if (phone) {
       Linking.openURL(`tel:${phone}`);
     } else {
-      Alert.alert("No Phone Number", "Driver phone number is not available");
+      Alert.alert(t("noPhoneNumber"), t("driverPhoneNotAvailable"));
     }
   };
 
   const handleCopyOrderId = () => {
     if (order?._id) {
       Clipboard.setString(order._id);
-      Alert.alert("Copied!", "Order ID copied to clipboard");
+      Alert.alert(t("copied"), t("orderIdCopied"));
     }
   };
 
   const handleCancelOrder = () => {
-    Alert.alert("Cancel Order", "Are you sure you want to cancel this order?", [
-      { text: "No", style: "cancel" },
+    Alert.alert(t("cancelOrder"), t("cancelOrderConfirm"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Yes, Cancel",
+        text: t("yesCancel"),
         style: "destructive",
         onPress: async () => {
           try {
             await cancelOrder(order!._id);
-            Alert.alert("Success", "Order cancelled successfully");
+            Alert.alert(t("Success"), t("orderCancelledSuccess"));
             router.back();
           } catch (error: any) {
-            Alert.alert("Error", error.message || "Failed to cancel order");
+            Alert.alert(t("Error"), error.message || t("failedToCancelOrder"));
           }
         },
       },
@@ -81,19 +81,19 @@ export default function OrderDetailsScreen() {
 
   const handleTrackOrder = () => {
     // Navigate to tracking page or show tracking info
-    Alert.alert("Track Order", "Tracking feature coming soon!");
+    Alert.alert(t("trackOrder"), t("trackingComingSoon"));
   };
 
   const handleReorder = async () => {
     if (!order) {
-      Alert.alert("Error", "Order information not available");
+      Alert.alert(t("Error"), t("orderInfoNotAvailable"));
       return;
     }
 
     try {
       const orderItems = order.items || [];
       if (!orderItems.length) {
-        Alert.alert("Unable to reorder", "This order does not include item details.");
+        Alert.alert(t("unableToReorder"), t("orderNoItemDetails"));
         return;
       }
       const productsById = await getProductsByIds(orderItems.map((item) => item.productId));
@@ -123,27 +123,27 @@ export default function OrderDetailsScreen() {
       }
 
       if (addedNames.length === 0) {
-        Alert.alert("Unable to reorder", "The products from this order are no longer available.");
+        Alert.alert(t("unableToReorder"), t("productsNoLongerAvailable"));
         return;
       }
-      const unavailableMessage = unavailableNames.length ? `\nUnavailable: ${unavailableNames.join(", ")}` : "";
+      const unavailableMessage = unavailableNames.length ? `\n${t("unavailableItemsPrefix")} ${unavailableNames.join(", ")}` : "";
 
       Alert.alert(
-        "Success",
-        `${addedNames.join("\n")} added to cart.${unavailableMessage}`,
+        t("Success"),
+        `${addedNames.join("\n")} ${t("itemsAddedToCart")}${unavailableMessage}`,
         [
           {
-            text: "View Cart",
+            text: t("checkout"),
             onPress: () => router.push("/(customer)/checkout"),
           },
           {
-            text: "Continue Shopping",
+            text: t("browseProducts"),
             style: "cancel",
           },
         ],
       );
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to add items to cart");
+      Alert.alert(t("Error"), error.message || t("failedToAddItemsToCart"));
     }
   };
 
@@ -180,7 +180,7 @@ export default function OrderDetailsScreen() {
       const orderData = await getOrderById(id);
       setOrder(orderData);
     } catch (error: any) {
-      Alert.alert("Error", "Failed to load order details");
+      Alert.alert(t("Error"), t("failedToLoadOrderDetails"));
     } finally {
       setIsLoading(false);
     }

@@ -1,6 +1,8 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Modal,
   ScrollView,
   StyleSheet,
@@ -10,7 +12,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { Alert } from 'react-native';
 import { COLORS } from '../../utils/constants';
 
 export interface DeliveryTimeValue {
@@ -46,6 +47,7 @@ export const DeliveryTimeModal: React.FC<DeliveryTimeModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t } = useTranslation();
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(selectedDate));
   const [draftDate, setDraftDate] = useState<Date>(selectedDate);
@@ -94,7 +96,7 @@ export const DeliveryTimeModal: React.FC<DeliveryTimeModalProps> = ({
   const handleConfirm = () => {
     const parsed = parseTime(timeText);
     if (!parsed) {
-      Alert.alert('Invalid time', 'Please enter time in HH:MM format (e.g., 07:30).');
+      Alert.alert(t('invalidTime'), t('invalidTimePrompt'));
       return;
     }
 

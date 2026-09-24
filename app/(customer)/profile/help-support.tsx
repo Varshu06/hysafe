@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter as useExpoRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BUSINESS_ADDRESS, BUSINESS_EMAIL, BUSINESS_PHONE, COLORS } from "../../../src/utils/constants";
@@ -16,13 +17,14 @@ const FAQS = [
 ];
 
 export default function HelpSupportScreen() {
-  const router = useRouter();
+  const { t } = useTranslation();
+  const router = useExpoRouter();
   const insets = useSafeAreaInsets();
   const openContactLink = async (url: string) => {
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert("Unable to open", "No compatible phone or email app is available.");
+      Alert.alert(t("Unable to open"), t("noCompatibleApp"));
     }
   };
   return <View style={styles.container}>

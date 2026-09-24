@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../../src/context/AuthContext';
@@ -8,6 +9,7 @@ import { COLORS } from '../../../src/utils/constants';
 import { updateProfile as updateProfileAPI } from '../../../src/services/customer.service';
 
 export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, refreshProfile } = useAuth();
@@ -40,13 +42,13 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!user) {
-      Alert.alert('Not logged in', 'Please login to edit profile.');
+      Alert.alert(t('notLoggedIn'), t('pleaseLoginToEditProfile'));
       router.replace('/(auth)/login');
       return;
     }
 
     if (!name.trim()) {
-      Alert.alert('Missing name', 'Please enter your full name.');
+      Alert.alert(t('error'), t('pleaseEnterFullName'));
       return;
     }
 
@@ -62,11 +64,11 @@ export default function EditProfileScreen() {
       await refreshProfile();
       router.replace('/(customer)/profile');
       setTimeout(() => {
-        Alert.alert('Success', 'Your profile has been updated successfully!');
+        Alert.alert(t('Success'), t('profileUpdatedSuccess'));
       }, 100);
     } catch (error: any) {
       console.error('Profile update error:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile. Please try again.');
+      Alert.alert(t('Error'), error.message || t('failedToUpdateProfile'));
     } finally {
       setSaving(false);
     }

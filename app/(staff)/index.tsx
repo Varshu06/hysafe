@@ -366,7 +366,12 @@ export default function NewOrdersScreen() {
 
   const renderOrderCard = ({ item }: { item: any }) => {
     const id = item._id || item.id;
-    const paymentLabel = item.paymentMethod === 'shop' ? 'Pay at Shop' : item.paymentMethod === 'cash' || item.paymentMethod === 'offline' ? 'Cash on Delivery' : 'UPI';
+    const paymentLabel =
+      item.paymentMethod === 'shop'
+        ? t('shop')
+        : item.paymentMethod === 'cash' || item.paymentMethod === 'offline'
+          ? t('cash')
+          : 'UPI';
     const dist = haversineKm(staffLocation || undefined, item.location);
     const eta = etaMinutes(dist);
 
@@ -396,7 +401,7 @@ export default function NewOrdersScreen() {
               activeOpacity={0.85}
             >
               <Feather name="phone" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Call</Text>
+              <Text style={styles.quickBtnText}>{t("call")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
@@ -404,7 +409,7 @@ export default function NewOrdersScreen() {
               activeOpacity={0.85}
             >
               <Feather name="map" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Navigate</Text>
+              <Text style={styles.quickBtnText}>{t("navigate")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
@@ -412,21 +417,23 @@ export default function NewOrdersScreen() {
               activeOpacity={0.85}
             >
               <Feather name="file-text" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Details</Text>
+              <Text style={styles.quickBtnText}>{t("details")}</Text>
             </TouchableOpacity>
           </>
         }
         actions={
           <View style={styles.buttonRow}>
             <Button
-              title="Reject"
+              title={t("reject")}
               variant="outline"
+              size="md"
               onPress={() => setRejectingId(String(id))}
               style={styles.actionButton}
             />
             <Button
-              title="Accept"
+              title={t("accept")}
               variant="primary"
+              size="md"
               onPress={() => handleAccept(String(id))}
               style={styles.actionButton}
             />
@@ -448,7 +455,7 @@ export default function NewOrdersScreen() {
       {/* Online/Offline Toggle */}
       <View style={styles.content}>
         <View style={styles.toggleCard}>
-          <View>
+          <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={styles.toggleLabel}>{t("status")}</Text>
             <Text style={styles.toggleValue}>
               {t(isOnline ? "ONLINE" : "OFFLINE")}
@@ -467,7 +474,12 @@ export default function NewOrdersScreen() {
             {isToggling ? (
               <Loader size="small" color={COLORS.secondary} />
             ) : (
-              <Text style={styles.toggleText}>
+              <Text
+                style={styles.toggleText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
                 {t(isOnline ? "goOffline" : "goOnline")}
               </Text>
             )}
@@ -564,33 +576,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   toggleLabel: {
     fontSize: 12,
     fontWeight: "700",
     color: COLORS.textLight,
-    marginBottom: 4,
-    letterSpacing: 0.2,
+    marginBottom: 2,
   },
   toggleValue: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "900",
     color: COLORS.text,
   },
   toggleButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
-    minWidth: 120,
+    minWidth: 105,
     alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
   },
   toggleOnline: {
     backgroundColor: "#FEE2E2",
+    borderColor: "#FECACA",
   },
   toggleOffline: {
     backgroundColor: "#D1FAE5",
+    borderColor: "#A7F3D0",
   },
   toggleDisabled: {
     opacity: 0.6,
@@ -598,6 +616,7 @@ const styles = StyleSheet.create({
   toggleText: {
     color: COLORS.text,
     fontWeight: "800",
+    fontSize: 13,
   },
   sortCard: {
     backgroundColor: COLORS.secondary,
@@ -606,10 +625,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   sortTitle: {
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "800",
     color: COLORS.textLight,
     marginBottom: 10,
   },
@@ -618,11 +642,14 @@ const styles = StyleSheet.create({
   },
   buttonRow: {
     flexDirection: "row",
+    alignItems: "center",
     marginTop: 0,
-    gap: 12,
+    gap: 10,
   },
   actionButton: {
     flex: 1,
+    height: 40,
+    minHeight: 40,
   },
   quickBtn: {
     flex: 1,

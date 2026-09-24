@@ -2,6 +2,7 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ interface LocationData {
 }
 
 export default function AddAddressScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
@@ -456,11 +458,11 @@ export default function AddAddressScreen() {
       .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
       .join(', ');
     if (!locationData || !Number.isFinite(locationData.latitude) || !Number.isFinite(locationData.longitude) || Math.abs(locationData.latitude) > 90 || Math.abs(locationData.longitude) > 180 || (locationData.latitude === 0 && locationData.longitude === 0)) {
-      Alert.alert('Location Required', 'Choose a valid delivery location using the map or current location.');
+      Alert.alert(t('locationRequired'), t('chooseValidLocation'));
       return;
     }
     if (!typedAddress.trim()) {
-      Alert.alert('Address Required', 'Enter a delivery address or choose a location with a resolved address.');
+      Alert.alert(t('addressRequired'), t('enterDeliveryAddressPrompt'));
       return;
     }
     if (!locationConfirmed) {
@@ -494,13 +496,13 @@ export default function AddAddressScreen() {
       if (fromCurrentLocation || params.edit === 'true') {
         router.replace('/(customer)/address/search');
       } else {
-        Alert.alert('Success', 'Address saved successfully!', [
-          { text: 'OK', onPress: () => router.replace('/(customer)/address/search') }
+        Alert.alert(t('Success'), t('addressSavedSuccess'), [
+          { text: t('ok'), onPress: () => router.replace('/(customer)/address/search') }
         ]);
       }
     } catch (error) {
       console.error('Error saving address:', error);
-      Alert.alert('Error', 'Failed to save address. Please try again.');
+      Alert.alert(t('Error'), t('failedToSaveAddress'));
     }
   };
 
@@ -549,9 +551,9 @@ export default function AddAddressScreen() {
               console.error('Map error:', data.message);
               setLocationError('Google Maps could not load. Check the Maps JavaScript API key, its restrictions, and your network connection.');
               Alert.alert(
-                'Map Loading Error',
-                data.message || 'Unable to load Google Maps. Please check your internet connection and try again.',
-                [{ text: 'OK' }]
+                t('mapLoadingError'),
+                data.message || t('mapLoadingErrorMessage'),
+                [{ text: t('ok') }]
               );
             }
           } catch (error) {

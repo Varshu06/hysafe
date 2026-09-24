@@ -27,8 +27,10 @@ import { StatusStepper } from "../../../src/components/staff/StatusStepper";
 import { ReasonModal } from "../../../src/components/staff/ReasonModal";
 import { DeliveryConfirmModal } from "../../../src/components/staff/DeliveryConfirmModal";
 import { openDirectionsToLocation } from "../../../src/utils/geo";
+import { useTranslation } from "react-i18next";
 
 export default function StaffOrderDetailsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
@@ -102,8 +104,12 @@ export default function StaffOrderDetailsScreen() {
 
   const paymentLabel = useMemo(() => {
     if (!order) return "";
-    return order.paymentMethod === 'shop' ? 'Pay at Shop' : order.paymentMethod === 'cash' || order.paymentMethod === 'offline' ? 'Cash on Delivery' : 'UPI';
-  }, [order]);
+    return order.paymentMethod === 'shop'
+      ? t('shop')
+      : order.paymentMethod === 'cash' || order.paymentMethod === 'offline'
+      ? t('cash')
+      : 'UPI';
+  }, [order, t]);
 
   const handleAccept = async () => {
     if (!order) return;
@@ -236,7 +242,7 @@ export default function StaffOrderDetailsScreen() {
   return (
     <View style={styles.container}>
       <StaffHeader
-        title="Order Details"
+        title={t("orderDetails")}
         onBack={() => router.replace("/(staff)")}
       />
 
@@ -247,8 +253,8 @@ export default function StaffOrderDetailsScreen() {
       >
         {!order && !loading ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Order not found</Text>
-            <Text style={styles.emptyText}>Please go back and try again.</Text>
+            <Text style={styles.emptyTitle}>{t("orderNotFound")}</Text>
+            <Text style={styles.emptyText}>{t("pullToRefresh") || "Please go back and try again."}</Text>
           </View>
         ) : (
           <>
@@ -260,12 +266,12 @@ export default function StaffOrderDetailsScreen() {
                     {isRecurring ? (
                       <View style={styles.recurringChip}>
                         <Feather name="repeat" size={11} color="#0284C7" />
-                        <Text style={styles.recurringChipText}>Recurring</Text>
+                        <Text style={styles.recurringChipText}>{t("recurring")}</Text>
                       </View>
                     ) : null}
                   </View>
                   <View style={styles.payChip}>
-                    <Text style={styles.payChipText}>{paymentLabel}</Text>
+                    <Text style={styles.payChipText} numberOfLines={1}>{paymentLabel}</Text>
                   </View>
                 </View>
                 <Text style={styles.meta}>#{order?._id || order?.id}</Text>
@@ -276,11 +282,11 @@ export default function StaffOrderDetailsScreen() {
                   <View style={styles.recurringNoticeHeader}>
                     <Feather name="repeat" size={16} color="#0284C7" />
                     <Text style={styles.recurringNoticeTitle}>
-                      Scheduled Recurring Delivery
+                      {t("scheduledRecurringDelivery")}
                     </Text>
                   </View>
                   <Text style={styles.recurringNoticeDesc}>
-                    This delivery is automated based on the customer's recurring schedule.
+                    {t("recurringAutomatedDesc")}
                   </Text>
                 </View>
               ) : null}
@@ -300,11 +306,11 @@ export default function StaffOrderDetailsScreen() {
               <StatusStepper status={String(order?.status || "")} />
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Customer</Text>
+                <Text style={styles.sectionTitle}>{t("customer")}</Text>
                 <View style={styles.infoRow}>
                   <Feather name="user" size={16} color="#94A3B8" />
                   <Text style={styles.infoText}>
-                    {order?.customer || "Customer"}
+                    {order?.customer || t("customer")}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
@@ -320,22 +326,22 @@ export default function StaffOrderDetailsScreen() {
                     onPress={handleCallCustomer}
                     activeOpacity={0.85}
                   >
-                    <Feather name="phone" size={16} color={COLORS.primary} />
-                    <Text style={styles.quickBtnText}>Call</Text>
+                    <Feather name="phone" size={15} color={COLORS.primary} />
+                    <Text style={styles.quickBtnText} numberOfLines={1}>{t("call")}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.quickBtn}
                     onPress={handleNavigate}
                     activeOpacity={0.85}
                   >
-                    <Feather name="map" size={16} color={COLORS.primary} />
-                    <Text style={styles.quickBtnText}>Navigate</Text>
+                    <Feather name="map" size={15} color={COLORS.primary} />
+                    <Text style={styles.quickBtnText} numberOfLines={1}>{t("navigate")}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Addresses</Text>
+                <Text style={styles.sectionTitle}>{t("addresses")}</Text>
                 <View style={styles.infoRow}>
                   <Feather name="map-pin" size={16} color="#94A3B8" />
                   <Text style={styles.infoText} numberOfLines={2}>
@@ -353,13 +359,13 @@ export default function StaffOrderDetailsScreen() {
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Payment & Schedule</Text>
+                <Text style={styles.sectionTitle}>{t("paymentSchedule")}</Text>
                 <View style={styles.infoRow}>
                   <Feather name="credit-card" size={16} color="#94A3B8" />
                   <Text style={styles.infoText}>
                     {paymentLabel}{" "}
                     {String(order?.paymentMethod || "").toLowerCase() ===
-                    "offline"
+                    "offline" || String(order?.paymentMethod || "").toLowerCase() === "cash"
                       ? `• ₹${order?.codAmount || order?.totalPrice || 0}`
                       : ""}
                   </Text>
@@ -368,7 +374,7 @@ export default function StaffOrderDetailsScreen() {
                   <View style={styles.infoRow}>
                     <Feather name="file-text" size={16} color="#0284C7" />
                     <Text style={[styles.infoText, { color: "#0284C7", fontWeight: "800" }]}>
-                      Terms: {String(order.paymentTerms).toUpperCase()} BILLING
+                      {t("terms")}: {t(String(order.paymentTerms).toLowerCase()) || String(order.paymentTerms).toUpperCase()} {t("billing")}
                     </Text>
                   </View>
                 ) : null}
@@ -376,7 +382,7 @@ export default function StaffOrderDetailsScreen() {
                   <View style={styles.infoRow}>
                     <Feather name="calendar" size={16} color="#0284C7" />
                     <Text style={[styles.infoText, { color: "#0284C7", fontWeight: "800" }]}>
-                      Scheduled: {formattedSlot}
+                      {t("scheduled")}: {formattedSlot}
                     </Text>
                   </View>
                 ) : null}
@@ -391,10 +397,10 @@ export default function StaffOrderDetailsScreen() {
                   />
                   <View style={{ flex: 1 }}>
                     {isRecurring ? (
-                      <Text style={styles.notesLabel}>Customer Instructions / Recurring Note:</Text>
+                      <Text style={styles.notesLabel}>{t("customerInstructions")}:</Text>
                     ) : null}
                     <Text style={[styles.notesText, isRecurring && styles.recurringNotesText]}>
-                      {order.notes}
+                      {order.notes === 'Automated recurring delivery order' ? t("automatedRecurringOrder") : order.notes}
                     </Text>
                   </View>
                 </View>
@@ -405,14 +411,16 @@ export default function StaffOrderDetailsScreen() {
               {canAcceptReject ? (
                 <View style={styles.actionRow}>
                   <Button
-                    title="Reject"
+                    title={t("reject")}
                     variant="outline"
+                    size="md"
                     onPress={handleReject}
                     style={styles.actionBtn}
                   />
                   <Button
-                    title="Accept"
+                    title={t("accept")}
                     variant="primary"
+                    size="md"
                     onPress={handleAccept}
                     style={styles.actionBtn}
                   />
@@ -421,15 +429,17 @@ export default function StaffOrderDetailsScreen() {
 
               {canPick ? (
                 <Button
-                  title="Mark Picked"
+                  title={t("orderPicked")}
                   variant="primary"
+                  size="md"
                   onPress={() => handleStatusUpdate("picked")}
                 />
               ) : null}
               {canDeliver ? (
                 <Button
-                  title="Mark Delivered"
+                  title={t("markDelivered")}
                   variant="success"
+                  size="md"
                   onPress={() => setDeliverOpen(true)}
                 />
               ) : null}
@@ -440,9 +450,9 @@ export default function StaffOrderDetailsScreen() {
 
       <ReasonModal
         visible={rejectOpen}
-        title="Reject order"
-        placeholder="Reason (e.g., too far / busy / issue with stock)"
-        confirmText="Reject"
+        title={t("rejectOrder")}
+        placeholder={t("rejectReasonPlaceholder")}
+        confirmText={t("reject")}
         onClose={() => setRejectOpen(false)}
         onConfirm={async (reason) => {
           try {
@@ -464,10 +474,9 @@ export default function StaffOrderDetailsScreen() {
         isRecurring={Boolean(order?.isRecurring)}
         codAmount={order?.codAmount || order?.totalPrice || 0}
         onClose={() => setDeliverOpen(false)}
-        onConfirm={async ({ codCollected, transactionId, notes, collectedPaymentMethod }) => {
+        onConfirm={async ({ codCollected, notes, collectedPaymentMethod }) => {
           console.log("delivery_data:", {
             codCollected,
-            transactionId,
             paymentMethod: order?.paymentMethod,
             notes,
           });
@@ -506,6 +515,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 8,
   },
   badgeGroup: {
@@ -513,6 +524,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexWrap: "wrap",
+    flexShrink: 1,
   },
   recurringChip: {
     flexDirection: "row",
@@ -560,14 +572,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0F2FE",
     borderWidth: 1,
     borderColor: "#BAE6FD",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: "flex-start",
   },
   payChipText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: "#0F172A",
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#0369A1",
   },
   meta: {
     color: COLORS.textLight,
@@ -674,6 +687,8 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
+    minHeight: 42,
+    height: 42,
   },
   empty: {
     alignItems: "center",

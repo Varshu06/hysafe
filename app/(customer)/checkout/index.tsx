@@ -153,7 +153,7 @@ export default function CheckoutScreen() {
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
-      Alert.alert("Error", "Please select a delivery address");
+      Alert.alert(t("Error"), t("pleaseSelectDeliveryAddress"));
       return;
     }
 
@@ -172,8 +172,8 @@ export default function CheckoutScreen() {
         latestProducts = await getProductsByIds(cartProductIds);
       } catch (error: any) {
         Alert.alert(
-          "Unable to verify cart",
-          "We couldn't verify the latest product information. Please check your connection and try again.",
+          t("unableToVerifyCart"),
+          t("verifyCartConnectionError"),
         );
         return;
       }
@@ -183,32 +183,35 @@ export default function CheckoutScreen() {
         const latestProduct = latestProducts.get(item.id);
         if (!latestProduct) {
           Alert.alert(
-            "Product unavailable",
-            `Product ${item.name} is no longer available. Please review your cart before placing the order.`,
+            t("productUnavailable"),
+            t("productNoLongerAvailable", { product: item.name }),
           );
           return;
         }
 
         if (latestProduct.available === false) {
           Alert.alert(
-            "Product unavailable",
-            `Product ${latestProduct.name} is currently unavailable. Please review your cart before placing the order.`,
+            t("productUnavailable"),
+            t("productUnavailableMessage", { product: latestProduct.name }),
           );
           return;
         }
 
         if (Number(latestProduct.quantity) === 0) {
           Alert.alert(
-            "Out of stock",
-            `Product ${latestProduct.name} is out of stock. Please remove it from your cart.`,
+            t("outOfStock"),
+            t("outOfStockMessage", { product: latestProduct.name }),
           );
           return;
         }
 
         if (Number(latestProduct.quantity) < item.quantity) {
           Alert.alert(
-            "Insufficient quantity",
-            `Only ${latestProduct.quantity} unit(s) of ${latestProduct.name} are available. Please reduce the quantity.`,
+            t("insufficientQuantity"),
+            t("insufficientQuantityMessage", {
+              available: latestProduct.quantity,
+              product: latestProduct.name,
+            }),
           );
           return;
         }
@@ -248,16 +251,16 @@ export default function CheckoutScreen() {
       if (changedProducts.length > 0) {
         const confirmPriceChange = await new Promise<boolean>((resolve) => {
           Alert.alert(
-            "Cart updated",
-            "Some product prices or delivery charges have changed. Please review the updated prices before placing the order.",
+            t("cartUpdated"),
+            t("cartPriceChangedWarning"),
             [
               {
-                text: "Cancel",
+                text: t("cancel"),
                 style: "cancel",
                 onPress: () => resolve(false),
               },
               {
-                text: "Continue",
+                text: t("continue"),
                 onPress: () => resolve(true),
               },
             ],
@@ -305,11 +308,11 @@ export default function CheckoutScreen() {
 
       if (response.success) {
         Alert.alert(
-          "Order Placed!",
-          "Your order has been placed successfully.",
+          t("orderPlacedTitle"),
+          t("orderPlacedSuccess"),
           [
             {
-              text: "OK",
+              text: t("ok"),
               onPress: () => {
                 clearCart();
                 refreshOrders(); // Refresh orders list
@@ -321,8 +324,8 @@ export default function CheckoutScreen() {
       }
     } catch (error: any) {
       Alert.alert(
-        "Error",
-        error.message || "Failed to place order. Please try again.",
+        t("Error"),
+        error.message || t("failedToPlaceOrder"),
       );
     } finally {
       setIsPlacingOrder(false);
@@ -453,7 +456,7 @@ export default function CheckoutScreen() {
               <View style={styles.detailContent}>
                 <Text style={styles.detailTitle}>{t("deliveryAtHome")}</Text>
                 <Text style={styles.detailSubtext} numberOfLines={1}>
-                  {selectedAddress?.address || "Select delivery address"}
+                  {selectedAddress?.address || t("selectDeliveryAddress")}
                 </Text>
                 {/* 5km Radius Validation */}
                 {distanceFromFactory !== null && (
@@ -472,10 +475,11 @@ export default function CheckoutScreen() {
                         styles.distanceText,
                         !isWithinServiceArea && styles.distanceTextError,
                       ]}
+                      numberOfLines={2}
                     >
                       {isWithinServiceArea
-                        ? `Within service area (${distanceFromFactory.toFixed(1)} km)`
-                        : `Outside service area (${distanceFromFactory.toFixed(1)} km) - You can still proceed`}
+                        ? t("withinServiceArea", { dist: distanceFromFactory.toFixed(1) })
+                        : t("outsideServiceArea", { dist: distanceFromFactory.toFixed(1) })}
                     </Text>
                   </View>
                 )}
@@ -523,7 +527,10 @@ export default function CheckoutScreen() {
 
             <View style={styles.detailRow}>
               <Ionicons name="cash-outline" size={20} color="#102841" />
-              <View style={styles.detailContent}><Text style={styles.detailTitle}>Cash on Delivery</Text><Text style={styles.detailSubtext}>Payment is collected when your order arrives.</Text></View>
+              <View style={styles.detailContent}>
+                <Text style={styles.detailTitle}>{t("cash")}</Text>
+                <Text style={styles.detailSubtext}>{t("codDescription")}</Text>
+              </View>
             </View>
 
             {/* Total Bill */}
@@ -555,12 +562,15 @@ export default function CheckoutScreen() {
               // Warn but allow orders outside service area
               if (!isWithinServiceArea && distanceFromFactory !== null) {
                 Alert.alert(
-                  "Address Outside Service Area",
-                  `This address is ${distanceFromFactory.toFixed(1)} km away from our service center (${SERVICE_RADIUS_KM} km limit). Do you want to proceed anyway? Extra charges may apply.`,
+                  t("addressOutsideServiceArea"),
+                  t("outsideServiceAreaWarning", {
+                    dist: distanceFromFactory.toFixed(1),
+                    limit: SERVICE_RADIUS_KM,
+                  }),
                   [
-                    { text: "Cancel", style: "cancel" },
+                    { text: t("cancel"), style: "cancel" },
                     {
-                      text: "Proceed",
+                      text: t("proceed"),
                       onPress: () => handlePlaceOrder(),
                       style: "default",
                     },
@@ -573,12 +583,17 @@ export default function CheckoutScreen() {
             }}
             disabled={isPlacingOrder}
           >
-            <Text style={styles.payButtonText}>
+            <Text
+              style={styles.payButtonText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
               {isPlacingOrder
-                ? "Placing Order..."
+                ? t("placingOrder")
                 : !isWithinServiceArea && distanceFromFactory !== null
-                  ? `Proceed (${distanceFromFactory.toFixed(1)} km away)`
-                  : `Place Order - ₹${totalPrice}`}
+                  ? `${t("proceed")} (${distanceFromFactory.toFixed(1)} km)`
+                  : `${t("placeOrder")} - ₹${totalPrice}`}
             </Text>
           </TouchableOpacity>
         </View>

@@ -43,7 +43,7 @@ export default function LoginScreen() {
   };
 
   const handleLanguage = async (lang: string) => {
-    await changeLanguage(lang);
+    await changeLanguage(lang as "en" | "ta");
 
     setShowModal(false);
   };

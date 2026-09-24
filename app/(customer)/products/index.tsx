@@ -202,6 +202,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.text,
     textAlign: "center",
+    lineHeight: 26,
+    paddingVertical: 2,
   },
   placeholder: {
     width: 40,

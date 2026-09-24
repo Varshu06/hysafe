@@ -53,10 +53,10 @@ export default function ProfileScreen() {
       }
       return;
     }
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("Logout"), t("confirmLogout"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Logout",
+        text: t("Logout"),
         style: "destructive",
         onPress: async () => {
           // Logout function in AuthContext handles navigation
@@ -76,8 +76,8 @@ export default function ProfileScreen() {
 
 
   const handleNotifications = () => {
-    Alert.alert("Notifications", "Notification settings feature coming soon!", [
-      { text: "OK" },
+    Alert.alert(t("Notifications"), t("notificationsComingSoon"), [
+      { text: t("ok") },
     ]);
   };
 
@@ -378,6 +378,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.text,
     textAlign: "center",
+    lineHeight: 26,
+    paddingVertical: 2,
   },
   placeholder: {
     width: 40,
@@ -440,6 +442,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: COLORS.text,
+    lineHeight: 26,
+    paddingVertical: 2,
   },
   profileHint: {
     marginTop: 6,
@@ -471,6 +475,8 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 12,
+    lineHeight: 24,
+    paddingVertical: 2,
   },
 
   langChangeTitle: {
@@ -485,7 +491,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: COLORS.secondary,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderRadius: 12,
     marginBottom: 8,
     shadowColor: "#000",
@@ -499,7 +506,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     flex: 1,
-    flexShrink: 1,
+    paddingVertical: 2,
   },
   menuItemRight: {
     flexDirection: "row",
@@ -510,12 +517,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.text,
     fontWeight: "500",
-    flexShrink: 1,
+    flex: 1,
+    lineHeight: 22,
+    paddingVertical: 2,
   },
   menuItemLangText: {
     fontSize: 14,
     color: COLORS.textLight,
     fontWeight: "400",
+    lineHeight: 20,
+    paddingVertical: 2,
   },
   logoutButton: {
     marginTop: 8,

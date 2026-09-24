@@ -17,14 +17,7 @@ import { useTranslation } from "react-i18next";
 import { useProduct } from "../../context/ProductContext";
 
 interface AddOnItemProps {
-  item: {
-    id: string;
-    name: string;
-    price: number;
-    volume: string;
-    image: ImageSourcePropType | string;
-    deliveryCharge?: number;
-  };
+  item: Product;
   isInCart: boolean;
   onAdd: () => void;
 }

@@ -1,8 +1,9 @@
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { COLORS } from '../../utils/constants';
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { COLORS } from "../../utils/constants";
 
 interface OrderCardProps {
   order: {
@@ -17,13 +18,13 @@ interface OrderCardProps {
 
 const getStatusIcon = (status: string) => {
   const statusLower = status.toLowerCase();
-  if (statusLower === 'pending') {
+  if (statusLower === "pending") {
     return <Feather name="clock" size={12} color={COLORS.warning} />;
   }
-  if (statusLower === 'cancelled') {
+  if (statusLower === "cancelled") {
     return <Feather name="x" size={12} color={COLORS.textLight} />;
   }
-  if (statusLower === 'delivered') {
+  if (statusLower === "delivered") {
     return <Feather name="check" size={12} color={COLORS.success} />;
   }
   return <Feather name="check" size={12} color={COLORS.primary} />;
@@ -31,7 +32,15 @@ const getStatusIcon = (status: string) => {
 
 export const OrderCard = ({ order }: OrderCardProps) => {
   const router = useRouter();
-  
+  const { t } = useTranslation();
+
+  const statusKey = order.status?.toLowerCase() || "pending";
+  const displayStatus = t(statusKey) || order.status;
+  const displayDriver =
+    order.driver === "notAssigned"
+      ? t("notAssigned")
+      : order.driver || t("notAssigned");
+
   return (
     <TouchableOpacity
       style={styles.orderCard}
@@ -41,24 +50,33 @@ export const OrderCard = ({ order }: OrderCardProps) => {
       <View style={styles.cardHeader}>
         <View style={styles.statusBadge}>
           {getStatusIcon(order.status)}
-           <Text style={styles.statusText}>{order.status}</Text>
+          <Text
+            style={styles.statusText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            {displayStatus}
+          </Text>
         </View>
         <Text style={styles.date}>{order.date}</Text>
         <Text style={styles.price}>₹ {order.price}</Text>
       </View>
-      
+
       <View style={styles.cardDetails}>
         <View style={styles.detailRow}>
-          <Text style={styles.driverLabel}>{order.driver}</Text>
-          <Text style={styles.addressText} numberOfLines={1}>{order.address}</Text>
-         </View>
+          <Text style={styles.driverLabel}>{displayDriver}</Text>
+          <Text style={styles.addressText} numberOfLines={1}>
+            {order.address}
+          </Text>
+        </View>
       </View>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.viewDetailsBtn}
         onPress={() => router.push(`/(customer)/order-details/${order.id}`)}
       >
-        <Text style={styles.viewDetailsText}>View Details</Text>
+        <Text style={styles.viewDetailsText}>{t("viewDetails")}</Text>
         <Feather name="chevron-right" size={16} color="#0F172A" />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -67,100 +85,104 @@ export const OrderCard = ({ order }: OrderCardProps) => {
 
 const styles = StyleSheet.create({
   orderCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-    gap: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+    gap: 8,
   },
   statusBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: 'white',
-      maxWidth: '45%',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 12,
-      gap: 4,
-      flexShrink: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    flexShrink: 1,
+    maxWidth: "55%",
   },
   statusText: {
-      fontSize: 12,
-      fontWeight: 'bold',
-      color: '#0F172A',
-      flexShrink: 1,
-      flexWrap: 'wrap',
-      lineHeight: 16,
-    textTransform: 'capitalize',
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#0F172A",
+    lineHeight: 18,
+    paddingVertical: 1,
+    textTransform: "capitalize",
   },
   date: {
-      color: 'white',
-      fontSize: 12,
+    color: "white",
+    fontSize: 12,
     flex: 1,
     flexShrink: 1,
-    marginLeft: 12,
-    lineHeight: 16,
-    textAlign: 'center',
+    marginLeft: 8,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingVertical: 1,
   },
   price: {
-      color: 'white',
-      fontSize: 14,
-      fontWeight: 'bold',
-      flexShrink: 0,
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+    flexShrink: 0,
+    lineHeight: 20,
+    paddingVertical: 1,
   },
   cardDetails: {
-      marginBottom: 16,
+    marginBottom: 14,
   },
   detailRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-    alignItems: 'flex-start',
-      flexShrink: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexShrink: 0,
     gap: 10,
   },
   driverLabel: {
-      color: 'white',
-      fontSize: 14,
-      fontWeight: 'bold',
-      marginRight: 16,
+    color: "white",
+    fontSize: 13,
+    fontWeight: "bold",
+    marginRight: 10,
     flexShrink: 0,
     lineHeight: 20,
+    paddingVertical: 1,
   },
   addressText: {
-      color: '#94A3B8',
-      fontSize: 12,
-      flex: 1,
-      textAlign: 'right',
+    color: "#94A3B8",
+    fontSize: 12,
+    flex: 1,
+    textAlign: "right",
     lineHeight: 18,
     flexShrink: 1,
+    paddingVertical: 1,
   },
   viewDetailsBtn: {
-      backgroundColor: 'white',
-      alignSelf: 'flex-end',
-    flexDirection: 'row',
-    alignItems: 'center',
-      paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: "white",
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 10,
     gap: 4,
-    minHeight: 40,
+    minHeight: 34,
   },
   viewDetailsText: {
-      fontSize: 12,
-      fontWeight: 'bold',
-      color: '#0F172A',
-      lineHeight: 16,
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#0F172A",
+    lineHeight: 18,
+    paddingVertical: 1,
   },
 });
-

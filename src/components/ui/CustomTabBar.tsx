@@ -169,7 +169,12 @@ export const CustomTabBar: React.FC<CustomTabBarProps> = ({
                 ]}
               >
                 {getIcon(route.name, isFocused)}
-                <Text style={[styles.tabLabel, { color }]}>
+                <Text
+                  style={[styles.tabLabel, { color }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
                   {t(getTabLabel(route.name))}
                 </Text>
               </Animated.View>
@@ -215,11 +220,13 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     marginTop: 4,
     fontWeight: "500",
-    lineHeight: 14,
+    lineHeight: 16,
     textAlign: "center",
+    paddingVertical: 2,
+    includeFontPadding: true,
     flexShrink: 1,
   },
 });

@@ -1,6 +1,7 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +17,7 @@ interface LocationData {
 }
 
 export default function SaveAddressScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
@@ -53,13 +55,13 @@ export default function SaveAddressScreen() {
 
   const handleSave = () => {
     if (!locationData) {
-      Alert.alert('Error', 'Location data is missing.');
+      Alert.alert(t('error'), t('locationDataMissing'));
       return;
     }
     
     // Here you would save the address with houseNumber, apartmentRoad, and saveAs
-    Alert.alert('Success', 'Address saved successfully!', [
-      { text: 'OK', onPress: () => router.push('/(customer)/address/search') }
+    Alert.alert(t('Success'), t('addressSavedSuccess'), [
+      { text: t('ok'), onPress: () => router.push('/(customer)/address/search') }
     ]);
   };
 

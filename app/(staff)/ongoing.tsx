@@ -146,30 +146,21 @@ export default function OngoingOrdersScreen() {
     if (status === "accepted") {
       return (
         <Button
-          title="Order Picked"
+          title={t("orderPicked") || "Order Picked"}
           variant="primary"
+          size="md"
           onPress={() => handleStatusUpdate(id, "picked")}
           style={styles.statusButton}
         />
       );
     }
 
-    if (status === "picked" || status === "out_for_delivery") {
+    if (status === "picked" || status === "out_for_delivery" || status === "transit" || status === "in-transit") {
       return (
         <Button
-          title="Mark Delivered"
+          title={t("markDelivered") || "Mark Delivered"}
           variant="success"
-          onPress={() => setConfirming(order)}
-          style={styles.statusButton}
-        />
-      );
-    }
-
-    if (status === "transit" || status === "in-transit") {
-      return (
-        <Button
-          title="Mark Delivered"
-          variant="success"
+          size="md"
           onPress={() => setConfirming(order)}
           style={styles.statusButton}
         />
@@ -219,7 +210,12 @@ export default function OngoingOrdersScreen() {
 
   const renderOrderCard = ({ item }: { item: any }) => {
     const id = item._id || item.id;
-    const paymentLabel = item.paymentMethod === 'shop' ? 'Pay at Shop' : item.paymentMethod === 'cash' || item.paymentMethod === 'offline' ? 'Cash on Delivery' : 'UPI';
+    const paymentLabel =
+      item.paymentMethod === 'shop'
+        ? t('shop')
+        : item.paymentMethod === 'cash' || item.paymentMethod === 'offline'
+        ? t('cash')
+        : 'UPI';
     return (
       <StaffOrderCard
         status={item.status}
@@ -243,24 +239,24 @@ export default function OngoingOrdersScreen() {
               onPress={() => handleCallCustomer(item.customerPhone)}
               activeOpacity={0.85}
             >
-              <Feather name="phone" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Call</Text>
+              <Feather name="phone" size={15} color={COLORS.primary} />
+              <Text style={styles.quickBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t("call")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
               onPress={() => handleNavigate(item.location)}
               activeOpacity={0.85}
             >
-              <Feather name="map" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Navigate</Text>
+              <Feather name="map" size={15} color={COLORS.primary} />
+              <Text style={styles.quickBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t("navigate")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickBtn}
               onPress={() => router.push(`/(staff)/order-details/${id}`)}
               activeOpacity={0.85}
             >
-              <Feather name="file-text" size={16} color={COLORS.primary} />
-              <Text style={styles.quickBtnText}>Details</Text>
+              <Feather name="file-text" size={15} color={COLORS.primary} />
+              <Text style={styles.quickBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{t("details")}</Text>
             </TouchableOpacity>
           </>
         }
@@ -292,6 +288,9 @@ export default function OngoingOrdersScreen() {
                     styles.tabText,
                     filter === filterItem.key && styles.tabTextActive,
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
                 >
                   {t(filterItem.key)}
                 </Text>
@@ -351,7 +350,6 @@ export default function OngoingOrdersScreen() {
         onClose={() => setConfirming(null)}
         onConfirm={async ({
           codCollected,
-          transactionId,
           notes,
           paymentMethod,
           collectedPaymentMethod,
@@ -362,7 +360,7 @@ export default function OngoingOrdersScreen() {
             String(id),
             "delivered",
             paymentMethod,
-            transactionId,
+            undefined,
             notes,
             codCollected,
             collectedPaymentMethod,
@@ -398,7 +396,7 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 4,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -408,7 +406,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: COLORS.textLight,
     textAlign: "center",
@@ -429,22 +427,25 @@ const styles = StyleSheet.create({
   },
   statusButton: {
     marginTop: 0,
+    height: 40,
+    minHeight: 40,
   },
   quickBtn: {
     flex: 1,
-    height: 40,
-    borderRadius: 12,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: "#F8FAFC",
     borderWidth: 1,
     borderColor: "#E2E8F0",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 4,
+    paddingHorizontal: 4,
   },
   quickBtnText: {
-    fontSize: 12,
-    fontWeight: "900",
+    fontSize: 11,
+    fontWeight: "800",
     color: COLORS.text,
   },
   emptyContainer: {
