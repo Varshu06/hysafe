@@ -3,6 +3,15 @@ import { InventoryItem } from "../models/InventoryItem.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { Inventory } from "../models/Inventory.model";
 
+const validateProductImage = (image: unknown): string | null => {
+  if (typeof image !== "string") return "Product image must be a string";
+  if (image.length > 9 * 1024 * 1024) return "Product image is too large";
+  if (!image) return null;
+  if (/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/i.test(image)) return null;
+  if (/^https?:\/\//i.test(image)) return null;
+  return "Product image must be a supported image data URL or HTTP(S) URL";
+};
+
 export const getInventoryItems = async (req: AuthRequest, res: Response) => {
   try {
     const limit = Math.min(Number(req.query.limit) || 100, 500);
@@ -64,6 +73,7 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       price,
       deliveryCharge,
       available,
+      image,
     } = req.body;
 
     if (!name || !volume || quantity === undefined) {
@@ -71,6 +81,11 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
         success: false,
         message: "Name, volume and quantity are required",
       });
+    }
+
+    if (image !== undefined) {
+      const imageError = validateProductImage(image);
+      if (imageError) return res.status(400).json({ success: false, message: imageError });
     }
 
     const item = await InventoryItem.create({
@@ -82,6 +97,7 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
 
       price: Number(price),
       deliveryCharge: Number(deliveryCharge || 0),
+      ...(typeof image === "string" && image.trim() ? { image: image.trim() } : {}),
       // If the client explicitly provides `available`, respect it; otherwise derive from quantity
       available: available !== undefined ? Boolean(available) : Number(quantity) > 0,
     });
@@ -112,6 +128,7 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       price,
       deliveryCharge,
       available,
+      image,
     } = req.body;
 
     const updateData: Record<string, unknown> = {};
@@ -134,6 +151,11 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       updateData.deliveryCharge = Number(deliveryCharge);
     if (available !== undefined)
       updateData.available = Boolean(available);
+    if (image !== undefined) {
+      const imageError = validateProductImage(image);
+      if (imageError) return res.status(400).json({ success: false, message: imageError });
+      updateData.image = image.trim();
+    }
 
     const item = await InventoryItem.findByIdAndUpdate(id, updateData, {
       new: true,

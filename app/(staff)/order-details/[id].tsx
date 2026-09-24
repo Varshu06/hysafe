@@ -26,6 +26,7 @@ import { StaffHeader } from "../../../src/components/staff/StaffHeader";
 import { StatusStepper } from "../../../src/components/staff/StatusStepper";
 import { ReasonModal } from "../../../src/components/staff/ReasonModal";
 import { DeliveryConfirmModal } from "../../../src/components/staff/DeliveryConfirmModal";
+import { openDirectionsToLocation } from "../../../src/utils/geo";
 
 export default function StaffOrderDetailsScreen() {
   const router = useRouter();
@@ -80,7 +81,7 @@ export default function StaffOrderDetailsScreen() {
               customerPhone: (orderData as any).customerId?.phone || "",
               pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
               pickupLocation: { lat: 13.0827, lng: 80.2707 },
-              location: orderData.location || { lat: 0, lng: 0 },
+              location: orderData.location,
               codAmount: orderData.isRecurring
                 ? orderData.recurringBillId?.amount ?? orderData.totalPrice
                 : ["offline", "cash", "shop"].includes(orderData.paymentMethod)
@@ -160,7 +161,7 @@ export default function StaffOrderDetailsScreen() {
               customerPhone: (orderData as any).customerId?.phone || "",
               pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
               pickupLocation: { lat: 13.0827, lng: 80.2707 },
-              location: orderData.location || { lat: 0, lng: 0 },
+              location: orderData.location,
               codAmount:
                 orderData.isRecurring
                   ? orderData.recurringBillId?.amount ?? orderData.totalPrice
@@ -199,17 +200,7 @@ export default function StaffOrderDetailsScreen() {
   };
 
   const handleNavigate = async () => {
-    const coords = order?.location;
-    if (!coords)
-      return Alert.alert("No location", "Delivery location is not available.");
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
-    const can = await Linking.canOpenURL(url);
-    if (!can)
-      return Alert.alert(
-        "Not supported",
-        "Maps is not supported on this device.",
-      );
-    await Linking.openURL(url);
+    await openDirectionsToLocation(order?.location);
   };
 
   const isRecurring = Boolean(order?.isRecurring || order?.recurringDeliveryId);

@@ -1,12 +1,13 @@
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { addressStorage } from '../../../src/utils/addressStorage';
-import { COLORS, GOOGLE_MAPS_API_KEY } from '../../../src/utils/constants';
+import { COLORS, FACTORY_LOCATION, GOOGLE_MAPS_API_KEY } from '../../../src/utils/constants';
+import { ensureForegroundLocationPermission, getCurrentPositionWithTimeout } from '../../../src/utils/location';
 
 interface LocationData {
   latitude: number;
@@ -27,6 +28,8 @@ export default function AddAddressScreen() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [locationError, setLocationError] = useState('');
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [houseNumber, setHouseNumber] = useState('');
   const [apartmentRoad, setApartmentRoad] = useState('');
   const [saveAs, setSaveAs] = useState('Home');
@@ -35,6 +38,7 @@ export default function AddAddressScreen() {
   const hasInitialized = useRef(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const webViewRef = useRef<WebView>(null);
+  const reverseGeocodeRequest = useRef(0);
   
   const fromCurrentLocation = params.fromCurrentLocation === 'true';
 
@@ -44,7 +48,13 @@ export default function AddAddressScreen() {
     
     if (params.latitude && params.longitude) {
       hasInitialized.current = true;
-      const fullAddress = [
+      const latitude = Number(params.latitude);
+      const longitude = Number(params.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+        setLocationError('The selected coordinates are invalid. Please choose a location again.');
+        return;
+      }
+      const fullAddress = (params.fullAddress as string) || [
         params.name,
         params.street,
         params.city,
@@ -53,8 +63,8 @@ export default function AddAddressScreen() {
       ].filter(Boolean).join(', ');
       
       const newLocationData = {
-        latitude: parseFloat(params.latitude as string),
-        longitude: parseFloat(params.longitude as string),
+        latitude,
+        longitude,
         street: params.street as string || '',
         city: params.city as string || '',
         region: params.region as string || '',
@@ -64,38 +74,47 @@ export default function AddAddressScreen() {
       };
       
       setLocationData(newLocationData);
+      setLocationConfirmed(false);
+      if (params.type) setSaveAs(String(params.type));
       
       // Update map location
       updateMapLocation(newLocationData.latitude, newLocationData.longitude);
     } else {
       hasInitialized.current = true;
-      // Auto-fetch location when screen loads
-      handleGetCurrentLocation();
+      if (params.edit === 'true') {
+        setLocationError('This saved address has no stored coordinates. Select its location on the map before saving the edit.');
+      } else {
+        handleGetCurrentLocation();
+      }
     }
   }, []);
 
   const handleGetCurrentLocation = async () => {
     setIsLoadingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          'Permission Denied',
-          'Please enable location permissions in your device settings.',
-          [{ text: 'OK' }]
-        );
+      if (!(await ensureForegroundLocationPermission())) {
+        setLocationError('Location permission is denied. You can still choose a location on the map or search for a place.');
         setIsLoadingLocation(false);
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const location = await getCurrentPositionWithTimeout();
 
-      const [address] = await Location.reverseGeocodeAsync({
+      const selected = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      });
+        street: '', city: '', region: '', postalCode: '', name: '', fullAddress: '',
+      };
+      setLocationData(selected);
+      setLocationConfirmed(false);
+      setLocationError('');
+      reverseGeocodeRequest.current += 1;
+      setIsUpdatingLocation(false);
+      const locationRequest = reverseGeocodeRequest.current;
+      updateMapLocation(selected.latitude, selected.longitude);
+
+      try {
+        const [address] = await Location.reverseGeocodeAsync(selected);
 
       const fullAddress = [
         address?.name,
@@ -106,8 +125,8 @@ export default function AddAddressScreen() {
       ].filter(Boolean).join(', ');
 
       const newLocationData = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: selected.latitude,
+        longitude: selected.longitude,
         street: address?.street || '',
         city: address?.city || '',
         region: address?.region || '',
@@ -116,10 +135,13 @@ export default function AddAddressScreen() {
         fullAddress,
       };
       
-      setLocationData(newLocationData);
-      
-      // Update map location
-      updateMapLocation(newLocationData.latitude, newLocationData.longitude);
+      if (locationRequest === reverseGeocodeRequest.current) {
+        setLocationData(newLocationData);
+        setLocationError(fullAddress ? '' : 'We could not resolve this location to an address. Enter the delivery address below before confirming.');
+      }
+      } catch {
+        if (locationRequest === reverseGeocodeRequest.current) setLocationError('Location found, but its address could not be resolved. Enter the delivery address below before confirming.');
+      }
     } catch (error: any) {
       // Location unavailable - this is expected if location services are disabled
       // Only log if it's not a permission or availability issue
@@ -127,11 +149,7 @@ export default function AddAddressScreen() {
         console.warn('Location error:', error);
       }
       // Show user-friendly error message
-      Alert.alert(
-        'Location Unavailable',
-        'Unable to get your current location. Please make sure location services are enabled, or manually select your address on the map.',
-        [{ text: 'OK' }]
-      );
+      setLocationError('Unable to get your current location. Check that location services are enabled, or choose a place manually.');
       // Don't set default location - let user manually select
     } finally {
       setIsLoadingLocation(false);
@@ -141,13 +159,13 @@ export default function AddAddressScreen() {
   const getShortAddress = () => {
     if (isLoadingLocation) return 'Getting location...';
     if (!locationData) return 'Select Location';
-    return locationData.name || locationData.street || 'Selected Location';
+    return locationData.name || locationData.street || (locationData.fullAddress ? 'Selected Location' : 'Location selected');
   };
 
   const getFullAddress = () => {
     if (isLoadingLocation) return 'Please wait while we detect your location';
-    if (!locationData) return 'Tap GPS button to get your location';
-    return locationData.fullAddress || 'Location detected';
+    if (!locationData) return 'Use current location or select a location on the map';
+    return locationData.fullAddress || `${locationData.latitude.toFixed(5)}, ${locationData.longitude.toFixed(5)}`;
   };
 
   const updateMapLocation = (lat: number, lng: number) => {
@@ -164,7 +182,11 @@ export default function AddAddressScreen() {
   };
 
   const handleMapRegionChangeComplete = async (region: { latitude: number; longitude: number }) => {
-    if (isUpdatingLocation) return;
+    if (!Number.isFinite(region.latitude) || !Number.isFinite(region.longitude) || Math.abs(region.latitude) > 90 || Math.abs(region.longitude) > 180) return;
+    const request = ++reverseGeocodeRequest.current;
+    setLocationConfirmed(false);
+    setLocationData({ latitude: region.latitude, longitude: region.longitude, street: '', city: '', region: '', postalCode: '', name: '', fullAddress: '' });
+    setLocationError('');
     
     setIsUpdatingLocation(true);
     try {
@@ -181,6 +203,7 @@ export default function AddAddressScreen() {
         address?.postalCode,
       ].filter(Boolean).join(', ');
 
+      if (request !== reverseGeocodeRequest.current) return;
       setLocationData({
         latitude: region.latitude,
         longitude: region.longitude,
@@ -191,464 +214,56 @@ export default function AddAddressScreen() {
         name: address?.name || '',
         fullAddress,
       });
+      setLocationError(fullAddress ? '' : 'Address not available for this point. Enter the delivery address below before confirming.');
     } catch (error) {
-      console.error('Location update error:', error);
+      if (request !== reverseGeocodeRequest.current) return;
+      console.warn('Reverse geocoding failed:', error);
+      setLocationError('Address lookup failed. You can enter the delivery address below and confirm this map location.');
     } finally {
+      if (request === reverseGeocodeRequest.current) setIsUpdatingLocation(false);
+    }
+  };
+
+  const handleSearchLocation = async () => {
+    const query = searchText.trim();
+    if (query.length < 3) return;
+    setIsLoadingLocation(true);
+    setLocationError('');
+    try {
+      const [result] = await Location.geocodeAsync(query);
+      if (!result || !Number.isFinite(result.latitude) || !Number.isFinite(result.longitude)) {
+        setLocationError('No matching location was found. Try a more specific place or address.');
+        return;
+      }
+      const selected: LocationData = { latitude: result.latitude, longitude: result.longitude, street: '', city: '', region: '', postalCode: '', name: '', fullAddress: '' };
+      setLocationData(selected);
+      setLocationConfirmed(false);
+      reverseGeocodeRequest.current += 1;
+      const locationRequest = reverseGeocodeRequest.current;
       setIsUpdatingLocation(false);
+      updateMapLocation(selected.latitude, selected.longitude);
+      try {
+        const [address] = await Location.reverseGeocodeAsync(selected);
+        const fullAddress = [address?.name, address?.street, address?.city, address?.region, address?.postalCode].filter(Boolean).join(', ');
+        if (locationRequest !== reverseGeocodeRequest.current) return;
+        if (fullAddress) {
+          setLocationData({ ...selected, street: address?.street || '', city: address?.city || '', region: address?.region || '', postalCode: address?.postalCode || '', name: address?.name || '', fullAddress });
+        } else {
+          setLocationError('Location found, but no readable address was returned. Enter the address details below.');
+        }
+      } catch {
+        if (locationRequest === reverseGeocodeRequest.current) setLocationError('Location found, but address lookup failed. Enter the address details below.');
+      }
+    } catch (error) {
+      console.warn('Location search failed:', error);
+      setLocationError('Location search failed. Check your network connection and try again.');
+    } finally {
+      setIsLoadingLocation(false);
     }
   };
 
   const generateMapHTML = (initialLat: number, initialLng: number) => {
-    const apiKey = GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY !== 'YOUR_GOOGLE_MAPS_API_KEY_HERE' 
-      ? GOOGLE_MAPS_API_KEY 
-      : null;
-
-    if (!apiKey) {
-      // Enhanced Google Maps-style interactive map with very realistic appearance
-      return `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body, html { 
-                margin: 0; 
-                padding: 0; 
-                height: 100%; 
-                width: 100%; 
-                background: #E5E3DF; 
-                position: relative; 
-                overflow: hidden;
-                touch-action: none;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-              }
-              .map-base {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                background: #E5E3DF;
-              }
-              /* Google Maps style base layer */
-              .map-layer {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-              }
-              /* Streets grid pattern */
-              .street-grid {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                background-image: 
-                  repeating-linear-gradient(0deg, 
-                    transparent 0px, 
-                    transparent 48px, 
-                    rgba(160,160,160,0.25) 48px, 
-                    rgba(160,160,160,0.25) 50px,
-                    transparent 50px),
-                  repeating-linear-gradient(90deg, 
-                    transparent 0px, 
-                    transparent 48px, 
-                    rgba(160,160,160,0.25) 48px, 
-                    rgba(160,160,160,0.25) 50px,
-                    transparent 50px);
-                background-size: 50px 50px;
-                pointer-events: none;
-              }
-              /* Major roads */
-              .major-roads {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                background-image: 
-                  linear-gradient(90deg, 
-                    rgba(180,180,180,0.5) 0%, 
-                    rgba(180,180,180,0.5) 3px,
-                    transparent 3px, 
-                    transparent 47px,
-                    rgba(180,180,180,0.5) 47px,
-                    rgba(180,180,180,0.5) 50px,
-                    transparent 50px),
-                  linear-gradient(0deg, 
-                    rgba(180,180,180,0.5) 0%, 
-                    rgba(180,180,180,0.5) 3px,
-                    transparent 3px, 
-                    transparent 47px,
-                    rgba(180,180,180,0.5) 47px,
-                    rgba(180,180,180,0.5) 50px,
-                    transparent 50px),
-                  linear-gradient(90deg, 
-                    transparent 0%,
-                    transparent 24%,
-                    rgba(200,200,200,0.6) 24%,
-                    rgba(200,200,200,0.6) 26%,
-                    transparent 26%,
-                    transparent 74%,
-                    rgba(200,200,200,0.6) 74%,
-                    rgba(200,200,200,0.6) 76%,
-                    transparent 76%),
-                  linear-gradient(0deg, 
-                    transparent 0%,
-                    transparent 24%,
-                    rgba(200,200,200,0.6) 24%,
-                    rgba(200,200,200,0.6) 26%,
-                    transparent 26%,
-                    transparent 74%,
-                    rgba(200,200,200,0.6) 74%,
-                    rgba(200,200,200,0.6) 76%,
-                    transparent 76%);
-                background-size: 50px 50px, 50px 50px, 200px 200px, 200px 200px;
-                pointer-events: none;
-              }
-              .buildings-layer {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-              }
-              .building-block {
-                position: absolute;
-                background: #D4CFC9;
-                border: 1px solid rgba(200,195,185,0.6);
-                border-radius: 1px;
-                box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
-              }
-              .green-space {
-                position: absolute;
-                background: #AED581;
-                border-radius: 6px;
-                border: 1px solid rgba(150,200,150,0.4);
-                box-shadow: inset 0 1px 3px rgba(100,150,100,0.2);
-              }
-              .water-body {
-                position: absolute;
-                background: #81D4FA;
-                border-radius: 8px;
-                box-shadow: inset 0 2px 4px rgba(60,120,180,0.3);
-                border: 1px solid rgba(60,120,180,0.2);
-              }
-              .road-label {
-                position: absolute;
-                background: rgba(255,255,255,0.85);
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-size: 10px;
-                color: #333;
-                font-weight: 500;
-                pointer-events: none;
-                z-index: 5;
-                white-space: nowrap;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-              }
-              .location-marker {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -100%);
-                z-index: 100;
-                cursor: grab;
-                touch-action: none;
-                transition: transform 0.15s ease-out;
-              }
-              .location-marker:active {
-                cursor: grabbing;
-                transform: translate(-50%, -100%) scale(1.15);
-              }
-              .marker-pin {
-                width: 52px;
-                height: 52px;
-                position: relative;
-                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-              }
-              .pin-shadow {
-                position: absolute;
-                bottom: -10px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 28px;
-                height: 10px;
-                background: rgba(0,0,0,0.25);
-                border-radius: 50%;
-                filter: blur(5px);
-              }
-              .pin-body {
-                position: absolute;
-                bottom: 0;
-                left: 50%;
-                transform: translateX(-50%) rotate(-45deg);
-                width: 36px;
-                height: 36px;
-                background: ${COLORS.primary};
-                border-radius: 50% 50% 50% 0;
-                box-shadow: 0 3px 10px rgba(0,0,0,0.35);
-                border: 3px solid white;
-              }
-              .pin-center {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%) rotate(45deg);
-                width: 18px;
-                height: 18px;
-                background: white;
-                border-radius: 50%;
-                border: 2px solid ${COLORS.primary};
-              }
-              .pin-pulse {
-                position: absolute;
-                bottom: -10px;
-                left: 50%;
-                transform: translateX(-50%);
-                width: 36px;
-                height: 36px;
-                background: ${COLORS.primary};
-                border-radius: 50%;
-                opacity: 0.4;
-                animation: pulse 2s ease-in-out infinite;
-              }
-              @keyframes pulse {
-                0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.4; }
-                50% { transform: translateX(-50%) scale(1.6); opacity: 0; }
-              }
-              .search-bar {
-                position: absolute;
-                top: 12px;
-                left: 12px;
-                right: 12px;
-                background: white;
-                padding: 10px 16px;
-                border-radius: 24px;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-                font-size: 14px;
-                color: #333;
-                font-weight: 400;
-                z-index: 50;
-                border: 1px solid rgba(0,0,0,0.08);
-                pointer-events: none;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-              }
-              .search-icon {
-                width: 18px;
-                height: 18px;
-                opacity: 0.5;
-              }
-              .info-notice {
-                position: absolute;
-                bottom: 12px;
-                left: 12px;
-                right: 12px;
-                background: rgba(255,255,255,0.98);
-                padding: 10px 14px;
-                border-radius: 10px;
-                text-align: center;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.12);
-                font-size: 11px;
-                color: #666;
-                z-index: 50;
-                backdrop-filter: blur(12px);
-                line-height: 1.4;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="map-base" id="mapArea"></div>
-            <div class="street-grid"></div>
-            <div class="major-roads"></div>
-            <div class="buildings-layer" id="buildings"></div>
-            <div id="greens"></div>
-            <div id="waters"></div>
-            <div id="roadLabels"></div>
-            <div class="search-bar">
-              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <span>Search this area</span>
-            </div>
-            <div class="location-marker" id="marker">
-              <div class="marker-pin">
-                <div class="pin-shadow"></div>
-                <div class="pin-pulse"></div>
-                <div class="pin-body">
-                  <div class="pin-center"></div>
-                </div>
-              </div>
-            </div>
-            <div class="info-notice">
-              Tap or drag pin to set location • Configure Google Maps API key for satellite view
-            </div>
-            <script>
-              const marker = document.getElementById('marker');
-              const mapArea = document.getElementById('mapArea');
-              let isDragging = false;
-              
-              // Create realistic map elements
-              function createMapElements() {
-                const buildings = document.getElementById('buildings');
-                const greens = document.getElementById('greens');
-                const waters = document.getElementById('waters');
-                const roadLabels = document.getElementById('roadLabels');
-                
-                // Create building blocks (realistic urban layout)
-                const buildingPositions = [];
-                for (let i = 0; i < 60; i++) {
-                  const building = document.createElement('div');
-                  building.className = 'building-block';
-                  const width = 20 + Math.random() * 45;
-                  const height = 25 + Math.random() * 65;
-                  const left = Math.random() * 95;
-                  const top = Math.random() * 95;
-                  
-                  // Avoid overlapping too much
-                  let valid = true;
-                  for (let pos of buildingPositions) {
-                    if (Math.abs(pos.left - left) < 10 && Math.abs(pos.top - top) < 10) {
-                      valid = false;
-                      break;
-                    }
-                  }
-                  
-                  if (valid) {
-                    building.style.width = width + 'px';
-                    building.style.height = height + 'px';
-                    building.style.left = left + '%';
-                    building.style.top = top + '%';
-                    building.style.opacity = 0.75 + Math.random() * 0.25;
-                    building.style.background = '#' + ['D4CFC9', 'CFCAC4', 'D9D4CE', 'CEC9C3'][Math.floor(Math.random() * 4)];
-                    buildings.appendChild(building);
-                    buildingPositions.push({left, top});
-                  }
-                }
-                
-                // Create green spaces (parks)
-                for (let i = 0; i < 10; i++) {
-                  const green = document.createElement('div');
-                  green.className = 'green-space';
-                  const width = 70 + Math.random() * 100;
-                  const height = 70 + Math.random() * 100;
-                  green.style.width = width + 'px';
-                  green.style.height = height + 'px';
-                  green.style.left = Math.random() * 85 + '%';
-                  green.style.top = Math.random() * 85 + '%';
-                  greens.appendChild(green);
-                }
-                
-                // Create water bodies
-                for (let i = 0; i < 5; i++) {
-                  const water = document.createElement('div');
-                  water.className = 'water-body';
-                  const width = 60 + Math.random() * 90;
-                  const height = 40 + Math.random() * 70;
-                  water.style.width = width + 'px';
-                  water.style.height = height + 'px';
-                  water.style.left = Math.random() * 85 + '%';
-                  water.style.top = Math.random() * 85 + '%';
-                  waters.appendChild(water);
-                }
-                
-                // Add road labels
-                const roadNames = ['Main St', 'Park Ave', 'First St', 'Broadway', 'Oak St', 'Elm Ave', 'Maple Dr', 'Cedar Ln'];
-                for (let i = 0; i < 8; i++) {
-                  const label = document.createElement('div');
-                  label.className = 'road-label';
-                  label.textContent = roadNames[i];
-                  label.style.left = (10 + i * 12) + '%';
-                  label.style.top = (15 + (i % 3) * 30) + '%';
-                  roadLabels.appendChild(label);
-                }
-              }
-              
-              function updateMarkerPosition(x, y) {
-                marker.style.left = x + '%';
-                marker.style.top = y + '%';
-                
-                // Calculate lat/lng
-                const lat = ${initialLat} + ((y - 50) / 50) * 0.018;
-                const lng = ${initialLng} + ((x - 50) / 50) * 0.018;
-                
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'locationChange',
-                    latitude: lat,
-                    longitude: lng
-                  }));
-                }
-              }
-              
-              // Mouse/Touch handlers
-              marker.addEventListener('mousedown', (e) => {
-                isDragging = true;
-                e.preventDefault();
-              });
-              
-              marker.addEventListener('touchstart', (e) => {
-                isDragging = true;
-                e.preventDefault();
-              });
-              
-              mapArea.addEventListener('mousemove', (e) => {
-                if (isDragging) {
-                  const rect = mapArea.getBoundingClientRect();
-                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                  const y = ((e.clientY - rect.top) / rect.height) * 100;
-                  updateMarkerPosition(Math.max(5, Math.min(95, x)), Math.max(5, Math.min(95, y)));
-                }
-              });
-              
-              mapArea.addEventListener('touchmove', (e) => {
-                if (isDragging && e.touches[0]) {
-                  e.preventDefault();
-                  const touch = e.touches[0];
-                  const rect = mapArea.getBoundingClientRect();
-                  const x = ((touch.clientX - rect.left) / rect.width) * 100;
-                  const y = ((touch.clientY - rect.top) / rect.height) * 100;
-                  updateMarkerPosition(Math.max(5, Math.min(95, x)), Math.max(5, Math.min(95, y)));
-                }
-              });
-              
-              mapArea.addEventListener('click', (e) => {
-                if (!isDragging) {
-                  const rect = mapArea.getBoundingClientRect();
-                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                  const y = ((e.clientY - rect.top) / rect.height) * 100;
-                  updateMarkerPosition(x, y);
-                }
-              });
-              
-              mapArea.addEventListener('touchend', (e) => {
-                if (!isDragging && e.changedTouches[0]) {
-                  e.preventDefault();
-                  const touch = e.changedTouches[0];
-                  const rect = mapArea.getBoundingClientRect();
-                  const x = ((touch.clientX - rect.left) / rect.width) * 100;
-                  const y = ((touch.clientY - rect.top) / rect.height) * 100;
-                  updateMarkerPosition(x, y);
-                }
-              });
-              
-              document.addEventListener('mouseup', () => { isDragging = false; });
-              document.addEventListener('touchend', () => { isDragging = false; });
-              
-              // Initialize
-              createMapElements();
-              
-              // Send initial location
-              if (window.ReactNativeWebView) {
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'locationChange',
-                  latitude: ${initialLat},
-                  longitude: ${initialLng}
-                }));
-              }
-            </script>
-          </body>
-        </html>
-      `;
-    }
-
+    const apiKey = GOOGLE_MAPS_API_KEY;
     return `
       <!DOCTYPE html>
       <html>
@@ -701,6 +316,7 @@ export default function AddAddressScreen() {
                   // Use default Google Maps styling for clear, readable map
                   styles: []
                 });
+                window.map = map;
                 
                 // Create custom marker with pin style
                 marker = new google.maps.Marker({
@@ -737,36 +353,20 @@ export default function AddAddressScreen() {
                   title: 'Drag to set your location',
                   zIndex: 1000
                 });
+                window.marker = marker;
                 
-                // Send initial location
-                window.ReactNativeWebView.postMessage(JSON.stringify({
-                  type: 'locationChange',
-                  latitude: initialPosition.lat,
-                  longitude: initialPosition.lng,
-                }));
-                
-                // Helper function to reverse geocode and send address
-                function reverseGeocode(lat, lng) {
-                  const geocoder = new google.maps.Geocoder();
-                  geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-                    if (status === 'OK' && results[0]) {
-                      window.ReactNativeWebView.postMessage(JSON.stringify({
-                        type: 'addressUpdate',
-                        address: results[0].formatted_address,
-                        components: results[0].address_components
-                      }));
-                    }
-                  });
-                }
+                let userSelectedLocation = false;
+                map.addListener('dragstart', () => {
+                  userSelectedLocation = true;
+                });
                 
                 // Handle map click - move marker to clicked location
                 map.addListener('click', (e) => {
+                  userSelectedLocation = true;
                   const lat = e.latLng.lat();
                   const lng = e.latLng.lng();
                   marker.setPosition({ lat, lng });
                   map.panTo({ lat, lng });
-                  
-                  reverseGeocode(lat, lng);
                   
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'locationChange',
@@ -777,6 +377,7 @@ export default function AddAddressScreen() {
                 
                 // Handle marker drag
                 marker.addListener('dragstart', () => {
+                  userSelectedLocation = true;
                   marker.setAnimation(google.maps.Animation.BOUNCE);
                 });
                 
@@ -786,8 +387,6 @@ export default function AddAddressScreen() {
                   const lng = e.latLng.lng();
                   map.panTo({ lat, lng });
                   
-                  reverseGeocode(lat, lng);
-                  
                   window.ReactNativeWebView.postMessage(JSON.stringify({
                     type: 'locationChange',
                     latitude: lat,
@@ -795,13 +394,12 @@ export default function AddAddressScreen() {
                   }));
                 });
                 
-                // Handle map center change (when user pans map)
-                map.addListener('center_changed', () => {
+                // Report the settled center after a user pans or zooms the map.
+                map.addListener('idle', () => {
                   const center = map.getCenter();
-                  if (center) {
+                  if (center && userSelectedLocation) {
                     const lat = center.lat();
                     const lng = center.lng();
-                    // Update marker to follow map center
                     marker.setPosition({ lat, lng });
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                       type: 'locationChange',
@@ -811,11 +409,8 @@ export default function AddAddressScreen() {
                   }
                 });
                 
-                // Enable traffic layer for clear road visualization
-                const trafficLayer = new google.maps.TrafficLayer();
-                trafficLayer.setMap(map);
-                
                 mapLoaded = true;
+                window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
               } catch (error) {
                 console.error('Map initialization error:', error);
                 document.getElementById('error').style.display = 'block';
@@ -833,10 +428,11 @@ export default function AddAddressScreen() {
                 message: 'Failed to load Google Maps API'
               }));
             }
+            window.gm_authFailure = handleMapError;
             
-            // Load Google Maps API with Places and Visualization libraries
+            // Only Maps JavaScript API is required to render this selectable map.
             const script = document.createElement('script');
-            script.src = 'https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,visualization&callback=initMap';
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&callback=initMap';
             script.async = true;
             script.defer = true;
             script.onerror = handleMapError;
@@ -856,32 +452,37 @@ export default function AddAddressScreen() {
   };
 
   const handleConfirm = async () => {
-    const typedAddress = [houseNumber, apartmentRoad, searchText, locationData?.fullAddress]
+    const typedAddress = [houseNumber, apartmentRoad, locationData?.fullAddress]
       .filter((value, index, values) => Boolean(value) && values.indexOf(value) === index)
       .join(', ');
-    const addressData = Platform.OS === 'web' && typedAddress
-      ? { latitude: locationData?.latitude || 0, longitude: locationData?.longitude || 0, street: apartmentRoad || searchText, city: '', region: '', postalCode: '', name: houseNumber || apartmentRoad || searchText, fullAddress: typedAddress }
-      : locationData;
-    if (!addressData) {
-      Alert.alert('Location Required', 'Please wait for location to be detected.');
+    if (!locationData || !Number.isFinite(locationData.latitude) || !Number.isFinite(locationData.longitude) || Math.abs(locationData.latitude) > 90 || Math.abs(locationData.longitude) > 180 || (locationData.latitude === 0 && locationData.longitude === 0)) {
+      Alert.alert('Location Required', 'Choose a valid delivery location using the map or current location.');
+      return;
+    }
+    if (!typedAddress.trim()) {
+      Alert.alert('Address Required', 'Enter a delivery address or choose a location with a resolved address.');
+      return;
+    }
+    if (!locationConfirmed) {
+      setLocationConfirmed(true);
       return;
     }
     
     try {
       // Generate a unique ID for the address
-      const addressId = `addr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const addressId = params.edit === 'true' && params.addressId
+        ? String(params.addressId)
+        : `addr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Prepare address data
       const addressToSave = {
         id: addressId,
         type: saveAsName || saveAs || 'Home',
-        address: addressData.fullAddress.length > 30 
-          ? addressData.fullAddress.substring(0, 30) + '...' 
-          : addressData.fullAddress,
-        fullAddress: addressData.fullAddress,
+        address: typedAddress.length > 30 ? typedAddress.substring(0, 30) + '...' : typedAddress,
+        fullAddress: typedAddress,
         location: {
-          lat: addressData.latitude,
-          lng: addressData.longitude,
+          lat: locationData.latitude,
+          lng: locationData.longitude,
         },
       };
 
@@ -890,13 +491,11 @@ export default function AddAddressScreen() {
       // Set as selected address
       await addressStorage.setSelectedAddressId(addressId);
 
-      if (fromCurrentLocation) {
-        // Redirect directly to home page with updated location
-        router.push('/(customer)');
+      if (fromCurrentLocation || params.edit === 'true') {
+        router.replace('/(customer)/address/search');
       } else {
-        // After saving, redirect back to enter your area page
         Alert.alert('Success', 'Address saved successfully!', [
-          { text: 'OK', onPress: () => router.push('/(customer)/address/search') }
+          { text: 'OK', onPress: () => router.replace('/(customer)/address/search') }
         ]);
       }
     } catch (error) {
@@ -915,8 +514,7 @@ export default function AddAddressScreen() {
     }
   };
 
-  const initialLat = locationData?.latitude || 13.0827; // Default to Chennai
-  const initialLng = locationData?.longitude || 80.2707;
+  const mapHtml = useMemo(() => generateMapHTML(FACTORY_LOCATION.lat, FACTORY_LOCATION.lng), []);
 
   return (
     <View style={styles.container}>
@@ -924,64 +522,32 @@ export default function AddAddressScreen() {
       {Platform.OS === 'web' ? (
         <View style={styles.webAddressPanel}>
           <Ionicons name="location-outline" size={30} color={COLORS.primary} />
-          <Text style={styles.webAddressTitle}>Enter your delivery address</Text>
-          <Text style={styles.webAddressHint}>Use the address fields below to save a delivery location.</Text>
+          <Text style={styles.webAddressTitle}>Map unavailable on web</Text>
+          <Text style={styles.webAddressHint}>Open HySafe on a supported mobile device to choose a delivery location on the interactive map.</Text>
+        </View>
+      ) : !GOOGLE_MAPS_API_KEY ? (
+        <View style={styles.webAddressPanel}>
+          <Ionicons name="map-outline" size={30} color={COLORS.primary} />
+          <Text style={styles.webAddressTitle}>Map configuration required</Text>
+          <Text style={styles.webAddressHint}>Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY to enable the interactive map. You can still use current location or select a geocoded result.</Text>
         </View>
       ) : <WebView
         ref={webViewRef}
         style={styles.mapContainer}
-        source={{ html: generateMapHTML(initialLat, initialLng) }}
+        source={{ html: mapHtml }}
         onMessage={(event) => {
           try {
             const data = JSON.parse(event.nativeEvent.data);
-            if (data.type === 'locationChange') {
+            if (data.type === 'mapReady') {
+              if (locationData) updateMapLocation(locationData.latitude, locationData.longitude);
+            } else if (data.type === 'locationChange') {
               handleMapRegionChangeComplete({
                 latitude: data.latitude,
                 longitude: data.longitude,
               });
-            } else if (data.type === 'addressUpdate') {
-              // Update address fields when location changes
-              const address = data.address || '';
-              const components = data.components || [];
-              
-              // Extract address components
-              let street = '';
-              let city = '';
-              let region = '';
-              let postalCode = '';
-              let name = '';
-              
-              components.forEach((component: any) => {
-                const types = component.types;
-                if (types.includes('street_number') || types.includes('route')) {
-                  street = (street + ' ' + component.long_name).trim();
-                }
-                if (types.includes('locality')) {
-                  city = component.long_name;
-                }
-                if (types.includes('administrative_area_level_1')) {
-                  region = component.long_name;
-                }
-                if (types.includes('postal_code')) {
-                  postalCode = component.long_name;
-                }
-                if (types.includes('premise') || types.includes('subpremise')) {
-                  name = component.long_name;
-                }
-              });
-              
-              // Update location data with new address
-              setLocationData(prev => prev ? {
-                ...prev,
-                street: street || prev.street,
-                city: city || prev.city,
-                region: region || prev.region,
-                postalCode: postalCode || prev.postalCode,
-                name: name || prev.name,
-                fullAddress: address || prev.fullAddress,
-              } : null);
             } else if (data.type === 'error') {
               console.error('Map error:', data.message);
+              setLocationError('Google Maps could not load. Check the Maps JavaScript API key, its restrictions, and your network connection.');
               Alert.alert(
                 'Map Loading Error',
                 data.message || 'Unable to load Google Maps. Please check your internet connection and try again.',
@@ -995,11 +561,7 @@ export default function AddAddressScreen() {
         onError={(syntheticEvent) => {
           const { nativeEvent } = syntheticEvent;
           console.error('WebView error:', nativeEvent);
-          Alert.alert(
-            'Map Error',
-            'Unable to load the map. Please check your internet connection and ensure Google Maps API key is configured.',
-            [{ text: 'OK' }]
-          );
+          setLocationError('Unable to load the interactive map. Check your network connection and Google Maps API configuration.');
         }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
@@ -1025,12 +587,16 @@ export default function AddAddressScreen() {
             value={searchText}
             onChangeText={(value) => {
               setSearchText(value);
-              if (Platform.OS === 'web') {
-                setLocationData({ latitude: 0, longitude: 0, street: value, city: '', region: '', postalCode: '', name: value, fullAddress: value });
-              }
+              setLocationConfirmed(false);
+              setLocationError('');
             }}
+            onSubmitEditing={handleSearchLocation}
+            returnKeyType="search"
           />
         </View>
+
+          {locationError ? <Text style={styles.locationError}>{locationError}</Text> : null}
+          {locationData ? <Text style={styles.coordinatesText}>Selected coordinates: {locationData.latitude.toFixed(6)}, {locationData.longitude.toFixed(6)}</Text> : null}
 
         {/* GPS Button */}
         <TouchableOpacity 
@@ -1068,7 +634,7 @@ export default function AddAddressScreen() {
          </View>
 
           {/* Information Box - Hide for current location flow */}
-          {!fromCurrentLocation && (
+      {(!fromCurrentLocation || !locationData?.fullAddress) && (
          <View style={styles.infoBox}>
             <Text style={styles.infoText}>
                 The more accurate your address, the quicker we can reach you!
@@ -1077,7 +643,7 @@ export default function AddAddressScreen() {
           )}
 
           {/* Form Inputs - Hide for current location flow */}
-          {!fromCurrentLocation && (
+          {(!fromCurrentLocation || !locationData?.fullAddress) && (
             <>
          <View style={styles.form}>
             <TextInput 
@@ -1151,10 +717,10 @@ export default function AddAddressScreen() {
           <TouchableOpacity 
             style={styles.confirmButton}
             onPress={handleConfirm}
-            disabled={isUpdatingLocation}
+            disabled={isUpdatingLocation || isLoadingLocation}
           >
             <Text style={styles.confirmButtonText}>
-              {fromCurrentLocation ? 'Confirm/Proceed' : 'Save Address'}
+              {!locationConfirmed ? 'Confirm Location' : fromCurrentLocation ? 'Continue' : 'Save Address'}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -1183,6 +749,8 @@ const styles = StyleSheet.create({
   },
   webAddressTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginTop: 10 },
   webAddressHint: { fontSize: 14, color: COLORS.textLight, textAlign: 'center', marginTop: 8 },
+  locationError: { color: '#B42318', fontSize: 13, marginHorizontal: 16, marginTop: 8 },
+  coordinatesText: { color: COLORS.textLight, fontSize: 11, marginHorizontal: 16, marginTop: 4 },
   customMarker: {
     alignItems: 'center',
     justifyContent: 'center',

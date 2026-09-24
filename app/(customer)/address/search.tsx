@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../../src/context/AuthContext';
 import { addressStorage, SavedAddress } from '../../../src/utils/addressStorage';
 import { COLORS } from '../../../src/utils/constants';
+import { ensureForegroundLocationPermission, getCurrentPositionWithTimeout } from '../../../src/utils/location';
 
 export default function AddressSearchScreen() {
   const router = useRouter();
@@ -20,15 +21,19 @@ export default function AddressSearchScreen() {
   const [showMenuForAddress, setShowMenuForAddress] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load saved addresses - refresh when screen comes into focus
   const loadAddresses = useCallback(async () => {
-    const addresses = await addressStorage.getAllAddresses(user);
-    setSavedAddresses(addresses);
-    if (addresses.length > 0 && !selectedAddressId) {
-      setSelectedAddressId(addresses[0].id);
+    try {
+      const addresses = await addressStorage.getAllAddresses(user);
+      setSavedAddresses(addresses);
+      if (addresses.length > 0 && !selectedAddressId) setSelectedAddressId(addresses[0].id);
+    } catch (error) {
+      console.error('Could not load saved addresses:', error);
+      Alert.alert('Addresses unavailable', 'Saved addresses could not be read from this device. Please try again.');
     }
   }, [user, selectedAddressId]);
 
@@ -47,8 +52,7 @@ export default function AddressSearchScreen() {
     setIsLoadingLocation(true);
     try {
       // Request permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      if (!(await ensureForegroundLocationPermission())) {
         Alert.alert(
           'Permission Denied',
           'Please enable location permissions in your device settings to use this feature.',
@@ -59,15 +63,18 @@ export default function AddressSearchScreen() {
       }
 
       // Get current location
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const location = await getCurrentPositionWithTimeout();
 
       // Get address from coordinates
-      const [address] = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      let address: Location.LocationGeocodedAddress | undefined;
+      try {
+        [address] = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      } catch (error) {
+        console.warn('Current location reverse geocoding failed:', error);
+      }
 
       // Navigate to confirm location screen (add address screen) with location data
       router.push({
@@ -113,6 +120,7 @@ export default function AddressSearchScreen() {
     }
 
     setIsSearching(true);
+    setSearchError('');
     setShowSearchResults(true);
 
     try {
@@ -139,7 +147,7 @@ export default function AddressSearchScreen() {
                 return {
                   latitude: result.latitude,
                   longitude: result.longitude,
-                  name: addr.name || addr.street || text,
+                  name: addr.name || addr.street || '',
                   street: addr.street || '',
                   city: addr.city || '',
                   region: addr.region || '',
@@ -150,23 +158,14 @@ export default function AddressSearchScreen() {
             } catch (err) {
               // ignore
             }
-            return {
-              latitude: result.latitude,
-              longitude: result.longitude,
-              name: text,
-              street: '',
-              city: '',
-              region: '',
-              postalCode: '',
-              country: '',
-            };
+            return null;
           })
         );
 
-        geocodeResults = detailedResults.map((result, index) => ({
+        geocodeResults = detailedResults.filter((result: any) => result && [result.name, result.street, result.city, result.region, result.postalCode, result.country].some(Boolean)).map((result: any, index) => ({
           id: `search-${index}-${Date.now()}`,
           type: 'Search Result',
-          address: result.name || text,
+          address: result.name || result.street || result.city || result.region,
           fullAddress: [
             result.name,
             result.street,
@@ -182,8 +181,8 @@ export default function AddressSearchScreen() {
           isSearchResult: true,
         }));
       } catch (geocodeError) {
-        // Geocoding might not be available in all regions
-        console.log('Geocoding not available, using saved addresses only');
+        console.warn('Location search failed:', geocodeError);
+        setSearchError('Location search failed. Check your network connection and try again.');
       }
 
       // Combine saved addresses and geocode results
@@ -198,8 +197,10 @@ export default function AddressSearchScreen() {
       );
 
       setSearchResults(uniqueResults);
+      if (uniqueResults.length === 0) setSearchError('No matching saved address or geocoded place was found.');
     } catch (error: any) {
       console.error('Search error:', error);
+      setSearchError('Search is unavailable right now. Please try again.');
       // Fallback: just filter saved addresses
       const filtered = savedAddresses.filter(addr => 
         addr.address.toLowerCase().includes(text.toLowerCase()) ||
@@ -355,7 +356,7 @@ export default function AddressSearchScreen() {
 
       {showSearchResults && searchResults.length === 0 && !isSearching && searchText.length >= 3 && (
         <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>No results found</Text>
+          <Text style={styles.noResultsText}>{searchError || 'No results found'}</Text>
           <Text style={styles.noResultsSubtext}>Try a different search term</Text>
         </View>
       )}
@@ -387,11 +388,14 @@ export default function AddressSearchScreen() {
               key={addr.id} 
               style={[styles.addressItem, isSelected && styles.selectedAddressItem]}
               onPress={async () => {
-                setSelectedAddressId(addr.id);
-                // Save selected address ID
-                await addressStorage.setSelectedAddressId(addr.id);
-                // Update address and redirect to home page
-                router.push('/(customer)');
+                try {
+                  await addressStorage.setSelectedAddressId(addr.id);
+                  setSelectedAddressId(addr.id);
+                  router.back();
+                } catch (error) {
+                  console.error('Could not select saved address:', error);
+                  Alert.alert('Address not selected', 'Could not save your address selection on this device. Please try again.');
+                }
               }}
             >
               <View style={styles.addressIconContainer}>
@@ -471,6 +475,7 @@ export default function AddressSearchScreen() {
                       params: {
                         edit: 'true',
                         addressId: address.id,
+                        type: address.type,
                         latitude: address.location?.lat?.toString() || '',
                         longitude: address.location?.lng?.toString() || '',
                         fullAddress: address.fullAddress,
@@ -499,15 +504,18 @@ export default function AddressSearchScreen() {
                         text: 'Delete',
                         style: 'destructive',
                         onPress: async () => {
-                          await addressStorage.removeAddress(showMenuForAddress);
-                          // If this was the selected address, clear selection
-                          const currentSelected = await addressStorage.getSelectedAddressId();
-                          if (currentSelected === showMenuForAddress) {
-                            await addressStorage.setSelectedAddressId('');
+                          try {
+                            await addressStorage.removeAddress(showMenuForAddress);
+                            const currentSelected = await addressStorage.getSelectedAddressId();
+                            if (currentSelected === showMenuForAddress) {
+                              await addressStorage.setSelectedAddressId('');
+                            }
+                            await loadAddresses();
+                            setShowMenuForAddress(null);
+                          } catch (error) {
+                            console.error('Could not delete saved address:', error);
+                            Alert.alert('Address not deleted', 'Could not update saved addresses on this device. Please try again.');
                           }
-                          // Refresh addresses
-                          await loadAddresses();
-                          setShowMenuForAddress(null);
                         },
                       },
                     ]

@@ -100,8 +100,8 @@ export const CustomerHeader = () => {
       <View style={styles.actions}>
            <NotificationCenter topInset={insets.top} onNotificationPress={(item) => {
              if (item.orderId) router.push({ pathname: '/(customer)/order-details/[id]', params: { id: item.orderId } });
-             else if (item.recurringDeliveryId) router.push('/(customer)/recurring-deliveries');
              else if (item.billId) router.push({ pathname: '/(customer)/recurring-deliveries/bill', params: { billId: item.billId } });
+             else if (item.recurringDeliveryId) router.push({ pathname: '/(customer)/recurring-deliveries', params: { recurringDeliveryId: item.recurringDeliveryId } });
            }} />
            <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/(customer)/checkout')}>
               <Feather name="shopping-cart" size={18} color="#FFFFFF" />

@@ -4,7 +4,7 @@ import { Button } from '@components/Button';
 import { Badge, Loading, EmptyState } from '@components/Common';
 import { inventoryService } from '@services/inventory.service';
 import { formatDate } from '@utils/formatting';
-import { AlertTriangle, Plus, Edit2, Trash2, X, MoreVertical } from 'lucide-react';
+import { AlertTriangle, Plus, Edit2, Trash2, X, MoreVertical, ImagePlus } from 'lucide-react';
 import { createPortal } from "react-dom";
 
 const emptyForm = {
@@ -17,6 +17,7 @@ const emptyForm = {
   deliveryCharge: "",
   // availability toggle (true = available)
   available: true,
+  image: "",
 };
 
 export const InventoryPage: React.FC = () => {
@@ -85,6 +86,7 @@ export const InventoryPage: React.FC = () => {
       price: String(item.price ?? ""),
       deliveryCharge: String(item.deliveryCharge ?? "0"),
       available: item.available ?? true,
+      image: item.image || "",
     });
     setFormError('');
     setShowForm(true);
@@ -125,6 +127,7 @@ export const InventoryPage: React.FC = () => {
         price: Number(formData.price),
         deliveryCharge: Number(formData.deliveryCharge || 0),
         available: formData.available !== undefined ? Boolean(formData.available) : undefined,
+        image: formData.image,
       };
 
       if (editingItemId) {
@@ -223,7 +226,7 @@ export const InventoryPage: React.FC = () => {
           className="flex items-center gap-2"
         >
           <Plus size={20} />
-          Add Item
+          Add Product
         </Button>
       </div>
 
@@ -239,7 +242,7 @@ export const InventoryPage: React.FC = () => {
             >
               <CardHeader className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">
-                  {editingItemId ? "Add Stock" : "Add New Item"}
+                  {editingItemId ? "Edit Product" : "Add New Product"}
                 </h2>
 
                 <button
@@ -259,6 +262,45 @@ export const InventoryPage: React.FC = () => {
                   )}
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+
+                    <div className="md:col-span-2">
+                      <label htmlFor="product-image" className="mb-2 block text-sm font-medium text-text-primary">Product image</label>
+                      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-dashed border-border bg-accent/40 p-4">
+                        <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg bg-surface text-primary">
+                          {formData.image ? <img src={formData.image} alt="Product preview" className="h-full w-full object-cover" /> : <ImagePlus size={28} aria-hidden="true" />}
+                        </div>
+                        <div className="space-y-2">
+                          <input id="product-image" type="file" accept="image/jpeg,image/png,image/webp" className="max-w-full text-sm" onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) { setFormError("Choose an image smaller than 5 MB."); event.target.value = ""; return; }
+                            if (!file.type.startsWith("image/")) { setFormError("Choose a valid image file."); event.target.value = ""; return; }
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              if (typeof reader.result !== "string") return;
+                              const image = new Image();
+                              image.onload = () => {
+                                const canvas = document.createElement("canvas");
+                                const scale = Math.min(1, 1200 / Math.max(image.width, image.height));
+                                canvas.width = Math.max(1, Math.round(image.width * scale));
+                                canvas.height = Math.max(1, Math.round(image.height * scale));
+                                const context = canvas.getContext("2d");
+                                if (!context) { setFormError("Unable to process this image."); return; }
+                                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                                setFormData((current) => ({ ...current, image: canvas.toDataURL("image/jpeg", 0.82) }));
+                                setFormError("");
+                              };
+                              image.onerror = () => setFormError("Unable to read this image.");
+                              image.src = reader.result;
+                            };
+                            reader.onerror = () => setFormError("Unable to read this image.");
+                            reader.readAsDataURL(file);
+                          }} />
+                          <p className="text-xs text-text-secondary">JPG, PNG or WebP; up to 5 MB. Saved with this product.</p>
+                          {formData.image && <button type="button" onClick={() => { setFormData((current) => ({ ...current, image: "" })); const input = document.getElementById("product-image") as HTMLInputElement | null; if (input) input.value = ""; }} className="text-sm font-medium text-danger">Remove image</button>}
+                        </div>
+                      </div>
+                    </div>
 
                     <input
                       type="text"

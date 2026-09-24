@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -29,6 +29,7 @@ export default function RecurringDeliveriesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { recurringDeliveryId } = useLocalSearchParams<{ recurringDeliveryId?: string }>();
   const { t } = useTranslation();
   const [recurringDeliveries, setRecurringDeliveries] = useState<
     RecurringDelivery[]
@@ -38,6 +39,11 @@ export default function RecurringDeliveriesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "paused">("active");
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!recurringDeliveryId) return;
+    const plan = recurringDeliveries.find(item => (item._id || item.id) === recurringDeliveryId);
+    if (plan) setActiveTab(plan.isActive ? "active" : "paused");
+  }, [recurringDeliveryId, recurringDeliveries]);
 
   const loadRecurringDeliveries = useCallback(async () => {
     try {
@@ -279,7 +285,7 @@ export default function RecurringDeliveriesScreen() {
             );
 
             return (
-              <View key={id} style={styles.deliveryCard}>
+              <View key={id} style={[styles.deliveryCard, recurringDeliveryId === id && { borderColor: COLORS.primary, borderWidth: 2 }]}>
                 <View style={styles.deliveryHeader}>
                   <View style={styles.deliveryInfo}>
                     <Text style={styles.productName}>

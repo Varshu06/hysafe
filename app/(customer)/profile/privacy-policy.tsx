@@ -19,7 +19,7 @@ export default function PrivacyPolicyScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
-          onPress={() => router.replace("/(customer)/profile/privacy-security")}
+          onPress={() => router.replace("/(customer)/profile")}
           style={styles.backButton}
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />
@@ -34,36 +34,8 @@ export default function PrivacyPolicyScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.card}>
-          <Text style={styles.h1}>Hy-Safe Privacy Policy</Text>
-          <Text style={styles.p}>
-            This is a placeholder policy until final legal content is provided.
-          </Text>
-
-          <Text style={styles.h2}>What we collect</Text>
-          <Text style={styles.p}>
-            - Phone number / email (for login and communication){"\n"}- Delivery
-            address (for fulfilling orders){"\n"}- Order details and payment
-            method selection (for processing orders)
-          </Text>
-
-          <Text style={styles.h2}>How we use it</Text>
-          <Text style={styles.p}>
-            - To deliver water cans to your address{"\n"}- To send order updates
-            (accepted/out for delivery/delivered){"\n"}- To improve app
-            experience and support
-          </Text>
-
-          <Text style={styles.h2}>Data sharing</Text>
-          <Text style={styles.p}>
-            We may share limited details with delivery staff (name, phone,
-            address) only to complete deliveries.
-          </Text>
-
-          <Text style={styles.h2}>Contact</Text>
-          <Text style={styles.p}>
-            If you have questions, contact support via the Help & Support
-            section.
-          </Text>
+          <Text style={styles.h1}>Privacy Policy</Text>
+          <Text style={styles.p}>The official HySafe privacy policy has not yet been provided. This screen is not a legal privacy policy.</Text>
         </View>
       </ScrollView>
     </View>

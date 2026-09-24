@@ -57,7 +57,7 @@ export default function ChangePasswordScreen() {
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
-            router.replace("/(customer)/profile/privacy-security");
+            router.replace("/(customer)/profile");
           },
         },
       ]);
@@ -75,7 +75,7 @@ export default function ChangePasswordScreen() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
-          onPress={() => router.replace("/(customer)/profile/privacy-security")}
+          onPress={() => router.replace("/(customer)/profile")}
           style={styles.backButton}
         >
           <Feather name="arrow-left" size={24} color={COLORS.text} />

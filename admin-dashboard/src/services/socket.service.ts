@@ -37,8 +37,8 @@ class SocketService {
     this.socket?.on(event, callback);
   }
 
-  off(event: string) {
-    this.socket?.off(event);
+  off(event: string, callback?: (...args: any[]) => void) {
+    this.socket?.off(event, callback);
   }
 }
 

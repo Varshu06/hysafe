@@ -13,8 +13,6 @@ export const CustomersPage: React.FC = () => {
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState<any>(null);
   const [menu, setMenu] = useState<{
     id: string;
     x: number;
@@ -34,25 +32,6 @@ export const CustomersPage: React.FC = () => {
       console.error('Error loading customers:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-  const handleDeleteCustomer = async () => {
-    if (!customerToDelete) return;
-
-    try {
-      await customerService.deleteCustomer(customerToDelete._id);
-
-      setShowDeleteModal(false);
-      setCustomerToDelete(null);
-
-      if (selectedCustomer?._id === customerToDelete._id) {
-        setSelectedCustomer(null);
-        setCustomerOrders([]);
-      }
-
-      loadCustomers();
-    } catch (error) {
-      console.error("Error deleting customer:", error);
     }
   };
 
@@ -237,21 +216,7 @@ export const CustomersPage: React.FC = () => {
                     View Details
                   </button>
 
-                  <button
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-red-600 hover:bg-red-50"
-                    onClick={() => {
-                      const customer = customers.find((c) => c._id === menu.id);
-
-                      if (customer) {
-                        setCustomerToDelete(customer);
-                        setShowDeleteModal(true);
-                      }
-
-                      setMenu(null);
-                    }}
-                  >
-                    Delete Customer
-                  </button>
+                  <div className="px-4 py-3 text-xs text-slate-500" title="No supported customer-delete API is available.">Customer deletion is unavailable</div>
                 </div>
               </>
             )}
@@ -366,62 +331,6 @@ export const CustomersPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </CardBody>
-            </div>
-          </div>,
-          document.body
-        )}
-      {showDeleteModal &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
-            onClick={() => {
-              setShowDeleteModal(false);
-              setCustomerToDelete(null);
-            }}
-          >
-            <div
-              className="w-full max-w-md rounded-xl bg-white shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <CardHeader>
-                <h2 className="text-xl font-semibold text-red-600">
-                  Delete Customer
-                </h2>
-              </CardHeader>
-
-              <CardBody className="space-y-6">
-                <p className="text-text-secondary">
-                  Are you sure you want to delete
-                  <span className="font-semibold text-text-primary">
-                    {" "}
-                    {customerToDelete?.name}
-                  </span>
-                  ?
-                </p>
-
-                <p className="text-sm text-red-500">
-                  This action cannot be undone.
-                </p>
-
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => {
-                      setShowDeleteModal(false);
-                      setCustomerToDelete(null);
-                    }}
-                    className="rounded-lg border border-border px-4 py-2 hover:bg-gray-100"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    onClick={handleDeleteCustomer}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
-                </div>
               </CardBody>
             </div>
           </div>,

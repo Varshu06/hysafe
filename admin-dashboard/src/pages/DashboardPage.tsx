@@ -88,7 +88,7 @@ export const DashboardPage: React.FC = () => {
     loadDashboardData();
   }, []);
   useEffect(() => {
-    const refreshDashboard = async () => {
+      const refreshDashboard = async () => {
       try {
         const stats = await orderService.getOrderStats();
         setStats(stats);
@@ -107,8 +107,8 @@ export const DashboardPage: React.FC = () => {
     socketService.on("order-status-updated", refreshDashboard);
 
     return () => {
-      socketService.off("new-order");
-      socketService.off("order-status-updated");
+      socketService.off("new-order", refreshDashboard);
+      socketService.off("order-status-updated", refreshDashboard);
     };
   }, []);
 
@@ -116,12 +116,15 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
-        <p className="text-text-secondary mt-1">
-          Welcome back! Here's your business overview.
-        </p>
-        <div className="mt-3 flex items-center gap-3"><button onClick={() => setAnnouncementOpen(true)} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white">Create Announcement</button>{announcementStatus && <span role="status" className="text-sm text-text-secondary">{announcementStatus}</span>}</div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">Dashboard</h1>
+          <p className="text-text-secondary mt-1">
+            Welcome back! Here's your business overview.
+          </p>
+          {announcementStatus && <span role="status" className="mt-2 block text-sm text-text-secondary">{announcementStatus}</span>}
+        </div>
+        <button onClick={() => setAnnouncementOpen(true)} className="shrink-0 self-start rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:self-center">Create Announcement</button>
       </div>
       {announcementOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"><form onSubmit={publishAnnouncement} className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl"><div className="flex justify-between"><h2 className="text-xl font-semibold">Create Announcement</h2><button type="button" aria-label="Close" onClick={() => setAnnouncementOpen(false)}>×</button></div><label className="block text-sm font-medium">Title<input required maxLength={120} value={announcementTitle} onChange={event => setAnnouncementTitle(event.target.value)} className="mt-1 w-full rounded-lg border border-border p-2" /></label><label className="block text-sm font-medium">Message<textarea required maxLength={2000} rows={5} value={announcementMessage} onChange={event => setAnnouncementMessage(event.target.value)} className="mt-1 w-full rounded-lg border border-border p-2" /></label><label className="block text-sm font-medium">Audience<div className="mt-1 rounded-lg border border-border bg-slate-50 p-2">All Customers</div></label><div className="flex justify-end gap-2"><button type="button" onClick={() => setAnnouncementOpen(false)} className="rounded-lg border px-4 py-2">Cancel</button><button disabled={announcementSaving} className="rounded-lg bg-primary px-4 py-2 font-semibold text-white disabled:opacity-50">{announcementSaving ? 'Publishing…' : 'Publish'}</button></div></form></div>}
 

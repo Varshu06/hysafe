@@ -110,6 +110,16 @@ class SocketService {
   }
 
   off(event: string, callback?: (data: any) => void): void {
+    const pending = this.pendingListeners.get(event);
+    if (pending) {
+      if (callback) {
+        const remaining = pending.filter(listener => listener !== callback);
+        if (remaining.length) this.pendingListeners.set(event, remaining);
+        else this.pendingListeners.delete(event);
+      } else {
+        this.pendingListeners.delete(event);
+      }
+    }
     if (this.socket) {
       if (callback) {
         this.socket.off(event, callback);

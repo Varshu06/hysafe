@@ -27,7 +27,7 @@ export const addressStorage = {
       return [];
     } catch (error) {
       console.error('Error getting addresses:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -39,6 +39,7 @@ export const addressStorage = {
       await AsyncStorage.setItem(ADDRESSES_KEY, JSON.stringify(addresses));
     } catch (error) {
       console.error('Error saving addresses:', error);
+      throw error;
     }
   },
 
@@ -111,11 +112,7 @@ export const addressStorage = {
    * Set selected address ID
    */
   async setSelectedAddressId(addressId: string): Promise<void> {
-    try {
-      await AsyncStorage.setItem(SELECTED_ADDRESS_ID_KEY, addressId);
-    } catch (error) {
-      console.error('Error setting selected address ID:', error);
-    }
+    await AsyncStorage.setItem(SELECTED_ADDRESS_ID_KEY, addressId);
   },
 
   /**

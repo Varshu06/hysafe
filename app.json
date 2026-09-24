@@ -46,7 +46,13 @@
         }
       ],
       "expo-web-browser",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow HySafe to use your location to set delivery addresses and navigate to deliveries."
+        }
+      ]
     ],
     "scheme": "hysafe"
   }

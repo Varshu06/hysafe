@@ -99,14 +99,12 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
     }
 
     if (order.assignedStaffId) {
-      return res.status(400).json({ message: "Order is already assigned to another staff member" });
+      return res.status(400).json({ message: "Order is no longer available" });
     }
 
     const updatedOrder = await runTransaction(async (session) => {
-      // 1. Atomically reserve inventory
-      await reserveInventoryAtomic(order.items, session);
-
-      // 2. Atomic state transition & staff assignment
+      // Claim the order before touching inventory. This compare-and-swap makes
+      // concurrent acceptance safe even on standalone MongoDB deployments.
       const accepted = await Order.findOneAndUpdate(
         {
           _id: id,
@@ -124,7 +122,26 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
       );
 
       if (!accepted) {
-        throw new Error("Order was already accepted by another staff member");
+        throw new Error("Order is no longer available");
+      }
+
+      const reservedItems: typeof order.items = [];
+      try {
+        for (const item of order.items) {
+          await reserveInventoryAtomic([item], session);
+          reservedItems.push(item);
+        }
+      } catch (error) {
+        // Transaction deployments roll back the claim. On a standalone MongoDB
+        // deployment, explicitly release it if inventory reservation failed.
+        if (!session) {
+          if (reservedItems.length) await restoreInventoryAtomic(reservedItems);
+          await Order.updateOne(
+            { _id: id, status: "accepted", assignedStaffId: staffId },
+            { $set: { status: "pending" }, $unset: { assignedStaffId: 1, acceptedAt: 1 } },
+          );
+        }
+        throw error;
       }
 
       return accepted;
@@ -146,9 +163,12 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error("Accept order error:", error);
+    const message = error?.code === 112 || /write.?conflict|already accepted|no longer available/i.test(error?.message || "")
+      ? "Order is no longer available"
+      : error.message || "Failed to accept order";
     res
       .status(400)
-      .json({ message: error.message || "Failed to accept order" });
+      .json({ message });
   }
 };
 

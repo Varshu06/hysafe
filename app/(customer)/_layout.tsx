@@ -65,6 +65,10 @@ export default function CustomerLayout() {
         }}
       />
       <Tabs.Screen
+        name="profile/help-support"
+        options={{ href: null, tabBarStyle: { display: "none" }, headerShown: false }}
+      />
+      <Tabs.Screen
         name="profile/change-password"
         options={{
           href: null,

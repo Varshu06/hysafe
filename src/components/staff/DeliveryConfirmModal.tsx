@@ -11,7 +11,7 @@ import {
 import { COLORS } from "../../utils/constants";
 import { Button } from "../ui/Button";
 
-export type PaymentMethod = "online" | "offline" | "cash" | "shop";
+export type PaymentMethod = "offline" | "cash" | "shop";
 type Props = {
   visible: boolean;
   paymentMethod: PaymentMethod;
@@ -21,7 +21,6 @@ type Props = {
   onConfirm: (payload: {
     codCollected: boolean;
     notes?: string;
-    transactionId?: string;
     paymentMethod: PaymentMethod;
     collectedPaymentMethod?: 'cash' | 'shop';
   }) => void;
@@ -35,12 +34,10 @@ export function DeliveryConfirmModal({
   onClose,
   onConfirm,
 }: Props) {
-  const isCOD = String(paymentMethod || "").toLowerCase() !== "online";
+  const isCOD = true;
   const [codCollected, setCodCollected] = useState(!isCOD);
   const [notes, setNotes] = useState("");
-  const [transactionId, setTransactionId] = useState("");
   const [error, setError] = useState("");
-  const [paymentMode, setPaymentMode] = useState<PaymentMethod>("offline");
   const [collectedPaymentMethod, setCollectedPaymentMethod] = useState<'cash' | 'shop' | null>(
     paymentMethod === 'cash' || paymentMethod === 'shop' ? paymentMethod : null,
   );
@@ -49,28 +46,18 @@ export function DeliveryConfirmModal({
     ? paymentMethod
     : collectedPaymentMethod;
   const canConfirm = useMemo(() => {
-    if (paymentMode === "online") {
-      return Boolean(transactionId.trim());
-    }
     return codCollected && (!isRecurring || Boolean(effectiveCollectionMethod));
-  }, [paymentMode, transactionId, codCollected, isRecurring, effectiveCollectionMethod]);
+  }, [codCollected, isRecurring, effectiveCollectionMethod]);
 
   useEffect(() => {
-    setPaymentMode("offline");
     setCodCollected(!isCOD);
     setError("");
     setNotes("");
-    setTransactionId("");
     setCollectedPaymentMethod(paymentMethod === 'cash' || paymentMethod === 'shop' ? paymentMethod : null);
   }, [isCOD, paymentMethod, visible]);
 
   const handleConfirm = () => {
-    if (paymentMode === "online" && !transactionId.trim()) {
-      setError("Transaction ID is required for online payments.");
-      return;
-    }
-
-    if (paymentMode === "offline" && !codCollected) {
+    if (!codCollected) {
       setError("Confirm payment collection before marking delivered.");
       return;
     }
@@ -80,16 +67,13 @@ export function DeliveryConfirmModal({
     }
 
     onConfirm({
-      codCollected: paymentMode === "online" ? true : codCollected,
+      codCollected,
       notes: notes.trim() ? notes.trim() : undefined,
-      transactionId:
-        paymentMode === "online" ? transactionId.trim() : undefined,
-      paymentMethod: paymentMode,
+      paymentMethod: "offline",
       collectedPaymentMethod: effectiveCollectionMethod || undefined,
     });
 
     setNotes("");
-    setTransactionId("");
     setError("");
     setCodCollected(!isCOD);
   };
@@ -105,7 +89,7 @@ export function DeliveryConfirmModal({
         <View style={styles.card}>
           <Text style={styles.title}>Confirm Delivery</Text>
           <Text style={styles.subtitle}>
-            {isCOD ? `Amount to collect: ₹${codAmount || 0}` : "Online payment"}
+            {`Amount to collect: ₹${codAmount || 0}`}
           </Text>
           <View style={{ marginBottom: 12 }}>
             {/* Cash On Delivery */}
@@ -142,7 +126,7 @@ export function DeliveryConfirmModal({
             </View>
           </View>
           {isRecurring && paymentMethod !== 'cash' && paymentMethod !== 'shop' && <View style={styles.methodRow}>{(['cash', 'shop'] as const).map(method => <TouchableOpacity key={method} style={[styles.methodOption, collectedPaymentMethod === method && styles.methodOptionSelected]} onPress={() => setCollectedPaymentMethod(method)}><Text style={styles.checkText}>{method === 'cash' ? 'Cash on Delivery' : 'Pay at Shop'}</Text></TouchableOpacity>)}</View>}
-          {paymentMode === "offline" ? (
+          {
             <TouchableOpacity
               style={styles.checkRow}
               activeOpacity={0.85}
@@ -157,19 +141,7 @@ export function DeliveryConfirmModal({
               />
               <Text style={styles.checkText}>{effectiveCollectionMethod === "shop" ? "Payment received at shop" : "Cash collected"}</Text>
             </TouchableOpacity>
-          ) : (
-            <TextInput
-              value={transactionId}
-              onChangeText={(value) => {
-                setTransactionId(value);
-                if (error) {
-                  setError("");
-                }
-              }}
-              placeholder="Enter Transaction ID"
-              style={styles.inputTransactionId}
-            />
-          )}
+          }
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TextInput
@@ -284,16 +256,5 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 13,
     fontWeight: "700",
-  },
-  inputTransactionId: {
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    color: COLORS.text,
-    backgroundColor: "#F8FAFC",
-    textAlignVertical: "top",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
   },
 });

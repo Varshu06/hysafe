@@ -17,8 +17,8 @@ import { Loader } from "../../../src/components/ui/Loader";
 import { StatusBadge } from "../../../src/components/ui/StatusBadge";
 import { useCart } from "../../../src/context/CartContext";
 import { useOrder } from "../../../src/context/OrderContext";
-import { PRODUCTS } from "../../../src/data/dummy";
 import { getOrderById, cancelOrder } from "../../../src/services/order.service";
+import { getProductsByIds } from "../../../src/services/product.service";
 import { Order } from "../../../src/types/order.types";
 import { COLORS } from "../../../src/utils/constants";
 import { useTranslation } from "react-i18next";
@@ -84,45 +84,53 @@ export default function OrderDetailsScreen() {
     Alert.alert("Track Order", "Tracking feature coming soon!");
   };
 
-  const handleReorder = () => {
+  const handleReorder = async () => {
     if (!order) {
       Alert.alert("Error", "Order information not available");
       return;
     }
 
     try {
-      // Find the 20L water can product (default product)
-      const product = PRODUCTS.find((p) => p.volume === "20L") || PRODUCTS[0];
-
-      // Add to cart with the order quantity
-      const currentQuantity = order.quantity || 1;
-
-      // Check if product is already in cart
-      const existingQuantity = getQuantity(product.id);
-
-      if (existingQuantity > 0) {
-        // Product already in cart, update quantity
-        updateQuantity(product.id, existingQuantity + currentQuantity);
-      } else {
-        // Add product to cart (will add with quantity 1)
-        addToCart({
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          volume: product.volume,
-          deliveryCharge: product.deliveryCharge,
-        });
-
-        // Update quantity to match order quantity
-        if (currentQuantity > 1) {
-          updateQuantity(product.id, currentQuantity);
-        }
+      const orderItems = order.items || [];
+      if (!orderItems.length) {
+        Alert.alert("Unable to reorder", "This order does not include item details.");
+        return;
       }
+      const productsById = await getProductsByIds(orderItems.map((item) => item.productId));
+      const addedNames: string[] = [];
+      const unavailableNames: string[] = [];
+      for (const item of orderItems) {
+        const product = productsById.get(item.productId);
+        if (!product || !product.available) {
+          unavailableNames.push(item.productName);
+          continue;
+        }
+        const existingQuantity = getQuantity(product.id);
+        if (existingQuantity > 0) {
+          updateQuantity(product.id, existingQuantity + item.quantity);
+        } else {
+          addToCart({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            volume: product.volume,
+            deliveryCharge: product.deliveryCharge,
+          });
+          if (item.quantity > 1) updateQuantity(product.id, item.quantity);
+        }
+        addedNames.push(`${item.quantity} × ${product.name}`);
+      }
+
+      if (addedNames.length === 0) {
+        Alert.alert("Unable to reorder", "The products from this order are no longer available.");
+        return;
+      }
+      const unavailableMessage = unavailableNames.length ? `\nUnavailable: ${unavailableNames.join(", ")}` : "";
 
       Alert.alert(
         "Success",
-        `${currentQuantity} x ${product.name} added to cart!`,
+        `${addedNames.join("\n")} added to cart.${unavailableMessage}`,
         [
           {
             text: "View Cart",

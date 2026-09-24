@@ -1,64 +1,47 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../utils/constants';
 
-export const FlashScreen = () => {
+export const FlashScreen = ({ onComplete }: { onComplete?: () => void }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const ripple1 = useRef(new Animated.Value(0)).current;
-  const ripple2 = useRef(new Animated.Value(0)).current;
+  const dotScale = useRef(new Animated.Value(0.15)).current;
+  const dotOpacity = useRef(new Animated.Value(1)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo Animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Ripple Effect Loop
-    const createRipple = (anim: Animated.Value, delay: number) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 2000,
-            delay: delay,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 0,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    };
-
-    createRipple(ripple1, 0);
-    createRipple(ripple2, 1000);
-  }, []);
+    let animation: Animated.CompositeAnimation | undefined;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (cancelled) return;
+      if (reduceMotion) {
+        fadeAnim.setValue(1);
+        scaleAnim.setValue(1);
+        textOpacity.setValue(1);
+        dotOpacity.setValue(0);
+        onComplete?.();
+        return;
+      }
+      animation = Animated.sequence([
+        Animated.parallel([
+          Animated.timing(dotScale, { toValue: 2.8, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(dotOpacity, { toValue: 0, duration: 280, delay: 120, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        ]),
+        Animated.timing(textOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ]);
+      animation.start(({ finished }) => { if (finished) onComplete?.(); });
+    });
+    return () => { cancelled = true; animation?.stop(); };
+  }, [onComplete]);
 
   return (
     <View style={styles.container}>
       
-      {/* Ripples */}
-      <Animated.View style={[styles.ripple, { 
-          transform: [{ scale: ripple1.interpolate({ inputRange: [0, 1], outputRange: [1, 4] }) }],
-          opacity: ripple1.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0] })
-      }]} />
-      <Animated.View style={[styles.ripple, { 
-          transform: [{ scale: ripple2.interpolate({ inputRange: [0, 1], outputRange: [1, 4] }) }],
-          opacity: ripple2.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0] })
-      }]} />
+      <Animated.View style={[styles.dot, { opacity: dotOpacity, transform: [{ scale: dotScale }] }]} />
 
       <Animated.View style={[styles.logoContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.logoWrapper}>
@@ -68,8 +51,10 @@ export const FlashScreen = () => {
             resizeMode="contain"
           />
         </View>
-        <Text style={styles.appName}>Hy-Safe</Text>
-        <Text style={styles.tagline}>Pure Water. Pure Life.</Text>
+        <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
+          <Text style={styles.appName}>Hy-Safe</Text>
+          <Text style={styles.tagline}>Pure Water. Pure Life.</Text>
+        </Animated.View>
       </Animated.View>
     </View>
   );
@@ -83,13 +68,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  ripple: {
-      position: 'absolute',
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: 'white',
-      zIndex: 0,
+  dot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: 'white',
+    zIndex: 2,
   },
   logoContainer: {
     alignItems: 'center',

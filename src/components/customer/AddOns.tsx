@@ -10,11 +10,11 @@ import {
   View,
 } from "react-native";
 import { useCart } from "../../context/CartContext";
-import { PRODUCTS } from "../../data/dummy";
 import { COLORS } from "../../utils/constants";
 import { normalizeImageSource } from "../../utils/image";
-import { Product } from "@/types/product.types";
+import type { Product } from "@/types/product.types";
 import { useTranslation } from "react-i18next";
+import { useProduct } from "../../context/ProductContext";
 
 interface AddOnItemProps {
   item: {
@@ -107,6 +107,7 @@ const AddOnItem: React.FC<AddOnItemProps> = ({ item, isInCart, onAdd }) => {
 export const AddOns = () => {
   const { t } = useTranslation();
   const { addToCart, getQuantity } = useCart();
+  const { products } = useProduct();
 
   const handleAddItem = (item: AddOnItemProps['item']) => {
     addToCart({
@@ -120,7 +121,7 @@ export const AddOns = () => {
   };
 
   // Filter items to only show those not in cart
-  const itemsNotInCart = PRODUCTS.filter((item) => getQuantity(item.id) === 0);
+  const itemsNotInCart = products.filter((item) => item.available && getQuantity(item.id) === 0);
 
   // Don't show the section if all items are already in cart
   if (itemsNotInCart.length === 0) {

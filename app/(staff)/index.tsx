@@ -27,7 +27,7 @@ import { StaffHeader } from "../../src/components/staff/StaffHeader";
 import { StaffOrderCard } from "../../src/components/staff/StaffOrderCard";
 import { Chip, ChipRow } from "../../src/components/staff/StaffChips";
 import { ReasonModal } from "../../src/components/staff/ReasonModal";
-import { haversineKm, etaMinutes } from "../../src/utils/geo";
+import { haversineKm, etaMinutes, openDirectionsToLocation } from "../../src/utils/geo";
 import { storage } from "../../src/utils/storage";
 import { socketService } from "../../src/services/socket.service";
 import { useTranslation } from "react-i18next";
@@ -154,7 +154,7 @@ export default function NewOrdersScreen() {
               order.customerId?.phone || order.customer?.phone || "",
             pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
             pickupLocation: { lat: 13.0827, lng: 80.2707 },
-            location: order.location || { lat: 0, lng: 0 },
+            location: order.location,
             codAmount: order.isRecurring ? (order.recurringBillId?.amount ?? order.totalPrice) : (["offline", "cash", "shop"].includes(order.paymentMethod) ? order.totalPrice : 0),
           };
 
@@ -294,16 +294,7 @@ export default function NewOrdersScreen() {
   };
 
   const handleNavigate = async (coords?: { lat: number; lng: number }) => {
-    if (!coords)
-      return Alert.alert("No location", "Delivery location is not available.");
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
-    const can = await Linking.canOpenURL(url);
-    if (!can)
-      return Alert.alert(
-        "Not supported",
-        "Maps is not supported on this device.",
-      );
-    await Linking.openURL(url);
+    await openDirectionsToLocation(coords);
   };
 
   const handleAccept = async (orderId: string) => {

@@ -92,9 +92,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const checkAuth = async () => {
     try {
-      // Add artificial delay for Flash Screen
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
       const token = await storage.getToken();
       const userData = await storage.getUser();
       

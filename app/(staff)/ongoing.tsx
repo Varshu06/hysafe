@@ -30,6 +30,7 @@ import {
   PaymentMethod,
 } from "../../src/components/staff/DeliveryConfirmModal";
 import { useTranslation } from "react-i18next";
+import { openDirectionsToLocation } from "../../src/utils/geo";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -135,16 +136,7 @@ export default function OngoingOrdersScreen() {
   };
 
   const handleNavigate = async (coords?: { lat: number; lng: number }) => {
-    if (!coords)
-      return Alert.alert("No location", "Delivery location is not available.");
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${coords.lat},${coords.lng}&travelmode=driving`;
-    const can = await Linking.canOpenURL(url);
-    if (!can)
-      return Alert.alert(
-        "Not supported",
-        "Maps is not supported on this device.",
-      );
-    await Linking.openURL(url);
+    await openDirectionsToLocation(coords);
   };
 
   const getStatusButton = (order: any) => {

@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Bell,
   Boxes,
   ChevronRight,
-  Droplets,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,6 +15,8 @@ import {
 import { useAuth } from '@context/AuthContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AdminNotification, getNotifications, markAllNotificationsRead, markNotificationRead } from '@services/notification.service';
+import { socketService } from '@services/socket.service';
+import hysafeLogo from '../../../src/assets/logo1.png';
 
 const MENU_ITEMS = [
   { label: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -56,7 +57,7 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (op
       <div className="border-b border-slate-100 px-6 py-6 bg-gradient-to-b from-cyan-50 to-white">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-600 text-white shadow-sm ring-1 ring-cyan-200/80">
-            <Droplets size={24} />
+            <img src={hysafeLogo} alt="HySafe" className="h-11 w-11 object-contain" />
           </div>
           <div>
             <h1 className="text-lg font-semibold tracking-tight text-slate-900">HySafe Admin</h1>
@@ -72,7 +73,7 @@ export const Sidebar = ({ isOpen, setIsOpen }: { isOpen: boolean; setIsOpen: (op
         </div>
       </div>
 
-      <nav className="flex-1 px-3 pb-4">
+      <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4">
         {MENU_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.path === '/' ? location.pathname === '/' : location.pathname.startsWith(item.path);
@@ -123,11 +124,29 @@ export const Navbar = ({ onMenuToggle }: { onMenuToggle: () => void }) => {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationError, setNotificationError] = useState('');
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
   const loadNotifications = useCallback(async () => {
     try { const data = await getNotifications(); setNotifications(data.notifications); setUnreadCount(data.unreadCount); setNotificationError(''); }
     catch { setNotificationError('Unable to load notifications.'); }
   }, []);
   useEffect(() => { void loadNotifications(); }, [loadNotifications]);
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!notificationRef.current?.contains(target)) setNotificationsOpen(false);
+      if (!profileRef.current?.contains(target)) setUserMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') { setNotificationsOpen(false); setUserMenuOpen(false); } };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+  }, []);
+  useEffect(() => {
+    const handleNotificationCreated = () => { void loadNotifications(); };
+    socketService.on('notification-created', handleNotificationCreated);
+    return () => socketService.off('notification-created', handleNotificationCreated);
+  }, [loadNotifications]);
   const markRead = async (item: AdminNotification) => {
     try { if (!item.isRead) await markNotificationRead(item._id); setNotifications(rows => rows.map(row => row._id === item._id ? { ...row, isRead: true } : row)); setUnreadCount(count => Math.max(0, count - (item.isRead ? 0 : 1))); }
     catch { setNotificationError('Unable to update notification.'); }
@@ -154,16 +173,16 @@ export const Navbar = ({ onMenuToggle }: { onMenuToggle: () => void }) => {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative">
+        <div className="relative" ref={notificationRef}>
           <button aria-label="Notifications" onClick={() => { setNotificationsOpen(open => !open); void loadNotifications(); }} className="relative hidden rounded-xl p-2 text-slate-500 hover:bg-slate-100 md:inline-flex">
             <Bell size={20} />{unreadCount > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
           {notificationsOpen && <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3"><strong>Notifications</strong>{unreadCount > 0 && <button className="text-xs font-semibold text-cyan-700" onClick={async () => { try { await markAllNotificationsRead(); setNotifications(rows => rows.map(row => ({ ...row, isRead: true }))); setUnreadCount(0); setNotificationError(''); } catch { setNotificationError('Unable to update notifications.'); } }}>Mark all as read</button>}</div>
-            {notificationError ? <p className="p-4 text-sm text-rose-600">{notificationError}</p> : notifications.length ? <div className="max-h-80 overflow-y-auto">{notifications.map(item => <button key={item._id} onClick={() => void markRead(item)} className={`block w-full border-b px-4 py-3 text-left text-sm hover:bg-slate-50 ${item.isRead ? '' : 'bg-cyan-50'}`}><span className="font-semibold">{item.title || (item.type === 'admin_new_order' ? 'New order' : item.type)}</span>{item.message && <span className="mt-1 block text-slate-600">{item.message}</span>}<span className="mt-1 block text-xs text-slate-400">{new Date(item.createdAt).toLocaleString()}</span></button>)}</div> : <p className="p-4 text-sm text-slate-500">No notifications yet.</p>}
+            {notificationError ? <p className="p-4 text-sm text-rose-600">{notificationError}</p> : notifications.length ? <div className="max-h-80 overflow-y-auto">{notifications.map(item => <button key={item._id} onClick={async () => { await markRead(item); if (item.orderId) { setNotificationsOpen(false); navigate(`/orders?orderId=${encodeURIComponent(item.orderId)}`); } }} className={`block w-full border-b px-4 py-3 text-left text-sm hover:bg-slate-50 ${item.isRead ? '' : 'bg-cyan-50'}`}><span className="font-semibold">{item.title || (item.type === 'admin_new_order' ? 'New order' : item.type)}</span>{item.message && <span className="mt-1 block text-slate-600">{item.message}</span>}<span className="mt-1 block text-xs text-slate-400">{new Date(item.createdAt).toLocaleString()}</span></button>)}</div> : <p className="p-4 text-sm text-slate-500">No notifications yet.</p>}
           </div>}
         </div>
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-3 py-2 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"

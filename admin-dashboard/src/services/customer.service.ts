@@ -33,8 +33,4 @@ export const customerService = {
     const response = await api.get('/customers/stats');
     return response.data.data;
   },
-  deleteCustomer: async (id: string) => {
-    const response = await api.delete(`/customers/${id}`);
-    return response.data.data;
-  },
 };

@@ -108,23 +108,10 @@ export const SERVICE_RADIUS_KM = Number(
   process.env.EXPO_PUBLIC_SERVICE_RADIUS_KM || 5
 );
 
-// Google Maps API Key
-//
-// To get your Google Maps API Key:
-// 1. Go to https://console.cloud.google.com/
-// 2. Create a new project or select an existing one
-// 3. Enable the following APIs:
-//    - Maps JavaScript API
-//    - Geocoding API (optional, for address search)
-//    - Places API (optional, for place search)
-// 4. Go to "Credentials" and create a new API Key
-// 5. (Recommended) Restrict the API key to only the APIs you need
-// 6. Copy the API key and paste it below
-//
-// IMPORTANT: For production, use environment variables instead of hardcoding the key!
-// In Expo, you can use: Constants.expoConfig?.extra?.googleMapsApiKey
-//
-export const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY_HERE";
+// Google Maps JavaScript API key for the interactive address map in the WebView.
+// This is bundled in the mobile app; restrict it to Maps JavaScript API and the
+// app's allowed origins/restrictions in Google Cloud. Never put a server key here.
+export const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || "";
 
 // Google OAuth Client IDs
 //

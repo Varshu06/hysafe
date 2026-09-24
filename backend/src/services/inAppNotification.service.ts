@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { Notification, NotificationRole, NotificationType } from '../models/Notification.model';
-import { Staff } from '../models/Staff.model';
 import { User } from '../models/User.model';
+import { emitAdminNotificationCreated } from './socket.service';
 
 type NotificationInput = {
   recipientId: mongoose.Types.ObjectId | string;
@@ -49,11 +49,6 @@ export const notifyOrderCreated = async (order: any): Promise<void> => {
   if (customerId) recipients.push({ id: customerId, role: 'customer', type: 'order_placed' });
 
   try {
-    const onlineStaff = await Staff.find({ isOnline: true }).select('userId').lean();
-    onlineStaff.forEach(staff => {
-      const id = getId(staff.userId);
-      if (id) recipients.push({ id, role: 'staff', type: 'new_order_available' });
-    });
     const admins = await User.find({ role: 'admin', isActive: true }).select('_id').lean();
     admins.forEach(admin => recipients.push({ id: admin._id, role: 'admin', type: 'admin_new_order' }));
   } catch (error) {
@@ -67,6 +62,7 @@ export const notifyOrderCreated = async (order: any): Promise<void> => {
       eventKey: `order:${orderId}:${type}:${recipientId}`,
     };
   });
+  if (recipients.some(recipient => recipient.role === 'admin')) emitAdminNotificationCreated();
 };
 
 export const notifyCustomerOrderStatus = async (order: any, type: Extract<NotificationType, 'order_accepted' | 'order_cancelled' | 'order_out_for_delivery' | 'order_delivered'>): Promise<void> => {

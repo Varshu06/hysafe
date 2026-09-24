@@ -82,14 +82,20 @@ export const emitNewOrder = (order: any) => {
   }
 };
 
+export const emitAdminNotificationCreated = () => {
+  if (io) io.to('admin').emit('notification-created');
+};
+
 // Helper function to emit order accepted to customer
 export const emitOrderAccepted = (order: any) => {
   if (io) {
-    io.to(`customer:${order.customerId}`).emit('order-status-updated', {
+    const payload = {
       orderId: order._id,
       status: 'accepted',
       order,
-    });
+    };
+    io.to(`customer:${order.customerId}`).emit('order-status-updated', payload);
+    io.to('admin').emit('order-status-updated', payload);
     console.log(`✅ Order accepted notification sent to customer: ${order.customerId}`);
   }
 };

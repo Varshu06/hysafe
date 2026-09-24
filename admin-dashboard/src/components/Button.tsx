@@ -22,11 +22,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClass =
-      'inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2';
+      'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2';
 
     const variantClass = {
       primary:
-        'bg-gradient-to-r from-cyan-600 to-sky-700 text-white shadow-sm hover:from-cyan-700 hover:to-sky-800 active:scale-[0.98] disabled:bg-gray-400',
+        'bg-primary text-white shadow-sm hover:bg-primary-dark active:scale-[0.98] disabled:bg-gray-400',
       secondary:
         'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:bg-gray-200',
       danger:

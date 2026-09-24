@@ -1,13 +1,15 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { COLORS } from "../../../src/utils/constants";
+import { useAuth } from "../../../src/context/AuthContext";
 
 export default function PrivacySecurityScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { logout } = useAuth();
 
   const handleDeleteAccount = () => {
     router.push("/(customer)/profile/delete-account");
@@ -60,8 +62,9 @@ export default function PrivacySecurityScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Security</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.sectionTitle}>Account Security</Text>
+        <Text style={styles.rowSubtitle}>Change your password, review recent login activity, or log out from Profile.</Text>
 
         <Row
           icon="lock"
@@ -75,12 +78,15 @@ export default function PrivacySecurityScreen() {
           subtitle="View recent login sessions"
           onPress={() => router.push("/(customer)/profile/login-activity")}
         />
+        <Row icon="log-out" title="Log Out" subtitle="Sign out of this account on this device" onPress={() => Alert.alert("Log Out", "Are you sure you want to log out?", [{ text: "Cancel", style: "cancel" }, { text: "Log Out", style: "destructive", onPress: () => void logout() }])} />
 
-        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Privacy</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Data & Privacy</Text>
+        <Text style={styles.rowSubtitle}>HySafe account data includes profile and contact information. Orders and recurring plans are stored with the service. Saved addresses are stored locally on this device; the selected address is sent with an order at checkout.</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 18 }]}>Privacy information</Text>
         <Row
           icon="file-text"
           title="Privacy Policy"
-          subtitle="Read how we handle your data"
+          subtitle="The official policy content has not been provided yet"
           onPress={() => router.push("/(customer)/profile/privacy-policy")}
         />
         <Row
@@ -90,7 +96,7 @@ export default function PrivacySecurityScreen() {
           onPress={handleDeleteAccount}
           danger
         />
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -133,6 +139,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingBottom: 36,
   },
   sectionTitle: {
     fontSize: 16,

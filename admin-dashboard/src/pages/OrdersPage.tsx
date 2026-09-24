@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { socketService } from '@services/socket.service';
 import { Card, CardBody, CardHeader } from '@components/Card';
 import { DataTable } from '@components/DataTable';
 import { Button } from '@components/Button';
@@ -12,6 +14,7 @@ import { Edit2, Eye, MoreVertical, X } from 'lucide-react';
 import { createPortal } from "react-dom";
 
 export const OrdersPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [staff, setStaff] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,6 +41,20 @@ export const OrdersPage: React.FC = () => {
   }, [filter]);
 
   useEffect(() => {
+    const refreshOrders = () => { void loadOrders(); };
+    socketService.on('new-order', refreshOrders);
+    socketService.on('order-status-updated', refreshOrders);
+    return () => { socketService.off('new-order', refreshOrders); socketService.off('order-status-updated', refreshOrders); };
+  }, [filter]);
+
+  useEffect(() => {
+    const id = searchParams.get('orderId');
+    if (!id || isLoading) return;
+    const order = orders.find(row => row._id === id);
+    if (order) { openDetails(order); setSearchParams({}, { replace: true }); }
+  }, [searchParams, orders, isLoading]);
+
+  useEffect(() => {
     if (
       selectedOrder &&
       !orders.some((order) => order._id === selectedOrder._id)
@@ -59,6 +76,7 @@ export const OrdersPage: React.FC = () => {
           ? ordersArray
           : ordersArray.filter((o: any) => o.status === filter);
       setOrders(filtered);
+      setSelectedOrder(current => current ? (filtered.find((row: Order) => row._id === current._id) || current) : current);
     } catch (error) {
       console.error('Error loading orders:', error);
     } finally {
@@ -346,6 +364,8 @@ export const OrdersPage: React.FC = () => {
                   <div><p className="text-text-secondary">Amount</p><p className="font-semibold">{formatCurrency(selectedOrder.totalPrice)}</p></div>
                   <div><p className="text-text-secondary">Status</p><p className="font-semibold">{ORDER_STATUS_LABELS[selectedOrder.status]}</p></div>
                   <div><p className="text-text-secondary">Payment</p><p className="font-semibold">{selectedOrder.paymentMethod === 'shop' ? 'Pay at Shop' : selectedOrder.paymentMethod === 'cash' || selectedOrder.paymentMethod === 'offline' ? 'Cash on Delivery' : selectedOrder.paymentMethod}</p></div>
+                  <div><p className="text-text-secondary">Payment Status</p><Badge variant={selectedOrder.paymentStatus === 'paid' ? 'success' : 'warning'}>{selectedOrder.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}</Badge></div>
+                  <div className="md:col-span-2"><p className="text-text-secondary">Items</p>{selectedOrder.items?.length ? <ul className="mt-1 space-y-1">{selectedOrder.items.map((item, index) => <li key={`${item.productName}-${index}`} className="font-semibold">{item.productName} × {item.quantity}{item.price != null && <span className="font-normal text-text-secondary"> · {formatCurrency(item.price)} each</span>}</li>)}</ul> : <p className="font-semibold">{selectedOrder.quantity ? `Quantity: ${selectedOrder.quantity}` : 'Order item details unavailable'}</p>}</div>
                   <div><p className="text-text-secondary">Assigned Staff</p><p className="font-semibold">{selectedOrder.assignedStaffName || 'Unassigned'}</p></div>
                   <div className="md:col-span-2"><p className="text-text-secondary">Delivery Address</p><p className="font-semibold">{selectedOrder.deliveryAddress}</p></div>
                 </div>

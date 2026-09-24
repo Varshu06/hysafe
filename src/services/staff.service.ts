@@ -44,7 +44,7 @@ export const getAssignedOrders = async (): Promise<any[]> => {
         order.customerId?.phone || (order as any).customer?.phone || "",
       pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai", // Default pickup
       pickupLocation: { lat: 13.0827, lng: 80.2707 }, // Default factory location
-      location: order.location || { lat: 0, lng: 0 },
+      location: order.location,
       codAmount: order.isRecurring ? (order.recurringBillId?.amount ?? order.totalPrice) : (["offline", "cash", "shop"].includes(order.paymentMethod) ? order.totalPrice : 0),
     }));
   } catch (error: any) {
@@ -75,7 +75,7 @@ export const getOngoingOrders = async (): Promise<any[]> => {
         order.customerId?.phone || (order as any).customer?.phone || "",
       pickupAddress: "Hy-Safe Plant, 12 Industrial Rd, Chennai",
       pickupLocation: { lat: 13.0827, lng: 80.2707 },
-      location: order.location || { lat: 0, lng: 0 },
+      location: order.location,
       codAmount: order.isRecurring ? (order.recurringBillId?.amount ?? order.totalPrice) : (["offline", "cash", "shop"].includes(order.paymentMethod) ? order.totalPrice : 0),
     }));
   } catch (error: any) {

@@ -3,7 +3,7 @@ import { AlertCircle, Inbox, Loader2 } from 'lucide-react';
 
 export const Loading = () => (
   <div className="flex h-72 items-center justify-center">
-    <div className="rounded-3xl border border-slate-200 bg-white/80 px-8 py-10 text-center shadow-sm backdrop-blur-sm">
+    <div className="rounded-xl border border-border bg-white px-8 py-10 text-center shadow-sm">
       <Loader2 className="mx-auto mb-4 animate-spin text-primary" size={30} />
       <p className="text-sm font-medium text-slate-500">Loading data...</p>
     </div>
@@ -17,7 +17,7 @@ export const EmptyState = ({
   description?: string;
 }) => (
   <div className="flex h-64 items-center justify-center">
-    <div className="rounded-3xl border border-dashed border-slate-200 bg-white/70 px-8 py-10 text-center shadow-sm">
+    <div className="rounded-xl border border-dashed border-border bg-white px-8 py-10 text-center shadow-sm">
       <Inbox className="mx-auto mb-3 text-slate-400" size={30} />
 
       <h3 className="text-lg font-semibold text-slate-700">
@@ -33,7 +33,7 @@ export const EmptyState = ({
 
 export const ErrorState = ({ message = 'An error occurred' }: { message?: string }) => (
   <div className="flex h-64 items-center justify-center">
-    <div className="rounded-3xl border border-rose-200 bg-rose-50/80 px-8 py-10 text-center shadow-sm">
+    <div className="rounded-xl border border-rose-200 bg-rose-50 px-8 py-10 text-center shadow-sm">
       <AlertCircle className="mx-auto mb-3 text-rose-500" size={30} />
       <p className="text-sm font-medium text-rose-700">{message}</p>
     </div>
@@ -52,11 +52,11 @@ export const Badge: React.FC<BadgeProps> = ({
   className = '',
 }) => {
   const variantClass = {
-    primary: 'bg-primary text-white',
-    success: 'bg-success text-white',
-    warning: 'bg-warning text-white',
-    danger: 'bg-danger text-white',
-    secondary: 'bg-surface text-primary',
+    primary: 'bg-accent text-primary',
+    success: 'bg-emerald-100 text-emerald-700',
+    warning: 'bg-amber-100 text-amber-700',
+    danger: 'bg-red-100 text-red-700',
+    secondary: 'bg-slate-100 text-slate-700',
   };
 
   return (

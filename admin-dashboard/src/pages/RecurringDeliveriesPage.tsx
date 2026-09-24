@@ -6,6 +6,7 @@ import { recurringService } from '@services/recurring.service';
 import { RecurringBill, RecurringDelivery, RecurringBillStatus } from '@types';
 import { formatCurrency, formatDateOnly } from '@utils/formatting';
 import { Eye, MoreVertical, RefreshCw, X } from 'lucide-react';
+import { socketService } from '@services/socket.service';
 
 type Tab = 'plans' | 'bills';
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -46,6 +47,11 @@ export const RecurringDeliveriesPage: React.FC = () => {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const refresh = () => { void load(); };
+    socketService.on('order-status-updated', refresh);
+    return () => socketService.off('order-status-updated', refresh);
+  }, [load]);
 
   const billPlan = useMemo(() => {
     if (!selectedBill) return null;

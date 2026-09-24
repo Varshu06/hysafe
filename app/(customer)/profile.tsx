@@ -86,11 +86,7 @@ export default function ProfileScreen() {
   };
 
   const handleHelpSupport = () => {
-    Alert.alert(
-      "Help & Support",
-      "For support, please contact us at:\n\nEmail: support@hysafe.com\nPhone: +91-1800-XXX-XXXX",
-      [{ text: "OK" }],
-    );
+    router.push("/(customer)/profile/help-support");
   };
 
   const handleAbout = () => {
@@ -164,9 +160,6 @@ export default function ProfileScreen() {
                 <Text style={styles.name} numberOfLines={1}>
                   {user.name || user.email || user.phone}
                 </Text>
-                <View style={styles.roleChip}>
-                  <Text style={styles.roleChipText}>Customer</Text>
-                </View>
               </View>
               <Text style={styles.profileHint}>
                 Manage your account settings & preferences
@@ -447,19 +440,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     color: COLORS.text,
-  },
-  roleChip: {
-    backgroundColor: "#E0F2FE",
-    borderWidth: 1,
-    borderColor: "#BAE6FD",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  roleChipText: {
-    color: "#0F172A",
-    fontWeight: "800",
-    fontSize: 12,
   },
   profileHint: {
     marginTop: 6,
