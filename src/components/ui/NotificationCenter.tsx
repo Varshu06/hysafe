@@ -15,19 +15,19 @@ export function NotificationCenter({ topInset = 0, onNotificationPress }: Props)
   const [error, setError] = useState(false);
   const load = useCallback(async () => {
     setLoading(true); setError(false);
-    try { const result = await getInAppNotifications(); setItems(result.notifications); setUnread(result.unreadCount); }
+    try { const result = await getInAppNotifications(); setItems(result.notifications.filter(item => !item.isRead)); setUnread(result.unreadCount); }
     catch { setError(true); } finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
   const markRead = async (item: InAppNotification) => {
     if (!item.isRead) {
-      try { await markInAppNotificationRead(item._id); setItems(current => current.map(row => row._id === item._id ? { ...row, isRead: true } : row)); setUnread(value => Math.max(0, value - 1)); }
+      try { await markInAppNotificationRead(item._id); setItems(current => current.filter(row => row._id !== item._id)); setUnread(value => Math.max(0, value - 1)); }
       catch { setError(true); return; }
     }
     if (onNotificationPress) { setOpen(false); onNotificationPress(item); }
   };
   const markAll = async () => {
-    try { await markAllInAppNotificationsRead(); setItems(current => current.map(row => ({ ...row, isRead: true }))); setUnread(0); }
+    try { await markAllInAppNotificationsRead(); setItems([]); setUnread(0); }
     catch { setError(true); }
   };
   const label = (item: InAppNotification) => {

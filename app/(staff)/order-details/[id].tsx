@@ -205,10 +205,6 @@ export default function StaffOrderDetailsScreen() {
 
   const isRecurring = Boolean(order?.isRecurring || order?.recurringDeliveryId);
 
-  const paymentLabel = useMemo(() => {
-    return order?.paymentMethod === 'shop' ? 'Pay at Shop' : order?.paymentMethod === 'cash' || order?.paymentMethod === 'offline' ? 'Cash on Delivery' : 'UPI';
-  }, [order?.paymentMethod]);
-
   const formattedSlot = useMemo(() => {
     if (!order?.deliverySlot) return null;
     const parsed = new Date(order.deliverySlot);

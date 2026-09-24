@@ -7,25 +7,25 @@ interface Props {
 export const StatusBadge: React.FC<Props> = ({ status }) => {
   const styles: Record<string, string> = {
     pending:
-      "bg-yellow-100 text-yellow-700",
+      "bg-warning/10 text-warning",
 
     accepted:
-      "bg-blue-100 text-blue-700",
+      "bg-accent text-primary",
 
     out_for_delivery:
-      "bg-cyan-100 text-cyan-700",
+      "bg-accent text-primary",
 
     delivered:
-      "bg-green-100 text-green-700",
+      "bg-success/10 text-success",
 
     cancelled:
-      "bg-red-100 text-red-700",
+      "bg-danger/10 text-danger",
   };
 
   return (
     <span
       className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${
-        styles[status] || "bg-gray-100 text-gray-700"
+        styles[status] || "bg-surface text-text-secondary"
       }`}
     >
       {status.replace(/_/g, " ")

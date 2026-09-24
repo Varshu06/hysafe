@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { getMyOrders } from '../services/order.service';
 import { Order } from '../types/order.types';
 import { useAuth } from './AuthContext';
@@ -14,7 +14,8 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  
+  const fetchInProgressRef = useRef(false);
+
   // Get auth context - it should be available since OrderProvider is inside AuthProvider
   const auth = useAuth();
   const isAuthenticated = auth?.isAuthenticated || false;
@@ -28,7 +29,9 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setOrders([]);
       return;
     }
+    if (fetchInProgressRef.current) return;
     
+    fetchInProgressRef.current = true;
     try {
       setIsLoading(true);
       const data = await getMyOrders();
@@ -42,6 +45,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setOrders([]);
     } finally {
       setIsLoading(false);
+      fetchInProgressRef.current = false;
     }
   }, [isAuthenticated, userRole]);
 
@@ -54,7 +58,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Clear orders when user logs out or is not a customer
       setOrders([]);
     }
-  }, [isAuthenticated, userRole, userId]);
+  }, [isAuthenticated, userRole, userId, refreshOrders]);
 
   return (
     <OrderContext.Provider

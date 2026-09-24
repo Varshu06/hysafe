@@ -26,13 +26,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantClass = {
       primary:
-        'bg-primary text-white shadow-sm hover:bg-primary-dark active:scale-[0.98] disabled:bg-gray-400',
+        'bg-primary text-white shadow-sm hover:bg-primary-dark active:scale-[0.98] disabled:bg-text-secondary',
       secondary:
-        'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] disabled:bg-gray-200',
+        'border border-border bg-secondary text-text-primary shadow-sm hover:border-primary hover:bg-accent active:scale-[0.98] disabled:bg-surface',
       danger:
-        'bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:scale-[0.98] disabled:bg-gray-400',
+        'bg-danger text-white shadow-sm hover:bg-danger/90 active:scale-[0.98] disabled:bg-text-secondary',
       success:
-        'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:scale-[0.98] disabled:bg-gray-400',
+        'bg-success text-white shadow-sm hover:bg-success/90 active:scale-[0.98] disabled:bg-text-secondary',
     };
 
     const sizeClass = {

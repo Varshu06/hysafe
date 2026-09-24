@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import { getProfile, login, LoginCredentials, logout as logoutService, register, RegisterData } from '../services/auth.service';
-import { User, UserRole } from '../types/user.types';
+import { User } from '../types/user.types';
 import { storage } from '../utils/storage';
 import { setUnauthorizedCallback } from '../services/api';
 
@@ -39,56 +39,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
   }, [router]);
-
-  // Navigate based on role after authentication
-  useEffect(() => {
-    // Only navigate if loading is completely done and router is ready
-    // Don't navigate if user is null (logout scenario)
-    if (!isLoading && user && router) {
-      // Use setTimeout to ensure router is fully initialized
-      setTimeout(() => {
-        try {
-            navigateToRoleScreen(user.role);
-        } catch (error) {
-          console.error('Navigation error:', error);
-        }
-      }, 100);
-    } else if (!isLoading && !user && router) {
-      // If user is null and not loading, navigate to login
-      try {
-        router.replace('/(auth)/login');
-      } catch (error) {
-        console.error('Navigation to login error:', error);
-      }
-    }
-  }, [user, isLoading]);
-
-  const navigateToRoleScreen = (role: UserRole) => {
-    if (!router) return;
-    try {
-    // DEVELOPMENT MODE: Set to true to always open customer app (for testing)
-    // Set to false to allow role-based navigation
-    const FORCE_CUSTOMER_APP = false;
-    
-    if (FORCE_CUSTOMER_APP) {
-      router.replace('/(customer)');
-      return;
-    }
-    
-    switch (role) {
-      case 'customer':
-        router.replace('/(customer)');
-        break;
-      case 'staff':
-        router.replace('/(staff)');
-        break;
-      default:
-        router.replace('/(auth)/login');
-      }
-    } catch (error) {
-      console.error('Navigation error:', error);
-    }
-  };
 
   const checkAuth = async () => {
     try {

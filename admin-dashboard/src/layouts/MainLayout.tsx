@@ -9,7 +9,7 @@ export const MainLayout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.14),_transparent_28%),linear-gradient(180deg,_#f8fcff_0%,_#eef8ff_100%)]">
+    <div className="flex min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(2,132,199,0.1),_transparent_28%),linear-gradient(180deg,_#F0F9FF_0%,_#E0F2FE_100%)]">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       <div className="flex flex-1 flex-col md:pl-72">

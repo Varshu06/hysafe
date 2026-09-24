@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
 import {
   Image,
   ScrollView,
@@ -30,18 +30,8 @@ export default function CustomerHomeScreen() {
   const router = useRouter();
   const { addToCart, getQuantity, incrementQuantity, decrementQuantity } =
     useCart();
-  const { orders, refreshOrders, isLoading } = useOrder();
-  const { products, loading, refreshing, error, refreshProducts } = useProduct();
-
-  useEffect(() => {
-    refreshOrders();
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshProducts();
-    }, [refreshProducts]),
-  );
+  const { orders, isLoading } = useOrder();
+  const { products, loading } = useProduct();
 
   // Get active orders (pending, accepted, out_for_delivery)
   const activeOrders = orders.filter((order) => {

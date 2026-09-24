@@ -33,7 +33,7 @@ export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
       <div
         ref={ref}
         className={`
-          flex items-center justify-between border-b border-slate-100 px-6 py-4
+          flex items-center justify-between border-b border-border/70 px-6 py-4
           ${className}
         `}
         {...props}

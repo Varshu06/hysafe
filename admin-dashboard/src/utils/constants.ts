@@ -20,11 +20,11 @@ export const STORAGE_KEYS = {
 };
 
 export const ORDER_STATUS_COLORS: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  accepted: 'bg-blue-100 text-blue-800',
-  out_for_delivery: 'bg-purple-100 text-purple-800',
-  delivered: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
+  pending: 'bg-warning/10 text-warning',
+  accepted: 'bg-accent text-primary',
+  out_for_delivery: 'bg-accent text-primary',
+  delivered: 'bg-success/10 text-success',
+  cancelled: 'bg-danger/10 text-danger',
 };
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {

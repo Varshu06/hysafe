@@ -84,7 +84,7 @@ export const CustomersPage: React.FC = () => {
           <div className="relative w-80">
 
             <Search
-              className="absolute left-3 top-3 text-gray-400"
+              className="absolute left-3 top-3 text-text-secondary"
               size={18}
             />
 
@@ -112,7 +112,7 @@ export const CustomersPage: React.FC = () => {
 
             <table className="w-full">
 
-              <thead className="bg-gray-50">
+              <thead className="bg-surface">
 
                 <tr>
 
@@ -136,7 +136,7 @@ export const CustomersPage: React.FC = () => {
 
                   <tr
                     key={customer._id}
-                    className="border-t hover:bg-gray-50"
+                    className="border-t border-border hover:bg-accent"
                   >
 
                     <td className="px-6 py-4 font-medium">
