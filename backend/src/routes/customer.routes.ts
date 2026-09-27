@@ -10,6 +10,7 @@ import { getLoginActivity } from '../controllers/loginActivity.controller';
 import { getCustomerNotifications } from '../controllers/customerNotification.controller';
 import {
   createRecurringDelivery,
+  previewRecurringDeliveryBill,
   getRecurringDeliveries,
   updateRecurringDelivery,
   deleteRecurringDelivery,
@@ -33,9 +34,10 @@ router.get('/notifications', authenticate, requireRole('customer'), getCustomerN
 router.delete('/account', authenticate, requireRole('customer'), deleteAccount);
 
 // Recurring deliveries
+router.post('/recurring-deliveries/preview', authenticate, requireRole('customer'), previewRecurringDeliveryBill);
 router.post('/recurring-deliveries', authenticate, requireRole('customer'), createRecurringDelivery);
 router.get('/recurring-deliveries', authenticate, requireRole('customer'), getRecurringDeliveries);
-router.post('/recurring-deliveries/process-due', authenticate, requireRole('admin', 'customer'), processDueDeliveries);
+router.post('/recurring-deliveries/process-due', authenticate, requireRole('admin'), processDueDeliveries);
 router.put('/recurring-deliveries/:id', authenticate, requireRole('customer'), updateRecurringDelivery);
 router.delete('/recurring-deliveries/:id', authenticate, requireRole('customer'), deleteRecurringDelivery);
 

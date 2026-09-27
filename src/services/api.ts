@@ -10,6 +10,9 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+const isAuthenticationRequest = (url?: string): boolean =>
+  typeof url === 'string' && /(?:^|\/)auth(?:\/|$)/i.test(url.split('?')[0]);
+
 // Request interceptor - Add token to requests
 api.interceptors.request.use(
   async (config) => {
@@ -24,7 +27,9 @@ api.interceptors.request.use(
       url: config.url,
       baseURL: config.baseURL,
       fullURL: `${config.baseURL}${config.url}`,
-      data: config.data ? (config.method === 'post' || config.method === 'put' ? { ...config.data, password: '***' } : config.data) : undefined,
+      data: isAuthenticationRequest(config.url)
+        ? '[REDACTED]'
+        : config.data ? (config.method === 'post' || config.method === 'put' ? { ...config.data, password: '***' } : config.data) : undefined,
     });
 
     return config;
@@ -45,12 +50,13 @@ export const setUnauthorizedCallback = (callback: () => void) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const sensitiveAuthRequest = isAuthenticationRequest(error.config?.url);
     console.error('Axios error:', {
       message: error.message,
       code: error.code,
       status: error.response?.status,
       statusText: error.response?.statusText,
-      data: error.response?.data,
+      data: sensitiveAuthRequest ? '[REDACTED]' : error.response?.data,
       config: {
         url: error.config?.url,
         method: error.config?.method,
@@ -100,7 +106,6 @@ api.interceptors.response.use(
 );
 
 export default api;
-
 
 
 

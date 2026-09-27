@@ -325,6 +325,9 @@
   "unableToVerifyCart": "Unable to verify cart",
   "verifyCartConnectionError": "We couldn't verify the latest product information. Please check your connection and try again.",
   "productUnavailable": "Product unavailable",
+  "comingSoon": "Coming Soon",
+  "unavailableLabel": "Unavailable",
+  "productComingSoonMessage": "{{product}} is coming soon and cannot be ordered yet.",
   "productUnavailableMessage": "Product {{product}} is currently unavailable. Please review your cart before placing the order.",
   "productNoLongerAvailable": "Product {{product}} is no longer available. Please review your cart before placing the order.",
   "outOfStock": "Out of stock",
@@ -410,5 +413,8 @@
   "navigationUnavailable": "Navigation unavailable",
   "navigationUnavailableDesc": "Could not open a maps app or browser. Check that a browser is available and try again.",
   "deliveryPartner": "Delivery Partner",
+  "waitingForDeliveryPartner": "Waiting for delivery partner",
+  "partnerDetailsUnavailable": "Delivery partner details unavailable",
+  "productDetailsUnavailable": "Product details unavailable",
   "pleaseLoginToViewOrders": "Please login to view your orders"
 }

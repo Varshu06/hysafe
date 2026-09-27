@@ -3,19 +3,25 @@ import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  Easing,
+  Linking,
   LayoutChangeEvent,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { COLORS } from "../../utils/constants";
 
 interface ActiveOrderCardProps {
   order: {
     id: string;
     status: string;
-    driverName: string;
+    productName: string;
+    quantity: number | null;
+    totalAmount: number;
+    partnerAssigned: boolean;
+    partnerName: string;
+    partnerPhone: string;
     progress: number; // 0 to 1 representing delivery progress
     timeline: { status: string; completed: boolean; current?: boolean }[];
   };
@@ -23,7 +29,7 @@ interface ActiveOrderCardProps {
 
 export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
   const { t } = useTranslation();
-  const animationProgress = useRef(new Animated.Value(0)).current;
+  const animationProgress = useRef(new Animated.Value(order.progress)).current;
   const [timelineWidth, setTimelineWidth] = useState(0);
 
   // Measure the actual timeline width
@@ -35,32 +41,18 @@ export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
   useEffect(() => {
     if (timelineWidth === 0) return;
 
-    // Set initial progress based on order status
-    const initialProgress = order.progress || 0;
-    animationProgress.setValue(initialProgress);
+    const animation = Animated.timing(animationProgress, {
+      toValue: Math.max(0, Math.min(1, order.progress)),
+      duration: 350,
+      useNativeDriver: false,
+    });
+    animation.start();
 
-    // Animate from current progress to 1 (if not already at 1)
-    if (initialProgress < 1) {
-      const animation = Animated.timing(animationProgress, {
-        toValue: 1,
-        duration: (1 - initialProgress) * 10000, // Scale duration based on remaining progress
-        easing: Easing.linear,
-        useNativeDriver: false, // Need false for width animation
-      });
+    return () => animation.stop();
+  }, [timelineWidth, order.progress, animationProgress]);
 
-      animation.start();
-
-      return () => {
-        animation.stop();
-      };
-    }
-  }, [timelineWidth, order.progress]);
-
-  // Calculate the travel distance
-  // Truck is 32px wide, delivery dot is 24px wide at the right edge
-  // Truck should end up centered over the delivery dot
-  // Timeline width - truck width (32) + small offset to center over delivery dot
-  const travelDistance = timelineWidth - 32 - 4; // Stop with truck centered over delivery dot
+  // Align the truck center with the first/last dot centers (12px inset).
+  const travelDistance = Math.max(0, timelineWidth - 24);
 
   // Interpolate truck position
   const truckTranslateX = animationProgress.interpolate({
@@ -114,13 +106,20 @@ export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
         </Animated.View>
 
         <View style={styles.timelineItems}>
-          {order.timeline?.map((item, index) => (
+          {order.timeline.slice(0, 3).map((item, index) => (
             <View key={index} style={styles.timelineItem}>
               <View
                 style={[
                   styles.dot,
-                  item.completed ? styles.completedDot : styles.pendingDot,
-                  item.current && styles.currentDot,
+                  item.completed
+                    ? item.status === "delivered"
+                      ? styles.deliveredDot
+                      : styles.acceptedDot
+                    : styles.pendingDot,
+                  item.current &&
+                    (item.status === "delivered"
+                      ? styles.deliveredCurrentDot
+                      : styles.acceptedCurrentDot),
                 ]}
               >
                 {item.completed && (
@@ -129,31 +128,51 @@ export const ActiveOrderCard = ({ order }: ActiveOrderCardProps) => {
               </View>
               <Text style={styles.timelineLabel} numberOfLines={2}>{t(item.status)}</Text>
             </View>
-          )) || (
-            <>
-              <View style={styles.timelineItem}>
-                <View style={[styles.dot, styles.completedDot]}>
-                  <Feather name="check" size={12} color="white" />
-                </View>
-                <Text style={styles.timelineLabel} numberOfLines={2}>{t("picked")}</Text>
-              </View>
-              <View style={styles.timelineItem}>
-                <View style={styles.spacer} />
-              </View>
-              <View style={styles.timelineItem}>
-                <View style={[styles.dot, styles.pendingDot]} />
-                <Text style={styles.timelineLabel} numberOfLines={2}>{t("delivered")}</Text>
-              </View>
-            </>
-          )}
+          ))}
         </View>
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.driverName}>{t(order.driverName)}</Text>
-        <TouchableOpacity style={styles.callButton}>
-          <Feather name="phone" size={18} color="white" />
-        </TouchableOpacity>
+        <Text style={styles.productName} numberOfLines={1}>{order.productName}</Text>
+        <Text style={styles.orderDetailText}>
+          {t("quantity")}: {order.quantity ?? "—"}
+        </Text>
+        <Text style={styles.totalAmount}>
+          {t("totalAmount")}: ₹{order.totalAmount}
+        </Text>
+
+        <View style={styles.partnerSection}>
+          <Text style={styles.partnerLabel}>{t("deliveryPartner")}</Text>
+          {order.partnerAssigned ? (
+            <>
+              {order.partnerName ? (
+                <Text style={styles.partnerName} numberOfLines={1}>
+                  {order.partnerName}
+                </Text>
+              ) : null}
+              {order.partnerPhone ? (
+                <View style={styles.partnerPhoneRow}>
+                  <Text style={styles.partnerPhone}>{order.partnerPhone}</Text>
+                  <TouchableOpacity
+                    style={styles.callButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("call")}
+                    onPress={() => {
+                      void Linking.openURL(`tel:${order.partnerPhone}`).catch(() => undefined);
+                    }}
+                  >
+                    <Feather name="phone" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              {!order.partnerName && !order.partnerPhone ? (
+                <Text style={styles.waitingText}>{t("partnerDetailsUnavailable")}</Text>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.waitingText}>{t("waitingForDeliveryPartner")}</Text>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -200,7 +219,7 @@ const styles = StyleSheet.create({
     top: 12,
     left: 12,
     height: 3,
-    backgroundColor: "#3B82F6",
+    backgroundColor: COLORS.statusAccepted,
     borderRadius: 2,
     zIndex: 1,
   },
@@ -230,12 +249,9 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   timelineItem: {
+    width: 24,
     alignItems: "center",
     zIndex: 1,
-  },
-  spacer: {
-    width: 32,
-    height: 32,
   },
   dot: {
     width: 24,
@@ -246,18 +262,26 @@ const styles = StyleSheet.create({
     backgroundColor: "#334155",
     marginBottom: 8,
   },
-  completedDot: {
-    backgroundColor: "#3B82F6",
+  acceptedDot: {
+    backgroundColor: COLORS.statusAccepted,
+  },
+  deliveredDot: {
+    backgroundColor: COLORS.statusDelivered,
   },
   pendingDot: {
     backgroundColor: "white",
     borderWidth: 3,
     borderColor: "#334155",
   },
-  currentDot: {
-    backgroundColor: "#60A5FA",
+  acceptedCurrentDot: {
+    backgroundColor: COLORS.statusAccepted,
     borderWidth: 3,
-    borderColor: "#3B82F6",
+    borderColor: "#93C5FD",
+  },
+  deliveredCurrentDot: {
+    backgroundColor: COLORS.statusDelivered,
+    borderWidth: 3,
+    borderColor: "#86EFAC",
   },
   timelineLabel: {
     color: "white",
@@ -268,17 +292,58 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginTop: 2,
   },
-  driverName: {
+  productName: {
     color: "white",
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: "600",
+    lineHeight: 21,
+  },
+  orderDetailText: {
+    color: "#CBD5E1",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  totalAmount: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
+  },
+  partnerSection: {
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.12)",
+    marginTop: 10,
+    paddingTop: 8,
+  },
+  partnerLabel: {
+    color: "#94A3B8",
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  partnerName: {
+    color: "white",
+    fontSize: 14,
     fontWeight: "500",
-    flexShrink: 1,
-    lineHeight: 24,
-    paddingVertical: 2,
+    lineHeight: 20,
+  },
+  partnerPhoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 32,
+  },
+  partnerPhone: {
+    color: "#CBD5E1",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  waitingText: {
+    color: "#94A3B8",
+    fontSize: 12,
+    lineHeight: 18,
   },
   callButton: {
     width: 36,

@@ -58,13 +58,16 @@ export default function OrdersScreen() {
   const getStatusIcon = (status: string) => {
     const statusLower = status.toLowerCase();
     if (statusLower === "pending") {
-      return <Feather name="clock" size={12} color={COLORS.warning} />;
+      return <Feather name="clock" size={12} color={COLORS.statusPending} />;
+    }
+    if (statusLower === "accepted" || statusLower === "out_for_delivery") {
+      return <Feather name="check" size={12} color={COLORS.statusAccepted} />;
     }
     if (statusLower === "cancelled") {
       return <Feather name="x" size={12} color={COLORS.textLight} />;
     }
     if (statusLower === "delivered") {
-      return <Feather name="check" size={12} color={COLORS.success} />;
+      return <Feather name="check" size={12} color={COLORS.statusDelivered} />;
     }
     return <Feather name="check" size={12} color={COLORS.primary} />;
   };
@@ -99,9 +102,25 @@ export default function OrdersScreen() {
       activeOpacity={0.8}
     >
       <View style={styles.cardHeader}>
-        <View style={styles.statusBadge}>
+        <View
+          style={[
+            styles.statusBadge,
+            item.status.toLowerCase() === "pending" && styles.pendingStatusBadge,
+            (item.status.toLowerCase() === "accepted" || item.status.toLowerCase() === "out_for_delivery") && styles.acceptedStatusBadge,
+            item.status.toLowerCase() === "delivered" && styles.deliveredStatusBadge,
+          ]}
+        >
           {getStatusIcon(item.status)}
-          <Text style={styles.statusText}>{t(item.status)}</Text>
+          <Text
+            style={[
+              styles.statusText,
+              item.status.toLowerCase() === "pending" && styles.pendingStatusText,
+              (item.status.toLowerCase() === "accepted" || item.status.toLowerCase() === "out_for_delivery") && styles.acceptedStatusText,
+              item.status.toLowerCase() === "delivered" && styles.deliveredStatusText,
+            ]}
+          >
+            {t(item.status)}
+          </Text>
         </View>
         <Text style={styles.date}>
           {item.createdAt
@@ -130,7 +149,7 @@ export default function OrdersScreen() {
         onPress={() => router.push(`/(customer)/order-details/${item._id}`)}
       >
         <Text style={styles.viewDetailsText}>{t("viewDetails")}</Text>
-        <Feather name="chevron-right" size={16} color="#0F172A" />
+        <Feather name="chevron-right" size={16} color="#102841" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -170,7 +189,7 @@ export default function OrdersScreen() {
       {/* Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "active" && styles.activeTab]}
+          style={[styles.tab, activeTab === "active" && styles.activeOrdersTab]}
           onPress={() => setActiveTab("active")}
         >
           <Text
@@ -281,7 +300,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   activeTab: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#102841",
+  },
+  activeOrdersTab: {
+    backgroundColor: "#102841",
   },
   tabText: {
     fontSize: 14,
@@ -324,6 +346,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     gap: 4,
   },
+  pendingStatusBadge: {
+    backgroundColor: COLORS.statusPendingBackground,
+  },
+  acceptedStatusBadge: {
+    backgroundColor: COLORS.statusAcceptedBackground,
+  },
+  deliveredStatusBadge: {
+    backgroundColor: COLORS.statusDeliveredBackground,
+  },
   statusText: {
     fontSize: 12,
     fontWeight: "bold",
@@ -332,8 +363,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingVertical: 1,
   },
+  pendingStatusText: {
+    color: COLORS.statusPending,
+  },
+  acceptedStatusText: {
+    color: COLORS.statusAccepted,
+  },
+  deliveredStatusText: {
+    color: COLORS.statusDelivered,
+  },
   date: {
-    color: "white",
+    color: "#CBD5E1",
     fontSize: 12,
     flex: 1,
     marginLeft: 8,
@@ -383,7 +423,7 @@ const styles = StyleSheet.create({
   viewDetailsText: {
     fontSize: 12,
     fontWeight: "bold",
-    color: "#0F172A",
+    color: "#102841",
     lineHeight: 18,
     paddingVertical: 1,
   },

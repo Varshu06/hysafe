@@ -35,7 +35,7 @@ export const reserveInventoryAtomic = async (
       throw new Error(`Item quantity must be a positive integer: ${qty}`);
     }
 
-    const query = { _id: productIdStr, available: true, quantity: { $gte: qty } };
+    const query = { _id: productIdStr, available: true, comingSoon: { $ne: true }, quantity: { $gte: qty } };
     const update = { $inc: { quantity: -qty } };
     const options = { new: true, ...(session ? { session } : {}) };
 
@@ -45,6 +45,9 @@ export const reserveInventoryAtomic = async (
       const existingItem = await InventoryItem.findById(productIdStr);
       if (!existingItem) {
         throw new Error(`Product not found with ID: ${productIdStr}`);
+      }
+      if (existingItem.comingSoon) {
+        throw new Error(`Product "${existingItem.name}" is coming soon`);
       }
       if (!existingItem.available) {
         throw new Error(`Product "${existingItem.name}" is currently unavailable`);

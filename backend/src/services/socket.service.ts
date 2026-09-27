@@ -27,13 +27,17 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       }
 
       const decoded = verifyToken(token);
-      const user = await User.findById(decoded.userId);
+      const user = await User.findById(decoded.userId).select('_id role isActive');
       
       if (!user) {
         return next(new Error('Authentication error: User not found'));
       }
+      if (!user.isActive) {
+        return next(new Error('Authentication error: Account inactive'));
+      }
 
       socket.data.user = user;
+      socket.data.userId = user._id.toString();
       next();
     } catch (error) {
       next(new Error('Authentication error: Invalid token'));
@@ -44,8 +48,25 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     const user = socket.data.user;
     console.log(`✅ User connected: ${user._id} (${user.role})`);
 
+    // Keep all client-originated events tied to the user's current database
+    // status, even if the account is deactivated after the handshake.
+    socket.use(async (_packet, next) => {
+      try {
+        const currentUser = await User.findById(socket.data.userId).select('isActive').lean();
+        if (!currentUser?.isActive) {
+          socket.disconnect(true);
+          return next(new Error('Authentication error: Account inactive'));
+        }
+        next();
+      } catch (_error) {
+        socket.disconnect(true);
+        next(new Error('Authentication error'));
+      }
+    });
+
     // Join role-specific room
     socket.join(user.role);
+    socket.join(`user:${user._id}`);
 
     // Staff joins their own room for personal updates
     if (user.role === 'staff') {
@@ -70,6 +91,10 @@ export const initializeSocket = (httpServer: HTTPServer) => {
   });
 
   return io;
+};
+
+export const disconnectUserSockets = (userId: string): void => {
+  if (io) io.in(`user:${userId}`).disconnectSockets(true);
 };
 
 // Helper function to emit new order to all online staff
@@ -136,6 +161,5 @@ export const emitOrderAcceptedToStaff = (order: any) => {
     console.log(`🔔 Order accepted notification sent to staff: ${order._id}`);
   }
 };
-
 
 

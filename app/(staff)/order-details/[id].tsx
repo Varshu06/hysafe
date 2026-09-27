@@ -118,7 +118,15 @@ export default function StaffOrderDetailsScreen() {
       Alert.alert("Success", "Order accepted!");
       setOrder({ ...order, status: "accepted" });
     } catch (e: any) {
-      Alert.alert("Error", e?.message || "Failed to accept order");
+      if (e?.code === "ORDER_ALREADY_ACCEPTED") {
+        Alert.alert(
+          "Order already accepted",
+          "This order has already been accepted by another staff member.",
+          [{ text: "OK", onPress: () => router.back() }],
+        );
+      } else {
+        Alert.alert("Error", e?.message || "Failed to accept order");
+      }
     }
   };
 

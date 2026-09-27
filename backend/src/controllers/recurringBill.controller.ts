@@ -1,8 +1,9 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { RecurringBill } from '../models/RecurringBill.model';
-import { canCustomerConfirmBill, canRecordRecurringBillPayment, isFullBillPayment, isOfflinePaymentMethod } from '../services/recurringBilling.service';
-import { processDueRecurringDeliveries } from '../services/recurringDelivery.service';
+import { Order } from '../models/Order.model';
+import { canCustomerConfirmBill, canRecordRecurringBillPayment, canStaffHandleRecurringBill, isFullBillPayment, isOfflinePaymentMethod } from '../services/recurringBilling.service';
+import { ensureNextRecurringBillAfterPayment } from '../services/recurringDelivery.service';
 import { notifyCustomerBill } from '../services/inAppNotification.service';
 
 const populateBill = (query: any) => query
@@ -41,21 +42,53 @@ export const confirmRecurringBill = async (req: AuthRequest, res: Response) => {
     bill.status = 'confirmed';
     bill.confirmedAt = new Date();
     await bill.save();
-    processDueRecurringDeliveries().catch((err) => console.error('[RecurringBillController] Order generation failed:', err));
   }
   res.json({ message: 'Recurring bill confirmed. Payment is still pending.', recurringBill: bill });
 };
 
-export const getRecurringBills = async (_req: AuthRequest, res: Response) => {
+export const getRecurringBills = async (req: AuthRequest, res: Response) => {
   await markOverdueBills();
-  const bills = await populateBill(RecurringBill.find().sort({ dueDate: -1 }));
+  if (req.user!.role === 'admin') {
+    const bills = await populateBill(RecurringBill.find().sort({ dueDate: -1 }));
+    return res.json({ recurringBills: bills });
+  }
+
+  const assignedOrders = await Order.find({ assignedStaffId: req.user!._id, isRecurring: true })
+    .select('_id recurringBillId recurringDeliveryId deliverySlot assignedStaffId isRecurring');
+  if (!assignedOrders.length) return res.json({ recurringBills: [] });
+  const candidateRefs = [
+    { _id: { $in: assignedOrders.map((order) => order.recurringBillId).filter(Boolean) } },
+    { orderIds: { $in: assignedOrders.map((order) => order._id) } },
+  ];
+  const candidates = await RecurringBill.find({ $or: candidateRefs })
+    .select('_id recurringDeliveryId scheduledDeliveryDates orderIds');
+  const allowedIds = candidates
+    .filter((bill) => assignedOrders.some((order) => canStaffHandleRecurringBill(bill, order, req.user!._id)))
+    .map((bill) => bill._id);
+  const bills = await populateBill(RecurringBill.find({ _id: { $in: allowedIds } }).sort({ dueDate: -1 }));
   res.json({ recurringBills: bills });
 };
 
 export const getRecurringBillById = async (req: AuthRequest, res: Response) => {
   await markOverdueBills();
-  const bill = await populateBill(RecurringBill.findById(req.params.id));
-  if (!bill) return res.status(404).json({ message: 'Recurring bill not found' });
+  const billRecord = await RecurringBill.findById(req.params.id);
+  if (!billRecord) return res.status(404).json({ message: 'Recurring bill not found' });
+  if (req.user!.role === 'staff') {
+    const assignedOrder = await Order.findOne({
+      assignedStaffId: req.user!._id,
+      isRecurring: true,
+      recurringDeliveryId: billRecord.recurringDeliveryId,
+      deliverySlot: { $in: billRecord.scheduledDeliveryDates },
+      $or: [
+        { recurringBillId: billRecord._id },
+        { _id: { $in: billRecord.orderIds } },
+      ],
+    }).select('_id recurringBillId recurringDeliveryId deliverySlot assignedStaffId isRecurring');
+    if (!assignedOrder || !canStaffHandleRecurringBill(billRecord, assignedOrder, req.user!._id)) {
+      return res.status(404).json({ message: 'Recurring bill not found' });
+    }
+  }
+  const bill = await populateBill(RecurringBill.findById(billRecord._id));
   res.json({ recurringBill: bill });
 };
 
@@ -69,9 +102,24 @@ export const recordRecurringBillPayment = async (req: AuthRequest, res: Response
   await markOverdueBills();
   const bill = await RecurringBill.findById(req.params.id);
   if (!bill) return res.status(404).json({ message: 'Recurring bill not found' });
+  if (req.user!.role === 'staff') {
+    const assignedOrder = await Order.findOne({
+      assignedStaffId: req.user!._id,
+      isRecurring: true,
+      recurringDeliveryId: bill.recurringDeliveryId,
+      deliverySlot: { $in: bill.scheduledDeliveryDates },
+      $or: [
+        { recurringBillId: bill._id },
+        { _id: { $in: bill.orderIds } },
+      ],
+    }).select('_id recurringBillId recurringDeliveryId deliverySlot assignedStaffId isRecurring');
+    if (!assignedOrder || !canStaffHandleRecurringBill(bill, assignedOrder, req.user!._id)) {
+      return res.status(404).json({ message: 'Recurring bill not found' });
+    }
+  }
   if (bill.status === 'paid') return res.status(409).json({ message: 'Recurring bill has already been paid' });
   if (!canRecordRecurringBillPayment(bill.status)) {
-    return res.status(400).json({ message: 'Customer confirmation is required before payment can be recorded' });
+    return res.status(400).json({ message: 'This bill is not available for payment recording' });
   }
   if (!isFullBillPayment(amount, bill.amount)) return res.status(400).json({ message: 'Full bill payment is required' });
 
@@ -83,6 +131,9 @@ export const recordRecurringBillPayment = async (req: AuthRequest, res: Response
   );
   if (!updatedBill) return res.status(409).json({ message: 'Recurring bill has already been paid' });
   void notifyCustomerBill(updatedBill, 'bill_paid');
+  await ensureNextRecurringBillAfterPayment(updatedBill._id.toString()).catch((error) => {
+    console.error('[RecurringBillController] Next recurring bill generation failed:', error);
+  });
   res.json({ message: 'Offline payment recorded', recurringBill: await populateBill(RecurringBill.findById(updatedBill._id)) });
 };
 

@@ -8,7 +8,7 @@ interface ProductContextType {
   loading: boolean;
   refreshing: boolean;
   error: string | null;
-  refreshProducts: () => Promise<void>;
+  refreshProducts: (limit?: number) => Promise<void>;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);

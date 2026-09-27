@@ -36,8 +36,13 @@ export const orderService = {
     return response.data.data;
   },
 
-  getOrdersChart: async () => {
-    const response = await api.get('/orders/chart');
+  getOrdersChart: async (params: {
+    period: 'daily' | 'weekly' | 'monthly' | 'custom';
+    anchorDate?: string;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    const response = await api.get('/orders/chart', { params });
     return response.data.data;
   },
   getRecentOrders: async () => {
@@ -45,4 +50,3 @@ export const orderService = {
     return response.data.data;
   },
 };
-

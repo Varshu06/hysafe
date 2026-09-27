@@ -11,6 +11,7 @@ import { sendNotificationToStaff } from "../services/notification.service";
 import { notifyOrderCreated, notifyCustomerOrderStatus } from "../services/inAppNotification.service";
 import { runTransaction } from "../utils/transaction.util";
 import { shouldAutoMarkOrderPaidOnDelivery } from "../services/recurringBilling.service";
+import { getProductAvailabilityState } from "../services/productAvailability.service";
 import {
   reserveInventoryAtomic,
   restoreInventoryAtomic,
@@ -79,13 +80,19 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         return res.status(400).json({ message: `Product not found for ID: ${productIdStr}` });
       }
 
-      if (!inventoryItem.available) {
+      const availabilityState = getProductAvailabilityState(inventoryItem, quantity);
+      if (availabilityState === "coming_soon") {
+        return res.status(400).json({ code: "PRODUCT_COMING_SOON", message: `Product "${inventoryItem.name}" is coming soon` });
+      }
+
+      if (availabilityState === "unavailable" && inventoryItem.available !== true) {
         return res.status(400).json({ message: `Product "${inventoryItem.name}" is currently unavailable` });
       }
 
-      if (inventoryItem.quantity < quantity) {
+      if (availabilityState === "unavailable") {
         return res.status(400).json({
-          message: `Insufficient stock for "${inventoryItem.name}". Requested: ${quantity}, Available: ${inventoryItem.quantity}`,
+          code: "INSUFFICIENT_STOCK",
+          message: `Insufficient stock for "${inventoryItem.name}". Requested: ${quantity}, Available: ${Number(inventoryItem.quantity) || 0}`,
         });
       }
 
@@ -740,61 +747,196 @@ export const getOrdersChart = async (
   res: Response
 ) => {
   try {
-    // Last 7 days
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-    sevenDaysAgo.setHours(0, 0, 0, 0);
+    const queryString = (value: unknown) => typeof value === "string" ? value : undefined;
+    const parseDateOnly = (value: unknown): Date | null => {
+      const text = queryString(value);
+      const match = text?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return null;
+      const year = Number(match[1]);
+      const month = Number(match[2]) - 1;
+      const day = Number(match[3]);
+      const date = new Date(year, month, day);
+      return date.getFullYear() === year && date.getMonth() === month && date.getDate() === day
+        ? date
+        : null;
+    };
+    const addLocalDays = (date: Date, days: number) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    };
+    const localDateKey = (date: Date) => [
+      date.getFullYear().toString().padStart(4, "0"),
+      (date.getMonth() + 1).toString().padStart(2, "0"),
+      date.getDate().toString().padStart(2, "0"),
+    ].join("-");
+    const localDayCount = (start: Date, endExclusive: Date) => {
+      const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+      const endUtc = Date.UTC(endExclusive.getFullYear(), endExclusive.getMonth(), endExclusive.getDate());
+      return Math.round((endUtc - startUtc) / 86_400_000);
+    };
+    const weekStart = (date: Date) => addLocalDays(date, -((date.getDay() + 6) % 7));
+    const isoWeekKey = (date: Date) => {
+      const isoDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      isoDate.setUTCDate(isoDate.getUTCDate() + 4 - (isoDate.getUTCDay() || 7));
+      const yearStart = new Date(Date.UTC(isoDate.getUTCFullYear(), 0, 1));
+      const week = Math.ceil(((isoDate.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+      return `${isoDate.getUTCFullYear()}-${week.toString().padStart(2, "0")}`;
+    };
 
-    const orders = await Order.find({
-      createdAt: { $gte: sevenDaysAgo },
-    });
-
-    // Create last 7 dates
-    const chart: {
-      date: string;
-      fullDate: string;
-      orders: number;
-      revenue: number;
-    }[] = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-
-      chart.push({
-        date: date.toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-        }),
-        fullDate: date.toISOString().split("T")[0],
-        orders: 0,
-        revenue: 0,
-      });
+    const period = queryString(req.query.period) || "weekly";
+    if (!["daily", "weekly", "monthly", "custom"].includes(period)) {
+      return res.status(400).json({ message: "Invalid chart period" });
     }
 
-
-    orders.forEach((order) => {
-      const orderDate = new Date(order.createdAt)
-        .toISOString()
-        .split("T")[0];
-
-      const index = chart.findIndex(
-        (item) => item.fullDate === orderDate
-      );
-
-      if (index !== -1) {
-        chart[index].orders += 1;
-
-        // Revenue only from delivered orders
-        if (order.status === "delivered") {
-          chart[index].revenue += order.totalPrice;
-        }
+    let periodStart: Date;
+    let periodEndExclusive: Date;
+    if (period === "custom") {
+      const start = parseDateOnly(req.query.startDate);
+      const end = parseDateOnly(req.query.endDate);
+      if (!start || !end || start > end) {
+        return res.status(400).json({ message: "A valid custom date range is required" });
       }
+      periodStart = start;
+      periodEndExclusive = addLocalDays(end, 1);
+    } else {
+      const anchor = req.query.anchorDate === undefined
+        ? new Date()
+        : parseDateOnly(req.query.anchorDate);
+      if (!anchor) return res.status(400).json({ message: "Invalid chart anchor date" });
+
+      if (period === "daily") {
+        periodStart = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+        periodEndExclusive = addLocalDays(periodStart, 1);
+      } else if (period === "weekly") {
+        periodStart = weekStart(anchor);
+        periodEndExclusive = addLocalDays(periodStart, 7);
+      } else {
+        periodStart = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+        periodEndExclusive = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1);
+      }
+    }
+
+    const periodEnd = addLocalDays(periodEndExclusive, -1);
+    const dayCount = localDayCount(periodStart, periodEndExclusive);
+    const granularity = period === "daily"
+      ? "four-hours"
+      : period === "weekly" || period === "monthly"
+        ? "day"
+        : dayCount <= 62
+          ? "day"
+          : dayCount <= 731
+            ? "week"
+            : dayCount <= 3650
+            ? "month"
+              : "year";
+    const yearSpan = periodEndExclusive.getFullYear() - periodStart.getFullYear() + 1;
+    const yearStep = granularity === "year" ? Math.max(1, Math.ceil(yearSpan / 90)) : 1;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const dateString = (format: string) => ({
+      $dateToString: { format, date: "$createdAt", timezone },
+    });
+    const groupKey = granularity === "four-hours"
+      ? { $floor: { $divide: [{ $hour: { date: "$createdAt", timezone } }, 4] } }
+      : granularity === "day"
+        ? dateString("%Y-%m-%d")
+        : granularity === "week"
+          ? dateString("%G-%V")
+          : granularity === "month"
+            ? dateString("%Y-%m")
+            : yearStep === 1
+              ? dateString("%Y")
+              : {
+                  $multiply: [
+                    { $floor: { $divide: [{ $year: { date: "$createdAt", timezone } }, yearStep] } },
+                    yearStep,
+                  ],
+                };
+
+    const aggregates = await Order.aggregate([
+      { $match: { createdAt: { $gte: periodStart, $lt: periodEndExclusive } } },
+      {
+        $group: {
+          _id: groupKey,
+          orders: { $sum: 1 },
+          // Preserve the dashboard's established revenue definition: delivered order totals.
+          revenue: {
+            $sum: {
+              $cond: [
+                { $eq: ["$status", "delivered"] },
+                { $ifNull: ["$totalPrice", 0] },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const aggregateByKey = new Map(aggregates.map(item => [String(item._id), item]));
+    const buckets: Array<{ key: string; label: string }> = [];
+    if (granularity === "four-hours") {
+      for (let index = 0; index < 6; index += 1) {
+        buckets.push({ key: String(index), label: ["12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM"][index] });
+      }
+    } else {
+      let cursor = new Date(periodStart);
+      if (granularity === "week") cursor = weekStart(cursor);
+      if (granularity === "month") cursor = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+      if (granularity === "year") {
+        cursor = new Date(Math.floor(cursor.getFullYear() / yearStep) * yearStep, 0, 1);
+      }
+
+      while (cursor < periodEndExclusive) {
+        let key: string;
+        let label: string;
+        if (granularity === "day") {
+          key = localDateKey(cursor);
+          label = period === "weekly"
+            ? cursor.toLocaleDateString("en-GB", { weekday: "short" })
+            : period === "monthly"
+              ? String(cursor.getDate())
+              : cursor.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        } else if (granularity === "week") {
+          key = isoWeekKey(cursor);
+          label = cursor.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        } else if (granularity === "month") {
+          key = `${cursor.getFullYear()}-${(cursor.getMonth() + 1).toString().padStart(2, "0")}`;
+          label = cursor.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+        } else {
+          const year = cursor.getFullYear();
+          key = String(year);
+          label = yearStep === 1 ? key : `${year}–${year + yearStep - 1}`;
+        }
+        buckets.push({ key, label });
+        cursor = granularity === "day"
+          ? addLocalDays(cursor, 1)
+          : granularity === "week"
+            ? addLocalDays(cursor, 7)
+            : granularity === "month"
+              ? new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+              : new Date(cursor.getFullYear() + yearStep, 0, 1);
+      }
+    }
+
+    const points = buckets.map(bucket => {
+      const aggregate = aggregateByKey.get(bucket.key);
+      return {
+        date: bucket.label,
+        orders: aggregate?.orders || 0,
+        revenue: aggregate?.revenue || 0,
+      };
     });
 
     res.json({
       success: true,
-      data: chart.map(({ fullDate, ...rest }) => rest),
+      data: {
+        points,
+        periodStart: localDateKey(periodStart),
+        periodEnd: localDateKey(periodEnd),
+        currentDate: localDateKey(new Date()),
+        granularity,
+      },
     });
   } catch (error) {
     console.error(error);

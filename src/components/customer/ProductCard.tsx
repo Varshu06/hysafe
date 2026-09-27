@@ -11,6 +11,7 @@ import { COLORS } from "../../utils/constants";
 import { Product } from "@/types/product.types";
 import { ProductImages } from "@/data/dummy";
 import { normalizeImageSource } from "../../utils/image";
+import { useTranslation } from "react-i18next";
 
 interface ProductCardProps {
   item: Product;
@@ -19,6 +20,13 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
+  const { t } = useTranslation();
+  const availabilityState = item.comingSoon
+    ? "coming_soon"
+    : item.available !== true || Number(item.quantity) < 1
+      ? "unavailable"
+      : item.availabilityState || "available";
+  const isOrderable = availabilityState === "available";
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [shouldAnimate, setShouldAnimate] = useState(false);
   const prevSelectedRef = useRef(selected);
@@ -63,11 +71,12 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
 
   return (
     <TouchableOpacity
-      style={[styles.card, selected && styles.selectedCard]}
-      onPress={onSelect}
+      style={[styles.card, selected && isOrderable && styles.selectedCard, !isOrderable && styles.unavailableCard]}
+      onPress={isOrderable ? onSelect : undefined}
+      disabled={!isOrderable}
       activeOpacity={0.8}
     >
-      {selected && (
+      {selected && isOrderable && (
         <Animated.View
           style={[
             styles.checkIcon,
@@ -82,15 +91,22 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
       <View style={styles.imageContainer}>
         <Image
           source={normalizeImageSource(item.image) || getProductImage(item.volume)}
-          style={styles.productImage}
+          style={[styles.productImage, !isOrderable && styles.dimmedImage]}
           resizeMode="contain"
         />
+        {!isOrderable && (
+          <View style={styles.availabilityBadge}>
+            <Text style={styles.availabilityText}>
+              {availabilityState === "coming_soon" ? t("comingSoon") : t("unavailableLabel")}
+            </Text>
+          </View>
+        )}
       </View>
 
-      <Text style={styles.name}>{item.name}</Text>
+      <Text style={[styles.name, !isOrderable && styles.dimmedText]}>{item.name}</Text>
 
       <View style={styles.priceRow}>
-        <Text style={styles.price}>₹ {item.price}</Text>
+        <Text style={[styles.price, !isOrderable && styles.dimmedText]}>₹ {item.price}</Text>
         <View style={styles.deliveryBadge}>
           <Text style={styles.deliveryText}>🚚 {item.deliveryCharge === 0 ? 'Free' : `₹${item.deliveryCharge}`}</Text>
         </View>
@@ -119,6 +135,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
     backgroundColor: "#F0F9FF",
   },
+  unavailableCard: {
+    backgroundColor: "#F8FAFC",
+  },
   checkIcon: {
     position: "absolute",
     top: 8,
@@ -145,6 +164,28 @@ const styles = StyleSheet.create({
   productImage: {
     width: "100%",
     height: "100%",
+  },
+  dimmedImage: {
+    opacity: 0.45,
+  },
+  availabilityBadge: {
+    position: "absolute",
+    top: 6,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  availabilityText: {
+    color: "white",
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  dimmedText: {
+    color: COLORS.textLight,
   },
   name: {
     fontSize: 14,

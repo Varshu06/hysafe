@@ -9,6 +9,7 @@
     "seed:admin": "ts-node seed-admin.ts",
     "seed:inventory": "ts-node seed-inventory.ts",
     "test-db": "ts-node test-connection.ts",
+    "test:staff-acceptance": "ts-node test-staff-order-acceptance.ts",
     "test:recurring": "ts-node test-recurring-billing.ts",
     "clear-db": "ts-node clear-db.ts"
   },

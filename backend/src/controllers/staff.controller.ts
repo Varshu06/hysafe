@@ -16,7 +16,8 @@ import {
   restoreInventoryAtomic,
   validateStatusTransition,
 } from "../utils/orderInventory.util";
-import { processDueRecurringDeliveries } from "../services/recurringDelivery.service";
+import { ensureNextRecurringBillAfterPayment } from "../services/recurringDelivery.service";
+import { canStaffHandleRecurringBill } from "../services/recurringBilling.service";
 import { notifyCustomerBill, notifyCustomerOrderStatus } from "../services/inAppNotification.service";
 
 // Toggle online/offline status
@@ -62,11 +63,6 @@ export const toggleStatus = async (req: AuthRequest, res: Response) => {
 // Get available orders (pending, not assigned)
 export const getAvailableOrders = async (req: AuthRequest, res: Response) => {
   try {
-    // Ensure any due recurring deliveries for today are materialized into orders
-    await processDueRecurringDeliveries().catch((err) =>
-      console.error("[StaffController] Error processing due recurring deliveries on demand:", err)
-    );
-
     const orders = await Order.find({
       status: "pending",
       $or: [{ assignedStaffId: { $exists: false } }, { assignedStaffId: null }],
@@ -84,6 +80,12 @@ export const getAvailableOrders = async (req: AuthRequest, res: Response) => {
 
 // Accept order
 export const acceptOrder = async (req: AuthRequest, res: Response) => {
+  const respondAlreadyAccepted = () => res.status(409).json({
+    code: "ORDER_ALREADY_ACCEPTED",
+    title: "Order already accepted",
+    message: "This order has already been accepted by another staff member.",
+  });
+
   try {
     const { id } = req.params;
     const staffId = req.user._id;
@@ -94,13 +96,11 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    if (order.status !== "pending") {
+    if (order.status === "delivered" || order.status === "cancelled") {
       return res.status(400).json({ message: "Order is no longer available" });
     }
-
-    if (order.assignedStaffId) {
-      return res.status(400).json({ message: "Order is no longer available" });
-    }
+    if (order.assignedStaffId) return respondAlreadyAccepted();
+    if (order.status !== "pending") return res.status(400).json({ message: "Order is no longer available" });
 
     const updatedOrder = await runTransaction(async (session) => {
       // Claim the order before touching inventory. This compare-and-swap makes
@@ -122,7 +122,9 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
       );
 
       if (!accepted) {
-        throw new Error("Order is no longer available");
+        const conflict: any = new Error("This order has already been accepted by another staff member.");
+        conflict.code = "ORDER_ALREADY_ACCEPTED";
+        throw conflict;
       }
 
       const reservedItems: typeof order.items = [];
@@ -163,12 +165,10 @@ export const acceptOrder = async (req: AuthRequest, res: Response) => {
     });
   } catch (error: any) {
     console.error("Accept order error:", error);
-    const message = error?.code === 112 || /write.?conflict|already accepted|no longer available/i.test(error?.message || "")
-      ? "Order is no longer available"
-      : error.message || "Failed to accept order";
-    res
-      .status(400)
-      .json({ message });
+    if (error?.code === "ORDER_ALREADY_ACCEPTED" || error?.code === 112 || /write.?conflict|already accepted|no longer available/i.test(error?.message || "")) {
+      return respondAlreadyAccepted();
+    }
+    return res.status(400).json({ message: error.message || "Failed to accept order" });
   }
 };
 
@@ -311,6 +311,11 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
             // later deliveries in the same period must not request collection again.
             timestamps.paymentStatus = "paid";
           } else if (codCollected && bill && (bill.status === "confirmed" || bill.status === "overdue")) {
+            if (!canStaffHandleRecurringBill(bill, order, req.user._id)) {
+              const authorizationError: any = new Error("Only the staff member assigned to the first delivery can collect this recurring bill");
+              authorizationError.statusCode = 403;
+              throw authorizationError;
+            }
             const savedMethod = bill.preferredPaymentMethod ||
               (order.paymentMethod === "cash" || order.paymentMethod === "shop" ? order.paymentMethod : undefined);
             if (savedMethod && submittedCollectionMethod && submittedCollectionMethod !== savedMethod) {
@@ -363,7 +368,12 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 
     if (paidBillId) {
       const paidBill = await RecurringBill.findById(paidBillId);
-      if (paidBill) void notifyCustomerBill(paidBill, "bill_paid");
+      if (paidBill) {
+        void notifyCustomerBill(paidBill, "bill_paid");
+        await ensureNextRecurringBillAfterPayment(paidBill._id.toString()).catch((error) => {
+          console.error("[StaffController] Next recurring bill generation failed:", error);
+        });
+      }
     }
 
     if (populatedOrder) {
@@ -384,7 +394,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error("Update order status error:", error);
     res
-      .status(400)
+      .status(error.statusCode || 400)
       .json({ message: error.message || "Failed to update status" });
   }
 };

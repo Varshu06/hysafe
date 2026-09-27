@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { AddOns } from "../../../src/components/customer/AddOns";
 import { AddressPickerModal } from "../../../src/components/customer/AddressPickerModal";
 import { BillDetailsModal } from "../../../src/components/customer/BillDetailsModal";
@@ -185,6 +186,14 @@ export default function CheckoutScreen() {
           Alert.alert(
             t("productUnavailable"),
             t("productNoLongerAvailable", { product: item.name }),
+          );
+          return;
+        }
+
+        if (latestProduct.comingSoon || latestProduct.availabilityState === "coming_soon") {
+          Alert.alert(
+            t("comingSoon"),
+            t("productComingSoonMessage", { product: latestProduct.name }),
           );
           return;
         }
@@ -363,7 +372,13 @@ export default function CheckoutScreen() {
           </View>
         ) : (
           items.map((item) => (
-            <View key={item.id} style={styles.mainItemContainer}>
+            <LinearGradient
+              key={item.id}
+              colors={["#FFFFFF", "#F8FCFF"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.mainItemContainer}
+            >
               <View style={styles.itemRow}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <View style={styles.quantityRow}>
@@ -385,13 +400,18 @@ export default function CheckoutScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </LinearGradient>
           ))
         )}
 
         {/* Delivery and Bill Details Card */}
         {items.length > 0 && (
-          <View style={styles.detailsCard}>
+          <LinearGradient
+            colors={["#FFFFFF", "#F8FCFF"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.detailsCard}
+          >
             {/* Delivery Time */}
             <View style={styles.detailRow}>
               <Ionicons name="car-outline" size={20} color="#102841" />
@@ -547,7 +567,7 @@ export default function CheckoutScreen() {
               </View>
               <Feather name="chevron-right" size={20} color="#94A3B8" />
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
         )}
       </ScrollView>
 
@@ -723,10 +743,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   mainItemContainer: {
-    backgroundColor: "#E0F2FE",
+    overflow: "hidden",
     marginVertical: 8,
-    padding: 16,
+    padding: 18,
     borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: "#C6DCEB",
   },
   itemRow: {
     flexDirection: "row",
@@ -773,15 +796,21 @@ const styles = StyleSheet.create({
     color: "#102841",
   },
   detailsCard: {
-    backgroundColor: "#E0F2FE",
+    overflow: "hidden",
     marginVertical: 12,
     padding: 16,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D5EAF7",
   },
   detailRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderStyle: "dashed",
+    borderBottomColor: "#C6DCEB",
   },
   detailRowLast: {
     flexDirection: "row",
@@ -850,7 +879,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   payButton: {
-    backgroundColor: "#102841",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 14,
     borderRadius: 8,
     borderWidth: 1,
@@ -860,7 +889,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   payButtonText: {
-    color: "#FFFFFF",
+    color: "#102841",
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",

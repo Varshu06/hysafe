@@ -267,7 +267,7 @@ export default function OngoingOrdersScreen() {
 
   return (
     <View style={styles.container}>
-      <StaffHeader title={t("ongoing")} />
+      <StaffHeader title={t("ongoing")} showNotifications={false} />
 
       <View style={styles.content}>
         {/* Swipeable Tab Bar */}

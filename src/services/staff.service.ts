@@ -100,11 +100,14 @@ export const acceptOrder = async (orderId: string): Promise<any> => {
     return response.data;
   } catch (error: any) {
     console.log("Accept API Error:", error.response?.data);
-    throw new Error(
+    const acceptError: any = new Error(
       error.response?.data?.message ||
       error.message ||
       "Failed to accept order"
     );
+    acceptError.code = error.response?.data?.code;
+    acceptError.status = error.response?.status;
+    throw acceptError;
   }
 };
 

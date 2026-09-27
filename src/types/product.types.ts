@@ -1,6 +1,7 @@
 import { ProductImageSource } from "../utils/image";
 
 export interface Product {
+  availabilityState?: "available" | "coming_soon" | "unavailable";
   id: string;
   name: string;
   volume: string;
@@ -9,6 +10,7 @@ export interface Product {
   deliveryCharge: number;
   image?: ProductImageSource;
   available: boolean;
+  comingSoon?: boolean;
 }
 
 export interface ProductResponse {

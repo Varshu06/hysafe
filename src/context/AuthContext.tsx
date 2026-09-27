@@ -5,6 +5,7 @@ import { getProfile, login, LoginCredentials, logout as logoutService, register,
 import { User } from '../types/user.types';
 import { storage } from '../utils/storage';
 import { setUnauthorizedCallback } from '../services/api';
+import { socketService } from '../services/socket.service';
 
 interface AuthContextType {
   user: User | null;
@@ -107,6 +108,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const handleLogout = async () => {
     try {
+      socketService.disconnect();
       // Clear storage first
       await logoutService();
       
@@ -196,7 +198,6 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
 
 
 

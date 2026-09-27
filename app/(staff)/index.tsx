@@ -108,7 +108,7 @@ export default function NewOrdersScreen() {
       //   removeListeners();
       // }
     };
-  }, []);
+  }, [authLoading, isAuthenticated, user?.role]);
 
   // Set up Socket.io listeners for real-time updates
   useEffect(() => {
@@ -267,6 +267,7 @@ export default function NewOrdersScreen() {
         refreshAvailableOrders();
       } else {
         // Going offline - disconnect Socket.io
+        socketService.clearStaffOnlineAnnouncement();
         socketService.disconnect();
       }
     } catch (error: any) {
@@ -316,7 +317,11 @@ export default function NewOrdersScreen() {
       // Also refresh to ensure consistency
       refreshAvailableOrders();
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to accept order");
+      if (error.code === "ORDER_ALREADY_ACCEPTED") {
+        Alert.alert("Order already accepted", "This order has already been accepted by another staff member.");
+      } else {
+        Alert.alert("Error", error.message || "Failed to accept order");
+      }
       // Refresh on error to restore correct state
       refreshAvailableOrders();
     }
@@ -450,7 +455,7 @@ export default function NewOrdersScreen() {
 
   return (
     <View style={styles.container}>
-      <StaffHeader title={t("newOrders")} />
+      <StaffHeader title={t("newOrders")} showNotifications={false} />
 
       {/* Online/Offline Toggle */}
       <View style={styles.content}>

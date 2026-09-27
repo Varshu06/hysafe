@@ -10,6 +10,7 @@ export interface IInventoryItem extends Document {
   lastRestocked: Date;
   image?: string;
   available: boolean;
+  comingSoon: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,6 +65,10 @@ const InventoryItemSchema = new Schema<IInventoryItem>(
     available: {
       type: Boolean,
       default: true,
+    },
+    comingSoon: {
+      type: Boolean,
+      default: false,
     },
   },
   {

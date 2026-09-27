@@ -17,6 +17,7 @@ const emptyForm = {
   deliveryCharge: "",
   // availability toggle (true = available)
   available: true,
+  comingSoon: false,
   image: "",
 };
 
@@ -86,6 +87,7 @@ export const InventoryPage: React.FC = () => {
       price: String(item.price ?? ""),
       deliveryCharge: String(item.deliveryCharge ?? "0"),
       available: item.available ?? true,
+      comingSoon: item.comingSoon ?? false,
       image: item.image || "",
     });
     setFormError('');
@@ -127,6 +129,7 @@ export const InventoryPage: React.FC = () => {
         price: Number(formData.price),
         deliveryCharge: Number(formData.deliveryCharge || 0),
         available: formData.available !== undefined ? Boolean(formData.available) : undefined,
+        comingSoon: Boolean(formData.comingSoon),
         image: formData.image,
       };
 
@@ -376,6 +379,16 @@ export const InventoryPage: React.FC = () => {
                         }
                       />
                       <span className="text-sm">Available</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={!!formData.comingSoon}
+                        onChange={(e) =>
+                          setFormData({ ...formData, comingSoon: e.target.checked })
+                        }
+                      />
+                      <span className="text-sm">Mark as Coming Soon</span>
                     </label>
                     <input
                       type="number"

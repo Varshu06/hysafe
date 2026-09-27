@@ -6,6 +6,7 @@ import { Order } from '../models/Order.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { hashPassword } from '../utils/bcrypt.util';
 import { normalizeIndianMobilePhone } from '../utils/phone.util';
+import { disconnectUserSockets } from '../services/socket.service';
 
 const toObject = (doc: any) => (doc?.toObject ? doc.toObject() : doc);
 
@@ -415,6 +416,7 @@ export const updateStaffById = async (req: AuthRequest, res: Response) => {
         message: 'Staff not found',
       });
     }
+    const wasActive = user.isActive;
 
     if (phone && phone !== user.phone) {
       const existingPhone = await User.findOne({ phone, _id: { $ne: user._id } });
@@ -453,6 +455,7 @@ export const updateStaffById = async (req: AuthRequest, res: Response) => {
       user.password = await hashPassword(String(password));
     }
     await user.save();
+    if (wasActive && !user.isActive) disconnectUserSockets(user._id.toString());
 
     const staffProfile = await Staff.findOneAndUpdate(
       { userId: user._id },
@@ -497,10 +500,15 @@ export const deleteStaffById = async (req: AuthRequest, res: Response) => {
       Staff.deleteOne({ userId: user._id }),
       User.deleteOne({ _id: user._id, role: 'staff' }),
       Order.updateMany(
-        { assignedStaffId: user._id },
+        {
+          assignedStaffId: user._id,
+          status: { $in: ['pending', 'accepted', 'out_for_delivery'] },
+        },
         { $unset: { assignedStaffId: '' }, $set: { status: 'pending' } }
       ),
     ]);
+
+    disconnectUserSockets(user._id.toString());
 
     res.json({
       success: true,

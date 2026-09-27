@@ -452,7 +452,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     // Account Enumeration Prevention: Return same generic response if user doesn't exist
     if (!user) {
-      console.log(`[FORGOT PASSWORD] Reset requested for non-existing identifier: ${identifier}`);
       return res.json(genericSuccessResponse);
     }
 
@@ -469,7 +468,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
     });
 
     if (existingRecentOtp) {
-      console.log(`[FORGOT PASSWORD] Cooldown active for identifier: ${user.email || user.phone}`);
       return res.status(429).json({
         message: 'Please wait 60 seconds before requesting another verification code.',
       });
@@ -477,7 +475,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     // Phone-Only User Check (No SMS provider integrated currently)
     if (!user.email && user.phone) {
-      console.log(`[FORGOT PASSWORD] Reset requested for phone-only account (${user.phone}). SMS provider unavailable.`);
       return res.json(genericSuccessResponse);
     }
 
@@ -490,8 +487,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const generatedOtp = crypto.randomInt(100000, 1000000).toString();
     const otpHash = hashOtp(generatedOtp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    console.log(`🔑 [FORGOT PASSWORD] New OTP generated for ${targetEmail}: ${generatedOtp} (Valid until ${expiresAt.toLocaleTimeString()})`);
 
     // Remove existing OTPs for this user's identifiers and store hashed OTP
     await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
@@ -516,9 +511,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       });
     }
 
+    console.info('[Auth] Password reset code sent.');
     return res.json(genericSuccessResponse);
   } catch (error: any) {
-    console.error('Forgot password error:', error.message || error);
+    console.error('[Auth] Forgot password request failed.');
     res.status(500).json({ message: 'Failed to process forgot password request' });
   }
 };
@@ -587,7 +583,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
       message: 'OTP verified successfully',
     });
   } catch (error: any) {
-    console.error('Verify OTP error:', error.message || error);
+    console.error('[Auth] OTP verification failed.');
     res.status(500).json({ message: 'Failed to verify OTP' });
   }
 };
@@ -626,16 +622,14 @@ export const resetPassword = async (req: Request, res: Response) => {
     ];
 
     const submittedHash = hashOtp(cleanOtp);
-    console.log(`[RESET PASSWORD] Attempting reset for ${identifier} with OTP: ${cleanOtp}`);
     const otpRecord = await Otp.findOne({
       identifier: { $in: possibleIdentifiers },
-      otpHash: submittedHash,
       isUsed: false,
       expiresAt: { $gt: new Date() },
     });
 
     if (!otpRecord) {
-      console.warn(`[RESET PASSWORD] No matching or unexpired OTP found in DB for: ${identifier} (Submitted: ${cleanOtp})`);
+      console.warn('[Auth] Password reset rejected: invalid or expired code.');
       return res.status(400).json({ message: 'Invalid or expired OTP code' });
     }
 
@@ -643,9 +637,43 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
     }
 
+    const isMatch = crypto.timingSafeEqual(
+      Buffer.from(otpRecord.otpHash),
+      Buffer.from(submittedHash)
+    );
+
+    if (!isMatch) {
+      const updatedOtp = await Otp.findOneAndUpdate(
+        {
+          _id: otpRecord._id,
+          isUsed: false,
+          expiresAt: { $gt: new Date() },
+          attempts: { $lt: otpRecord.maxAttempts },
+        },
+        { $inc: { attempts: 1 } },
+        { new: true }
+      );
+
+      if (!updatedOtp || updatedOtp.attempts >= updatedOtp.maxAttempts) {
+        return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
+      }
+
+      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+    }
+
+    if (!otpRecord.isVerified) {
+      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+    }
+
     // Atomic consumption to prevent race conditions & double-use
     const consumedOtp = await Otp.findOneAndUpdate(
-      { _id: otpRecord._id, isUsed: false },
+      {
+        _id: otpRecord._id,
+        isVerified: true,
+        isUsed: false,
+        expiresAt: { $gt: new Date() },
+        attempts: { $lt: otpRecord.maxAttempts },
+      },
       { $set: { isUsed: true } },
       { new: true }
     );
@@ -661,13 +689,13 @@ export const resetPassword = async (req: Request, res: Response) => {
     // Invalidate / clear all OTP records for this user
     await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
 
+    console.info('[Auth] Password reset completed.');
     res.json({
       success: true,
       message: 'Password reset successfully. You can now log in with your new password.',
     });
   } catch (error: any) {
-    console.error('Reset password error:', error.message || error);
+    console.error('[Auth] Password reset failed.');
     res.status(500).json({ message: 'Failed to reset password' });
   }
 };
-

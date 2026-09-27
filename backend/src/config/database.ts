@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { User } from '../models/User.model';
+import { RecurringDelivery } from '../models/RecurringDelivery.model';
 
 export const connectDatabase = async () => {
   try {
@@ -34,6 +35,9 @@ export const connectDatabase = async () => {
     // Keep critical indexes aligned with schema to avoid stale index definitions.
     await User.syncIndexes();
     console.log('✅ User indexes synchronized');
+    // Build the plan/customer idempotency unique index before accepting API traffic.
+    await RecurringDelivery.createIndexes();
+    console.log('✅ Recurring delivery indexes ensured');
     
     // Connection event handlers
     mongoose.connection.on('error', (err) => {

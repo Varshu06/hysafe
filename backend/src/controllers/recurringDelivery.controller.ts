@@ -1,12 +1,29 @@
+import { createHash } from 'crypto';
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { RecurringDelivery } from '../models/RecurringDelivery.model';
+import { RecurringBill } from '../models/RecurringBill.model';
 import { Notification } from '../models/Notification.model';
-import { calculateNextDeliveryDate, getOrCreateInitialRecurringBill, processDueRecurringDeliveries } from '../services/recurringDelivery.service';
-import { getFirstScheduledDeliveryOnOrAfter, normalizeBillingFrequency, normalizeFrequency, validateDeliveryDays } from '../services/recurringBilling.service';
+import { assertRecurringDeliveryStock, calculateNextDeliveryDate, getOrCreateInitialRecurringBill, getTrustedInventoryItem, getTrustedInventoryPrice, processDueRecurringDeliveries } from '../services/recurringDelivery.service';
+import { calculateRecurringBill, getFirstScheduledDeliveryOnOrAfter, normalizeBillingFrequency, normalizeFrequency, validateDeliveryDays } from '../services/recurringBilling.service';
 
 const serverControlledFields = new Set(['items', 'billAmount', 'paymentMethod', 'paymentStatus', 'confirmationStatus', 'paidAt', 'paidBy', 'status', 'recurringBillId', 'nextDeliveryDate']);
 const paymentTermsFor = (frequency: 'per_order' | 'weekly' | 'monthly') => frequency === 'per_order' ? 'one-time' : frequency;
+const initialBillPendingResponse = (res: Response, planId: string, error: unknown) => {
+  const failure = error as { name?: string; code?: string | number };
+  console.error('[RecurringController] Initial recurring bill is pending recovery', {
+    operation: 'initial_bill_creation',
+    planId,
+    errorName: failure?.name || 'Error',
+    errorCode: failure?.code,
+  });
+  return res.status(503).json({
+    code: 'INITIAL_RECURRING_BILL_PENDING',
+    retryable: true,
+    recurringDeliveryId: planId,
+    message: 'Your recurring plan is saved, but its first bill is still being prepared. Please confirm again to safely retry.',
+  });
+};
 
 const validateSchedule = (frequencyInput: string, deliveryDays?: number[]) => {
   const frequency = normalizeFrequency(frequencyInput);
@@ -15,10 +32,58 @@ const validateSchedule = (frequencyInput: string, deliveryDays?: number[]) => {
   return error ? { error } : { frequency };
 };
 
+export const previewRecurringDeliveryBill = async (req: AuthRequest, res: Response) => {
+  try {
+    const { productId, quantity, frequency: frequencyInput, deliveryDays, billingFrequency: inputBillingFrequency, startDate: requestedStartDate } = req.body;
+    if (!productId || !quantity || !frequencyInput) return res.status(400).json({ message: 'Missing required billing preview fields' });
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) < 1) return res.status(400).json({ message: 'Quantity must be a positive whole number' });
+    const schedule = validateSchedule(frequencyInput, deliveryDays);
+    if ('error' in schedule) return res.status(400).json({ message: schedule.error });
+    const billingFrequency = normalizeBillingFrequency(inputBillingFrequency);
+    if (!billingFrequency) return res.status(400).json({ message: 'Billing frequency must be per_order, weekly, or monthly' });
+    const startDate = requestedStartDate ? new Date(requestedStartDate) : new Date();
+    if (Number.isNaN(startDate.getTime())) return res.status(400).json({ message: 'Invalid plan start date' });
+
+    const product = await getTrustedInventoryItem(String(productId));
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    let unitPrice: number;
+    try {
+      unitPrice = getTrustedInventoryPrice(product);
+      assertRecurringDeliveryStock(product, Number(quantity));
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    const occurrence = getFirstScheduledDeliveryOnOrAfter(startDate, schedule.frequency, deliveryDays);
+    const calculation = calculateRecurringBill({
+      unitPrice,
+      quantityPerDelivery: Number(quantity),
+      frequency: schedule.frequency,
+      deliveryDays,
+      billingFrequency,
+      startDate,
+      occurrence,
+    });
+    res.json({ recurringBillPreview: {
+      ...calculation,
+      billingFrequency,
+      startDate,
+      quantityPerDelivery: Number(quantity),
+      scheduledDeliveryCount: calculation.deliveryCount,
+    } });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Failed to calculate recurring bill preview' });
+  }
+};
+
 export const createRecurringDelivery = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?._id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const idempotencyKey = req.get('Idempotency-Key')?.trim();
+    if (!idempotencyKey || idempotencyKey.length > 128 || !/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
+      return res.status(400).json({ message: 'A valid Idempotency-Key header is required' });
+    }
     const { productId, productName, quantity, frequency: frequencyInput, deliveryDays, deliveryAddress, deliveryAddressId, billingFrequency: inputBillingFrequency, paymentTerms, paymentMethod, specialInstructions, startDate: requestedStartDate, endDate: requestedEndDate, items } = req.body;
     if (Array.isArray(items) && items.length > 0) return res.status(400).json({ message: 'Recurring plans support one product only; items is not accepted' });
     if (!productId || !productName || !quantity || !frequencyInput || !deliveryAddress) return res.status(400).json({ message: 'Missing required fields' });
@@ -32,17 +97,105 @@ export const createRecurringDelivery = async (req: AuthRequest, res: Response) =
     const endDate = requestedEndDate ? new Date(requestedEndDate) : undefined;
     if (Number.isNaN(startDate.getTime()) || (endDate && (Number.isNaN(endDate.getTime()) || endDate < startDate))) return res.status(400).json({ message: 'Invalid plan dates' });
 
-    const recurringDelivery = await RecurringDelivery.create({
-      customerId: userId, productId, productName, quantity: Number(quantity), frequency: schedule.frequency, status: 'active',
-      deliveryDays: schedule.frequency === 'daily' ? undefined : deliveryDays, startDate, endDate, isActive: true,
-      billingFrequency, paymentTerms: paymentTermsFor(billingFrequency), deliveryAddress, deliveryAddressId, offlinePaymentMethod: paymentMethod, specialInstructions,
-      nextDeliveryDate: getFirstScheduledDeliveryOnOrAfter(startDate, schedule.frequency, deliveryDays),
-      // Legacy display fields are deliberately not used for billing calculations.
-      deliveryCount: 1, billAmount: 0, paymentMethod: 'offline', paymentStatus: 'pending', confirmationStatus: 'pending',
-    });
-    const recurringBill = await getOrCreateInitialRecurringBill(recurringDelivery);
-    processDueRecurringDeliveries().catch((err) => console.error('[RecurringController] Order generation failed:', err));
-    res.status(201).json({ message: 'Recurring delivery created successfully', recurringDelivery, recurringBill });
+    const requestHash = createHash('sha256').update(JSON.stringify({
+      productId: String(productId),
+      productName: String(productName),
+      quantity: Number(quantity),
+      frequency: schedule.frequency,
+      deliveryDays: schedule.frequency === 'daily' ? [] : [...deliveryDays].sort((left: number, right: number) => left - right),
+      billingFrequency,
+      paymentMethod,
+      deliveryAddress,
+      deliveryAddressId: deliveryAddressId ?? null,
+      specialInstructions: specialInstructions ?? null,
+      startDate: requestedStartDate ? startDate.toISOString() : null,
+      endDate: requestedEndDate ? endDate?.toISOString() : null,
+    })).digest('hex');
+    const idempotencyFilter = { customerId: userId, creationIdempotencyKey: idempotencyKey };
+    const findExistingPlan = () => RecurringDelivery.findOne(idempotencyFilter).select('+creationRequestHash');
+    const returnExistingPlan = async (plan: any) => {
+      if (plan.creationRequestHash !== requestHash) {
+        return res.status(409).json({
+          code: 'IDEMPOTENCY_KEY_REUSED',
+          message: 'This idempotency key was already used for a different recurring plan request',
+        });
+      }
+      let existingBill;
+      try {
+        existingBill = await RecurringBill.findOne({ recurringDeliveryId: plan._id }).sort({ periodStart: 1 });
+        if (existingBill && plan.initialBillStatus !== 'ready') {
+          plan.initialBillStatus = 'ready';
+          await plan.save();
+        }
+        // Reuse a bill already created by the scheduler; otherwise retry the
+        // initial-period upsert using the same unique billing-period key.
+        if (!existingBill) existingBill = await getOrCreateInitialRecurringBill(plan);
+      } catch (billError) {
+        return initialBillPendingResponse(res, plan._id.toString(), billError);
+      }
+      return res.status(200).json({ message: 'Recurring delivery already created', recurringDelivery: plan, recurringBill: existingBill });
+    };
+
+    const existingPlan = await findExistingPlan();
+    if (existingPlan) return await returnExistingPlan(existingPlan);
+
+    const product = await getTrustedInventoryItem(String(productId));
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    try {
+      getTrustedInventoryPrice(product);
+      assertRecurringDeliveryStock(product, Number(quantity));
+    } catch (error: any) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    let recurringDelivery;
+    try {
+      recurringDelivery = await RecurringDelivery.create({
+        ...idempotencyFilter,
+        creationRequestHash: requestHash,
+        productId,
+        productName,
+        quantity: Number(quantity),
+        frequency: schedule.frequency,
+        status: 'active',
+        deliveryDays: schedule.frequency === 'daily' ? undefined : deliveryDays,
+        startDate,
+        endDate,
+        isActive: true,
+        billingFrequency,
+        paymentTerms: paymentTermsFor(billingFrequency),
+        deliveryAddress,
+        deliveryAddressId,
+        offlinePaymentMethod: paymentMethod,
+        specialInstructions,
+        nextDeliveryDate: getFirstScheduledDeliveryOnOrAfter(startDate, schedule.frequency, deliveryDays),
+        // Legacy display fields are deliberately not used for billing calculations.
+        deliveryCount: 1,
+        billAmount: 0,
+        paymentMethod: 'offline',
+        paymentStatus: 'pending',
+        confirmationStatus: 'pending',
+        initialBillStatus: 'pending',
+      });
+    } catch (createError: any) {
+      if (createError?.code !== 11000) throw createError;
+      const racedPlan = await findExistingPlan();
+      if (!racedPlan) throw createError;
+      return await returnExistingPlan(racedPlan);
+    }
+
+    // A failed validation or product check above never persists the key. If
+    // bill creation fails, the same key can retry bill generation for this plan.
+    let recurringBill: Awaited<ReturnType<typeof getOrCreateInitialRecurringBill>>;
+    try {
+      recurringBill = await getOrCreateInitialRecurringBill(recurringDelivery);
+    } catch (billError) {
+      // The plan is durably marked pending; the same idempotency key retries
+      // this initial bill upsert without creating another plan or bill.
+      return initialBillPendingResponse(res, recurringDelivery._id.toString(), billError);
+    }
+    if (!recurringBill) return initialBillPendingResponse(res, recurringDelivery._id.toString(), new Error('Initial bill was not persisted'));
+    return res.status(201).json({ message: 'Recurring delivery created successfully', recurringDelivery, recurringBill });
   } catch (error: any) {
     console.error('Error creating recurring delivery:', error);
     res.status(500).json({ message: error.message || 'Failed to create recurring delivery' });

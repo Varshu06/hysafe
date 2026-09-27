@@ -146,6 +146,8 @@ export const Navbar = ({ onMenuToggle }: { onMenuToggle: () => void }) => {
     try { if (!item.isRead) await markNotificationRead(item._id); setNotifications(rows => rows.filter(row => row._id !== item._id)); setUnreadCount(count => Math.max(0, count - (item.isRead ? 0 : 1))); }
     catch { setNotificationError('Unable to update notification.'); }
   };
+  const getNotificationBody = (item: AdminNotification) =>
+    item.message?.trim() || (item.type === 'admin_new_order' ? item.productName?.trim() : '') || '';
 
   return (
     <nav className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border/70 bg-secondary/90 px-4 backdrop-blur-xl md:px-6">
@@ -168,7 +170,7 @@ export const Navbar = ({ onMenuToggle }: { onMenuToggle: () => void }) => {
           </button>
           {notificationsOpen && <div className="absolute right-0 mt-2 w-80 rounded-xl border border-border bg-secondary shadow-xl">
             <div className="flex items-center justify-between border-b border-border/70 px-4 py-3"><strong>Notifications</strong>{unreadCount > 0 && <button className="text-xs font-semibold text-primary" onClick={async () => { try { await markAllNotificationsRead(); setNotifications([]); setUnreadCount(0); setNotificationError(''); } catch { setNotificationError('Unable to update notifications.'); } }}>Mark all as read</button>}</div>
-            {notificationError ? <p className="p-4 text-sm text-danger">{notificationError}</p> : notifications.length ? <div className="max-h-80 overflow-y-auto">{notifications.map(item => <button key={item._id} onClick={async () => { await markRead(item); if (item.orderId) { setNotificationsOpen(false); navigate(`/orders?orderId=${encodeURIComponent(item.orderId)}`); } }} className={`block w-full border-b border-border/70 px-4 py-3 text-left text-sm hover:bg-accent ${item.isRead ? '' : 'bg-accent'}`}><span className="font-semibold">{item.title || (item.type === 'admin_new_order' ? 'New order' : item.type)}</span>{item.message && <span className="mt-1 block text-text-secondary">{item.message}</span>}<span className="mt-1 block text-xs text-text-secondary">{new Date(item.createdAt).toLocaleString()}</span></button>)}</div> : <p className="p-4 text-sm text-text-secondary">No notifications yet.</p>}
+            {notificationError ? <p className="p-4 text-sm text-danger">{notificationError}</p> : notifications.length ? <div className="max-h-80 overflow-y-auto">{notifications.map(item => <button key={item._id} onClick={async () => { await markRead(item); if (item.orderId) { setNotificationsOpen(false); navigate(`/orders?orderId=${encodeURIComponent(item.orderId)}`); } }} className={`block w-full border-b border-border/70 px-4 py-3 text-left text-sm hover:bg-accent ${item.isRead ? '' : 'bg-accent'}`}><span className="font-semibold">{item.title || (item.type === 'admin_new_order' ? 'New order' : item.type)}</span>{getNotificationBody(item) && <span className="mt-1 block text-text-secondary">{getNotificationBody(item)}</span>}<span className="mt-1 block text-xs text-text-secondary">{new Date(item.createdAt).toLocaleString()}</span></button>)}</div> : <p className="p-4 text-sm text-text-secondary">No notifications yet.</p>}
           </div>}
         </div>
       </div>

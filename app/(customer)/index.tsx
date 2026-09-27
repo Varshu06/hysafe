@@ -1,5 +1,5 @@
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -30,8 +30,20 @@ export default function CustomerHomeScreen() {
   const router = useRouter();
   const { addToCart, getQuantity, incrementQuantity, decrementQuantity } =
     useCart();
-  const { orders, isLoading } = useOrder();
-  const { products, loading } = useProduct();
+  const { orders, refreshOrders } = useOrder();
+  const { products, refreshProducts } = useProduct();
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshOrders();
+    }, [refreshOrders]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProducts();
+    }, [refreshProducts]),
+  );
 
   // Get active orders (pending, accepted, out_for_delivery)
   const activeOrders = orders.filter((order) => {
@@ -51,40 +63,56 @@ export default function CustomerHomeScreen() {
     })
     .slice(0, 3);
 
-  // Transform order for ActiveOrderCard
+  // Map the persisted order lifecycle to the three customer tracking milestones.
   const transformOrderForActiveCard = (order: Order) => {
     const status = order.status?.toLowerCase();
-    let progress = 0;
-    let timeline = [
-      { status: "picked", completed: false, current: false },
-      { status: "on_the_way", completed: false, current: false },
-      { status: "delivered", completed: false, current: false },
-    ];
-
-    if (status === "pending") {
-      progress = 0;
-      timeline[0].current = true;
-    } else if (status === "accepted") {
-      progress = 0.33;
-      timeline[0].completed = true;
-      timeline[1].current = true;
-    } else if (status === "out_for_delivery") {
-      progress = 0.66;
-      timeline[0].completed = true;
-      timeline[1].completed = true;
-      timeline[2].current = true;
-    } else if (status === "delivered") {
-      progress = 1;
-      timeline[0].completed = true;
-      timeline[1].completed = true;
-      timeline[2].completed = true;
-    }
+    const stageIndex =
+      status === "accepted" ? 0 : status === "out_for_delivery" ? 1 : status === "delivered" ? 2 : -1;
+    const timeline = ["accepted", "out_for_delivery", "delivered"].map(
+      (stage, index) => ({
+        status: stage,
+        completed: stageIndex >= index,
+        current: stageIndex === index,
+      }),
+    );
+    // The track has three dot centers at 0%, 50%, and 100% of its width.
+    const progress = stageIndex < 0 ? 0 : stageIndex / 2;
+    const assignedPartnerPhone =
+      order.assignedStaffId?.phone || order.assignedStaff?.phone;
 
     return {
       id: order._id,
       status: order.status || "pending",
-      driverName:
-        order.driverName || order.assignedStaff?.name || "notAssigned",
+      productName:
+        Array.from(
+          new Set(
+            (order.items || [])
+              .map((item) => item.productName?.trim())
+              .filter((name): name is string => Boolean(name)),
+          ),
+        ).join(" + ") || t("productDetailsUnavailable"),
+      quantity:
+        (Number.isFinite(order.quantity) && order.quantity > 0
+          ? order.quantity
+          : (order.items || []).reduce((sum, item) => {
+              const itemQuantity = Number(item.quantity);
+              return sum + (Number.isFinite(itemQuantity) && itemQuantity > 0 ? itemQuantity : 0);
+            }, 0)) || null,
+      totalAmount: Number.isFinite(Number(order.price || order.totalPrice || 0))
+        ? Number(order.price || order.totalPrice || 0)
+        : 0,
+      partnerAssigned: Boolean(
+        order.assignedStaffId ||
+          order.assignedStaff ||
+          status === "accepted" ||
+          status === "out_for_delivery",
+      ),
+      partnerName:
+        order.assignedStaffId?.name || order.assignedStaff?.name || "",
+      partnerPhone:
+        typeof assignedPartnerPhone === "string"
+          ? assignedPartnerPhone.trim()
+          : "",
       progress,
       timeline,
     };
@@ -142,55 +170,73 @@ export default function CustomerHomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.productsScroll}
           >
-            {products.map((product) => (
-              <View key={product.id} style={styles.productCardSmall}>
-                <View style={styles.productImageContainer}>
-                  <Image
-                    source={normalizeImageSource(product.image) || ProductImages[product.volume.toLowerCase()]}
-                    style={styles.productImage}
-                    resizeMode="contain"
-                  />
-                </View>
-                <Text style={styles.productName}>{product.name}</Text>
-                <View style={styles.priceRow}>
-                  <Text style={styles.price}>₹ {product.price}</Text>
-                  {getQuantity(product.id) > 0 ? (
-                    <View style={styles.quantitySelector}>
+            {products.map((product) => {
+              const availabilityState = product.comingSoon
+                ? "coming_soon"
+                : product.available !== true || Number(product.quantity) < 1
+                  ? "unavailable"
+                  : product.availabilityState || "available";
+              const isOrderable = availabilityState === "available";
+              const cartQuantity = getQuantity(product.id);
+
+              return (
+                <View key={product.id} style={styles.productCardSmall}>
+                  <View style={styles.productImageContainer}>
+                    <Image
+                      source={normalizeImageSource(product.image) || ProductImages[product.volume.toLowerCase()]}
+                      style={[styles.productImage, !isOrderable && styles.unavailableProductImage]}
+                      resizeMode="contain"
+                    />
+                    {!isOrderable && (
+                      <View style={styles.productAvailabilityBadge}>
+                        <Text style={styles.productAvailabilityText}>
+                          {availabilityState === "coming_soon" ? t("comingSoon") : t("unavailableLabel")}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.productName, !isOrderable && styles.unavailableProductText]}>{product.name}</Text>
+                  <View style={styles.priceRow}>
+                    <Text style={[styles.price, !isOrderable && styles.unavailableProductText]}>₹ {product.price}</Text>
+                    {cartQuantity > 0 ? (
+                      <View style={styles.quantitySelector}>
+                        <TouchableOpacity
+                          style={styles.qtyButton}
+                          onPress={() => handleDecrement(product.id)}
+                        >
+                          <Text style={styles.qtyButtonText}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.qtyText}>{cartQuantity}</Text>
+                        <TouchableOpacity
+                          style={styles.qtyButton}
+                          onPress={() => handleIncrement(product.id)}
+                          disabled={!isOrderable}
+                        >
+                          <Text style={[styles.qtyButtonText, !isOrderable && styles.disabledQuantityButton]}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : isOrderable ? (
                       <TouchableOpacity
-                        style={styles.qtyButton}
-                        onPress={() => handleDecrement(product.id)}
+                        style={styles.addButton}
+                        onPress={() => handleAddProduct(product)}
                       >
-                        <Text style={styles.qtyButtonText}>−</Text>
+                        <Text
+                          style={styles.addButtonText}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.8}
+                        >
+                          {t("add")}
+                        </Text>
+                        <Text style={styles.plusIcon}>+</Text>
                       </TouchableOpacity>
-                      <Text style={styles.qtyText}>
-                        {getQuantity(product.id)}
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.qtyButton}
-                        onPress={() => handleIncrement(product.id)}
-                      >
-                        <Text style={styles.qtyButtonText}>+</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.addButton}
-                      onPress={() => handleAddProduct(product)}
-                    >
-                      <Text
-                        style={styles.addButtonText}
-                        numberOfLines={1}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.8}
-                      >
-                        {t("add")}
-                      </Text>
-                      <Text style={styles.plusIcon}>+</Text>
-                    </TouchableOpacity>
-                  )}
+                    ) : (
+                      <View style={styles.unavailableActionPlaceholder} />
+                    )}
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
           <TouchableOpacity
             style={styles.viewMoreBtn}
@@ -322,6 +368,35 @@ const styles = StyleSheet.create({
   productImage: {
     width: "100%",
     height: "100%",
+  },
+  unavailableProductImage: {
+    opacity: 0.45,
+  },
+  productAvailabilityBadge: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 8,
+    backgroundColor: "rgba(15, 23, 42, 0.82)",
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  productAvailabilityText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  unavailableProductText: {
+    color: COLORS.textLight,
+  },
+  unavailableActionPlaceholder: {
+    width: 48,
+    minHeight: 32,
+  },
+  disabledQuantityButton: {
+    opacity: 0.45,
   },
   productName: {
     fontSize: 14,

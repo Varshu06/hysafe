@@ -9,9 +9,10 @@ type Props = {
   title: string;
   onBack?: () => void;
   right?: React.ReactNode;
+  showNotifications?: boolean;
 };
 
-export function StaffHeader({ title, onBack, right }: Props) {
+export function StaffHeader({ title, onBack, right, showNotifications = true }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.header, { paddingTop: insets.top }]}>
@@ -34,7 +35,7 @@ export function StaffHeader({ title, onBack, right }: Props) {
       </Text>
 
       <View style={styles.sideRight}>
-        {right || <NotificationCenter topInset={insets.top} />}
+        {right || (showNotifications ? <NotificationCenter topInset={insets.top} /> : null)}
       </View>
     </View>
   );

@@ -22,6 +22,19 @@ export interface RecurringBill {
   paidBy?: { _id: string; name?: string; phone?: string };
 }
 
+export interface RecurringBillPreview {
+  amount: number;
+  billingFrequency: 'per_order' | 'weekly' | 'monthly';
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  startDate: string;
+  quantityPerDelivery: number;
+  deliveryCount: number;
+  scheduledDeliveryCount: number;
+  scheduledDeliveryDates: string[];
+}
+
 export interface CreateRecurringDeliveryData {
   productId: string;
   productName: string;
@@ -66,6 +79,7 @@ export interface RecurringDelivery {
   endDate?: string;
   isActive: boolean;
   status?: 'active' | 'paused' | 'cancelled';
+  initialBillStatus?: 'pending' | 'ready';
   billingFrequency: 'per_order' | 'weekly' | 'monthly';
   offlinePaymentMethod?: 'cash' | 'shop';
   deliveryAddress: string;
@@ -79,7 +93,7 @@ export interface RecurringDelivery {
 export interface RecurringDeliveryResponse {
   message: string;
   recurringDelivery: RecurringDelivery;
-  recurringBill?: RecurringBill;
+  recurringBill?: RecurringBill | null;
 }
 
 export interface RecurringDeliveriesResponse {
@@ -90,10 +104,15 @@ export interface RecurringDeliveriesResponse {
  * Create a new recurring delivery
  */
 export const createRecurringDelivery = async (
-  data: CreateRecurringDeliveryData
+  data: CreateRecurringDeliveryData,
+  idempotencyKey: string,
 ): Promise<RecurringDeliveryResponse> => {
   try {
-    const response = await api.post<RecurringDeliveryResponse>('/customers/recurring-deliveries', data);
+    const response = await api.post<RecurringDeliveryResponse>(
+      '/customers/recurring-deliveries',
+      data,
+      { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
     return response.data;
   } catch (error: any) {
     console.error('Error creating recurring delivery:', error);
@@ -101,18 +120,18 @@ export const createRecurringDelivery = async (
   }
 };
 
+export const previewRecurringDeliveryBill = async (
+  data: Pick<CreateRecurringDeliveryData, 'productId' | 'quantity' | 'frequency' | 'deliveryDays' | 'billingFrequency' | 'startDate'>,
+): Promise<RecurringBillPreview> => {
+  const response = await api.post<{ recurringBillPreview: RecurringBillPreview }>(
+    '/customers/recurring-deliveries/preview',
+    data,
+  );
+  return response.data.recurringBillPreview;
+};
+
 export const getRecurringBills = async (): Promise<{ recurringBills: RecurringBill[] }> => {
   const response = await api.get<{ recurringBills: RecurringBill[] }>('/customers/recurring-bills');
-  return response.data;
-};
-
-export const getRecurringBill = async (id: string): Promise<{ recurringBill: RecurringBill }> => {
-  const response = await api.get<{ recurringBill: RecurringBill }>(`/customers/recurring-bills/${id}`);
-  return response.data;
-};
-
-export const confirmRecurringBill = async (id: string): Promise<{ message: string; recurringBill: RecurringBill }> => {
-  const response = await api.put<{ message: string; recurringBill: RecurringBill }>(`/customers/recurring-bills/${id}/confirm`);
   return response.data;
 };
 

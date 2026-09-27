@@ -8,6 +8,7 @@ import { Otp } from '../models/Otp.model';
 import { Staff } from '../models/Staff.model';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { runTransaction } from '../utils/transaction.util';
+import { disconnectUserSockets } from '../services/socket.service';
 
 // Update customer profile
 export const updateProfile = async (req: AuthRequest, res: Response) => {
@@ -181,6 +182,8 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
       await User.findByIdAndDelete(userId, { session });
     });
 
+    disconnectUserSockets(userId.toString());
+
     console.log(`[HySafe] Successfully deleted account for user ID: ${userId} (${user.phone})`);
 
     return res.status(200).json({
@@ -194,7 +197,6 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
     });
   }
 };
-
 
 
 

@@ -48,14 +48,14 @@ export const CustomerHeader = () => {
         address?.region,
       ].filter(Boolean).join(', ');
 
-      setCurrentLocation(fullAddress || t('currentLocation'));
+      setCurrentLocation(fullAddress || 'Current Location');
     } catch (error) {
       // Silently fail - will fallback to saved address
       console.warn('Failed to fetch current location:', error);
     } finally {
       setIsFetchingLocation(false);
     }
-  }, [t]);
+  }, []);
 
   // Load selected address
   const loadSelectedAddress = useCallback(async () => {
@@ -81,8 +81,8 @@ export const CustomerHeader = () => {
     <View style={styles.container}>
       <TouchableOpacity style={styles.addressContainer} onPress={() => router.push('/(customer)/address/search')}>
           <View style={styles.labelRow}>
-            <Text style={styles.label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              {isFetchingLocation ? t('fetching') : (selectedAddress?.type ? t(selectedAddress.type) : t('selectAddress'))}
+            <Text style={styles.label}>
+              {isFetchingLocation ? 'Fetching...' : currentLocation ? 'Current Location' : (selectedAddress?.type || 'Home')}
             </Text>
             {isFetchingLocation ? (
               <ActivityIndicator size="small" color={COLORS.text} style={styles.chevron} />
@@ -92,16 +92,16 @@ export const CustomerHeader = () => {
           </View>
         <Text style={styles.address} numberOfLines={2}>
           {isFetchingLocation 
-            ? t('gettingLocation') 
-            : currentLocation || selectedAddress?.address || selectedAddress?.fullAddress || t('selectDeliveryAddress')}
+            ? 'Getting your location...' 
+            : currentLocation || selectedAddress?.address || selectedAddress?.fullAddress || 'Select delivery address'}
         </Text>
       </TouchableOpacity>
       
       <View style={styles.actions}>
            <NotificationCenter topInset={insets.top} onNotificationPress={(item) => {
              if (item.orderId) router.push({ pathname: '/(customer)/order-details/[id]', params: { id: item.orderId } });
-             else if (item.billId) router.push({ pathname: '/(customer)/recurring-deliveries/bill', params: { billId: item.billId } });
              else if (item.recurringDeliveryId) router.push({ pathname: '/(customer)/recurring-deliveries', params: { recurringDeliveryId: item.recurringDeliveryId } });
+             else if (item.billId) router.push('/(customer)/recurring-deliveries');
            }} />
            <TouchableOpacity style={styles.cartButton} onPress={() => router.push('/(customer)/checkout')}>
               <Feather name="shopping-cart" size={18} color="#FFFFFF" />
@@ -152,8 +152,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.text,
-    lineHeight: 20,
-    paddingVertical: 2,
+    lineHeight: 18,
   },
   chevron: {
     marginLeft: 4,
@@ -161,8 +160,7 @@ const styles = StyleSheet.create({
   address: {
     fontSize: 12,
     color: COLORS.textLight,
-    lineHeight: 18,
-    paddingVertical: 1,
+    lineHeight: 16,
   },
   actions: {
     flexDirection: 'row',

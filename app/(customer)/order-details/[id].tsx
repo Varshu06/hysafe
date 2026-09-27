@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: COLORS.textLight,
     marginBottom: 4,
     fontWeight: "500",
     lineHeight: 16,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   },
   timelineValue: {
     fontSize: 13,
-    color: "#94A3B8",
+    color: COLORS.textLight,
     lineHeight: 18,
   },
   errorText: {
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   },
   orderIdLabel: {
     fontSize: 12,
-    color: "#94A3B8",
+    color: COLORS.textLight,
     marginBottom: 8,
     fontWeight: "500",
   },
@@ -733,7 +733,7 @@ const styles = StyleSheet.create({
   },
   driverPhone: {
     fontSize: 14,
-    color: "#94A3B8",
+    color: COLORS.textLight,
     lineHeight: 20,
   },
   callButton: {

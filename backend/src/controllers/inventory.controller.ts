@@ -2,6 +2,7 @@ import { Response } from "express";
 import { InventoryItem } from "../models/InventoryItem.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { Inventory } from "../models/Inventory.model";
+import { getProductAvailabilityState } from "../services/productAvailability.service";
 
 const validateProductImage = (image: unknown): string | null => {
   if (typeof image !== "string") return "Product image must be a string";
@@ -73,6 +74,7 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       price,
       deliveryCharge,
       available,
+      comingSoon,
       image,
     } = req.body;
 
@@ -98,8 +100,8 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       price: Number(price),
       deliveryCharge: Number(deliveryCharge || 0),
       ...(typeof image === "string" && image.trim() ? { image: image.trim() } : {}),
-      // If the client explicitly provides `available`, respect it; otherwise derive from quantity
-      available: available !== undefined ? Boolean(available) : Number(quantity) > 0,
+      available: available !== undefined ? Boolean(available) : true,
+      comingSoon: comingSoon !== undefined ? Boolean(comingSoon) : false,
     });
 
     res.status(201).json({
@@ -128,6 +130,7 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       price,
       deliveryCharge,
       available,
+      comingSoon,
       image,
     } = req.body;
 
@@ -136,7 +139,6 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
     if (name !== undefined) updateData.name = String(name).trim();
     if (quantity !== undefined) {
       updateData.quantity = Number(quantity);
-      updateData.available = Number(quantity) > 0;
     }
     if (minStock !== undefined)
       updateData.minStock = Number(minStock);
@@ -151,6 +153,8 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
       updateData.deliveryCharge = Number(deliveryCharge);
     if (available !== undefined)
       updateData.available = Boolean(available);
+    if (comingSoon !== undefined)
+      updateData.comingSoon = Boolean(comingSoon);
     if (image !== undefined) {
       const imageError = validateProductImage(image);
       if (imageError) return res.status(400).json({ success: false, message: imageError });
@@ -230,6 +234,8 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
       deliveryCharge: product.deliveryCharge,
       image: product.image,
       available: product.available,
+      comingSoon: product.comingSoon === true,
+      availabilityState: getProductAvailabilityState(product),
     }));
 
     res.json({

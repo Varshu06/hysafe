@@ -38,6 +38,9 @@ export interface IRecurringDelivery extends Document {
   offlinePaymentMethod?: 'cash' | 'shop';
   paymentStatus?: 'pending' | 'paid';
   confirmationStatus?: 'confirmed' | 'pending';
+  creationIdempotencyKey?: string;
+  creationRequestHash?: string;
+  initialBillStatus?: 'pending' | 'ready';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -139,15 +142,34 @@ const RecurringDeliverySchema = new Schema<IRecurringDelivery>(
       enum: ['confirmed', 'pending'],
       default: 'confirmed',
     },
+    creationIdempotencyKey: { type: String, select: false },
+    creationRequestHash: { type: String, select: false },
+    // Plans created by the API stay pending until their first persisted bill is confirmed.
+    initialBillStatus: { type: String, enum: ['pending', 'ready'] },
   },
   {
     timestamps: true,
+    toJSON: {
+      transform: (_document, result) => {
+        delete result.creationIdempotencyKey;
+        delete result.creationRequestHash;
+        return result;
+      },
+    },
   }
+);
+
+// Idempotency keys are unique per customer while legacy plans without a key
+// remain outside the index and customers can still create multiple plans.
+RecurringDeliverySchema.index(
+  { customerId: 1, creationIdempotencyKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { creationIdempotencyKey: { $type: 'string' } },
+  },
 );
 
 export const RecurringDelivery = mongoose.model<IRecurringDelivery>(
   'RecurringDelivery',
   RecurringDeliverySchema
 );
-
-

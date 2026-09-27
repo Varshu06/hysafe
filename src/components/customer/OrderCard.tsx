@@ -19,13 +19,16 @@ interface OrderCardProps {
 const getStatusIcon = (status: string) => {
   const statusLower = status.toLowerCase();
   if (statusLower === "pending") {
-    return <Feather name="clock" size={12} color={COLORS.warning} />;
+    return <Feather name="clock" size={12} color={COLORS.statusPending} />;
+  }
+  if (statusLower === "accepted" || statusLower === "out_for_delivery") {
+    return <Feather name="check" size={12} color={COLORS.statusAccepted} />;
   }
   if (statusLower === "cancelled") {
     return <Feather name="x" size={12} color={COLORS.textLight} />;
   }
   if (statusLower === "delivered") {
-    return <Feather name="check" size={12} color={COLORS.success} />;
+    return <Feather name="check" size={12} color={COLORS.statusDelivered} />;
   }
   return <Feather name="check" size={12} color={COLORS.primary} />;
 };
@@ -48,10 +51,22 @@ export const OrderCard = ({ order }: OrderCardProps) => {
       activeOpacity={0.8}
     >
       <View style={styles.cardHeader}>
-        <View style={styles.statusBadge}>
+        <View
+          style={[
+            styles.statusBadge,
+            statusKey === "pending" && styles.pendingStatusBadge,
+            (statusKey === "accepted" || statusKey === "out_for_delivery") && styles.acceptedStatusBadge,
+            statusKey === "delivered" && styles.deliveredStatusBadge,
+          ]}
+        >
           {getStatusIcon(order.status)}
           <Text
-            style={styles.statusText}
+            style={[
+              styles.statusText,
+              statusKey === "pending" && styles.pendingStatusText,
+              (statusKey === "accepted" || statusKey === "out_for_delivery") && styles.acceptedStatusText,
+              statusKey === "delivered" && styles.deliveredStatusText,
+            ]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.8}
@@ -113,6 +128,15 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     maxWidth: "55%",
   },
+  pendingStatusBadge: {
+    backgroundColor: COLORS.statusPendingBackground,
+  },
+  acceptedStatusBadge: {
+    backgroundColor: COLORS.statusAcceptedBackground,
+  },
+  deliveredStatusBadge: {
+    backgroundColor: COLORS.statusDeliveredBackground,
+  },
   statusText: {
     fontSize: 12,
     fontWeight: "bold",
@@ -120,6 +144,15 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     paddingVertical: 1,
     textTransform: "capitalize",
+  },
+  pendingStatusText: {
+    color: COLORS.statusPending,
+  },
+  acceptedStatusText: {
+    color: COLORS.statusAccepted,
+  },
+  deliveredStatusText: {
+    color: COLORS.statusDelivered,
   },
   date: {
     color: "white",

@@ -5,13 +5,15 @@ import { storage } from '../utils/storage';
 class SocketService {
   private socket: Socket | null = null;
   private isConnected: boolean = false;
-  private pendingListeners: Map<string, Array<(data: any) => void>> = new Map();
+  private connectionToken: string | null = null;
+  private connectionRequestId = 0;
+  private connectionGeneration = 0;
+  private staffOnlineRequested = false;
+  private staffOnlineEmittedGeneration = 0;
+  private listeners: Map<string, Array<(data: any) => void>> = new Map();
 
   async connect(token?: string): Promise<void> {
-    // Disconnect existing connection if any
-    if (this.socket) {
-      this.disconnect();
-    }
+    const requestId = ++this.connectionRequestId;
 
     let connectionToken = token;
     // Get token from storage if not provided
@@ -24,13 +26,19 @@ class SocketService {
       return;
     }
 
+    // Keep the active socket and its listeners when the same session requests a connection again.
+    if (this.socket && this.connectionToken === connectionToken) return;
+
+    if (requestId !== this.connectionRequestId) return;
+
     if (!SOCKET_URL) {
       console.warn('SocketService: SOCKET_URL is not configured, cannot connect');
       return;
     }
 
     try {
-      this.socket = io(SOCKET_URL, {
+      this.closeSocket();
+      const socket = io(SOCKET_URL, {
         auth: {
           token: connectionToken,
         },
@@ -42,20 +50,28 @@ class SocketService {
         timeout: 20000,
         forceNew: true,
       });
-
-      this.socket.on('connect', () => {
-        console.log('✅ Socket.io connected');
-        this.isConnected = true;
-        // Re-attach any pending listeners
-        this.attachPendingListeners();
+      this.socket = socket;
+      this.connectionToken = connectionToken;
+      this.listeners.forEach((callbacks, event) => {
+        callbacks.forEach(callback => socket.on(event, callback));
       });
 
-      this.socket.on('disconnect', (reason) => {
+      socket.on('connect', () => {
+        if (this.socket !== socket) return;
+        console.log('✅ Socket.io connected');
+        this.isConnected = true;
+        this.connectionGeneration += 1;
+        this.emitStaffOnlineIfConnected();
+      });
+
+      socket.on('disconnect', (reason) => {
+        if (this.socket !== socket) return;
         console.log('❌ Socket.io disconnected:', reason);
         this.isConnected = false;
       });
 
-      this.socket.on('connect_error', (error) => {
+      socket.on('connect_error', (error) => {
+        if (this.socket !== socket) return;
         // Only log connection errors, not websocket upgrade failures
         // WebSocket errors are expected if the server doesn't support it
         if (error.message && !error.message.includes('websocket')) {
@@ -65,7 +81,7 @@ class SocketService {
       });
 
       // Handle transport errors silently (they're expected during fallback)
-      this.socket.io.on('error', (error: any) => {
+      socket.io.on('error', (error: any) => {
         // Only log if it's not a websocket error (which is expected during fallback)
         if (error.message && !error.message.includes('websocket')) {
           console.warn('Socket.io transport error:', error.message);
@@ -77,48 +93,36 @@ class SocketService {
     }
   }
 
-  private attachPendingListeners(): void {
-    if (!this.socket) return;
-
-    this.pendingListeners.forEach((callbacks, event) => {
-      callbacks.forEach(callback => {
-        this.socket!.on(event, callback);
-      });
-    });
-    this.pendingListeners.clear();
+  private closeSocket(): void {
+    if (this.socket) this.socket.disconnect();
+    this.socket = null;
+    this.connectionToken = null;
+    this.isConnected = false;
   }
 
   disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-      this.isConnected = false;
-      console.log('SocketService: Disconnected');
-    }
+    this.connectionRequestId += 1;
+    this.staffOnlineRequested = false;
+    this.closeSocket();
+    console.log('SocketService: Disconnected');
   }
 
   on(event: string, callback: (data: any) => void): void {
-    if (this.socket && this.isConnected) {
-      this.socket.on(event, callback);
-    } else {
-      // Store listener to attach when socket connects
-      if (!this.pendingListeners.has(event)) {
-        this.pendingListeners.set(event, []);
-      }
-      this.pendingListeners.get(event)!.push(callback);
-    }
+    const callbacks = this.listeners.get(event) || [];
+    if (callbacks.includes(callback)) return;
+    callbacks.push(callback);
+    this.listeners.set(event, callbacks);
+    this.socket?.on(event, callback);
   }
 
   off(event: string, callback?: (data: any) => void): void {
-    const pending = this.pendingListeners.get(event);
-    if (pending) {
+    const registered = this.listeners.get(event);
+    if (registered) {
       if (callback) {
-        const remaining = pending.filter(listener => listener !== callback);
-        if (remaining.length) this.pendingListeners.set(event, remaining);
-        else this.pendingListeners.delete(event);
-      } else {
-        this.pendingListeners.delete(event);
-      }
+        const remaining = registered.filter(listener => listener !== callback);
+        if (remaining.length) this.listeners.set(event, remaining);
+        else this.listeners.delete(event);
+      } else this.listeners.delete(event);
     }
     if (this.socket) {
       if (callback) {
@@ -130,7 +134,7 @@ class SocketService {
   }
 
   emit(event: string, data: any): void {
-    if (this.socket && this.isConnected) {
+    if (this.socket?.connected) {
       this.socket.emit(event, data);
     } else {
       console.warn(`SocketService: Cannot emit ${event}, socket not connected`);
@@ -156,7 +160,23 @@ class SocketService {
 
   // Staff-specific events
   emitStaffOnline(): void {
-    this.emit('staff-online', {});
+    this.staffOnlineRequested = true;
+    this.emitStaffOnlineIfConnected();
+  }
+
+  private emitStaffOnlineIfConnected(): void {
+    if (
+      !this.staffOnlineRequested ||
+      !this.socket?.connected ||
+      this.staffOnlineEmittedGeneration === this.connectionGeneration
+    ) return;
+
+    this.socket.emit('staff-online', {});
+    this.staffOnlineEmittedGeneration = this.connectionGeneration;
+  }
+
+  clearStaffOnlineAnnouncement(): void {
+    this.staffOnlineRequested = false;
   }
 
   getSocket(): Socket | null {
@@ -169,6 +189,4 @@ class SocketService {
 }
 
 export const socketService = new SocketService();
-
-
 

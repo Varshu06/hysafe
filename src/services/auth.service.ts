@@ -98,7 +98,6 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       isTimeout: error.isTimeout,
       isNetworkError: error.isNetworkError,
       isCorsError: error.isCorsError,
-      response: error.response?.data,
       status: error.response?.status,
     });
     
@@ -173,9 +172,6 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
     
     return response.data;
   } catch (error: any) {
-    console.error('Registration error:', error);
-    console.error('Error response:', error.response?.data);
-    
     // Extract error message from various possible locations
     const errorMessage = 
       error.response?.data?.message || 
@@ -218,7 +214,6 @@ export const changePassword = async (currentPassword: string, newPassword: strin
     });
     return response.data;
   } catch (error: any) {
-    console.error('Change password error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to change password');
   }
 };
@@ -234,7 +229,6 @@ export const forgotPassword = async (identifier: string): Promise<{ message: str
     });
     return response.data;
   } catch (error: any) {
-    console.error('Forgot password API error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to request password reset code');
   }
 };
@@ -251,7 +245,6 @@ export const verifyOtp = async (identifier: string, otp: string): Promise<{ mess
     });
     return response.data;
   } catch (error: any) {
-    console.error('Verify OTP API error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Invalid or expired OTP code');
   }
 };
@@ -269,12 +262,9 @@ export const resetPassword = async (identifier: string, otp: string, newPassword
     });
     return response.data;
   } catch (error: any) {
-    console.error('Reset password API error:', error);
     throw new Error(error.response?.data?.message || error.message || 'Failed to reset password');
   }
 };
-
-
 
 
 

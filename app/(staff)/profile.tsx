@@ -178,7 +178,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <StaffHeader title={t("profile")} />
+      <StaffHeader title={t("profile")} showNotifications={false} />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileCard}>

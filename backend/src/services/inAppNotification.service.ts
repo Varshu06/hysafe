@@ -44,7 +44,13 @@ export const notifyOrderCreated = async (order: any): Promise<void> => {
   const orderId = getId(order?._id);
   const customerId = getId(order?.customerId);
   if (!orderId) return;
-  const productName = order?.items?.[0]?.productName || 'Order';
+  const productNames = Array.isArray(order?.items)
+    ? order.items
+        .map((item: any) => typeof item?.productName === 'string' ? item.productName.trim() : '')
+        .filter(Boolean)
+    : [];
+  const adminProductName = [...new Set(productNames)].join(' + ') || undefined;
+  const customerProductName = order?.items?.[0]?.productName || 'Order';
   const recipients: Array<{ id: mongoose.Types.ObjectId; role: NotificationRole; type: NotificationType }> = [];
   if (customerId) recipients.push({ id: customerId, role: 'customer', type: 'order_placed' });
 
@@ -58,7 +64,12 @@ export const notifyOrderCreated = async (order: any): Promise<void> => {
   await notifyRecipients(recipients, (recipientId, role) => {
     const type = recipients.find(r => r.id.equals(recipientId) && r.role === role)?.type || 'order_placed';
     return {
-      recipientId, recipientRole: role, type, orderId, productName,
+      recipientId,
+      recipientRole: role,
+      type,
+      orderId,
+      title: role === 'admin' ? 'New order' : undefined,
+      productName: role === 'admin' ? adminProductName : customerProductName,
       eventKey: `order:${orderId}:${type}:${recipientId}`,
     };
   });

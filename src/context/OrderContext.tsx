@@ -2,6 +2,7 @@ import React, { createContext, ReactNode, useContext, useEffect, useState, useCa
 import { getMyOrders } from '../services/order.service';
 import { Order } from '../types/order.types';
 import { useAuth } from './AuthContext';
+import { socketService } from '../services/socket.service';
 
 interface OrderContextType {
   orders: Order[];
@@ -41,8 +42,7 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (error?.response?.status !== 403) {
         console.error('Get orders error:', error?.response?.statusText || error?.message || 'Unknown error');
       }
-      // Don't throw, just log
-      setOrders([]);
+      // Keep the last known order state if a refresh fails temporarily.
     } finally {
       setIsLoading(false);
       fetchInProgressRef.current = false;
@@ -59,6 +59,33 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setOrders([]);
     }
   }, [isAuthenticated, userRole, userId, refreshOrders]);
+
+  // Keep the existing API-backed order store current when staff updates an order.
+  useEffect(() => {
+    if (!isAuthenticated || userRole !== 'customer') return;
+
+    const handleOrderStatusUpdate = (event: { orderId: string; status: string }) => {
+      const knownStatuses = ['pending', 'accepted', 'out_for_delivery', 'delivered', 'cancelled'];
+      if (knownStatuses.includes(event.status)) {
+        setOrders((currentOrders) =>
+          currentOrders.map((order) =>
+            order._id === event.orderId
+              ? { ...order, status: event.status as Order['status'] }
+              : order,
+          ),
+        );
+      }
+      void refreshOrders();
+    };
+
+    socketService.onOrderStatusUpdate(handleOrderStatusUpdate);
+    void socketService.connect();
+
+    return () => {
+      socketService.off('order-status-updated', handleOrderStatusUpdate);
+      socketService.disconnect();
+    };
+  }, [isAuthenticated, userRole, refreshOrders]);
 
   return (
     <OrderContext.Provider
@@ -80,7 +107,5 @@ export const useOrder = (): OrderContextType => {
   }
   return context;
 };
-
-
 
 

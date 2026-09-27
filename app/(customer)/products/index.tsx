@@ -34,7 +34,10 @@ export default function ProductsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      refreshProducts();
+      setPage(1);
+      setMoreProducts([]);
+      setHasNext(true);
+      void refreshProducts(PAGE_SIZE);
     }, [refreshProducts]),
   );
 
@@ -66,6 +69,12 @@ export default function ProductsScreen() {
   };
 
   const toggleSelection = (product: Product) => {
+    const state = product.comingSoon
+      ? "coming_soon"
+      : product.available !== true || Number(product.quantity) < 1
+        ? "unavailable"
+        : product.availabilityState || "available";
+    if (state !== "available") return;
     const isInCart = getQuantity(product.id) > 0;
     if (isInCart) {
       removeFromCart(product.id);

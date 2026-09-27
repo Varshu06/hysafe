@@ -90,6 +90,12 @@ export const COLORS = {
   textLight: "#64748B", // Slate 500
   success: "#0EA5E9", // Sky 500 - Success (keeping it blue-ish green or just blue)
   warning: "#F59E0B",
+  statusPending: "#F59E0B",
+  statusPendingBackground: "#FEF3C7",
+  statusAccepted: "#3B82F6",
+  statusAcceptedBackground: "#DBEAFE",
+  statusDelivered: "#22C55E",
+  statusDeliveredBackground: "#DCFCE7",
   error: "#EF4444",
   border: "#BAE6FD", // Sky 200
   overlay: "#0000004D", // For modal

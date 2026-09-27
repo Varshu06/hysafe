@@ -110,6 +110,8 @@ export interface InventoryItem {
   unit: string;
   minStock: number;
   price: number;
+  available?: boolean;
+  comingSoon?: boolean;
   image?: string;
   lastRestocked: Date;
   createdAt: Date;

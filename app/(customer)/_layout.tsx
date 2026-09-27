@@ -156,7 +156,6 @@ export default function CustomerLayout() {
           headerShown: false,
         }}
       />
-      <Tabs.Screen name="recurring-deliveries/bill" options={{ href: null, tabBarStyle: { display: "none" }, headerShown: false }} />
     </Tabs>
   );
 }

@@ -166,6 +166,12 @@ export default function RecurringDeliveriesScreen() {
     });
   };
 
+  const formatBillPeriod = (bill: RecurringBill) =>
+    `${new Date(bill.periodStart).toLocaleDateString("en-IN", { day: "numeric", month: "short" })} – ${new Date(bill.periodEnd).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+
+  const formatBillingFrequency = (frequency: RecurringBill["billingFrequency"]) =>
+    frequency === "per_order" ? "Pay per order" : `${frequency[0].toUpperCase()}${frequency.slice(1)}`;
+
   const activeDeliveries = recurringDeliveries.filter((rd) => rd.isActive);
   const pausedDeliveries = recurringDeliveries.filter((rd) => !rd.isActive);
   const displayedDeliveries =
@@ -276,14 +282,33 @@ export default function RecurringDeliveriesScreen() {
           displayedDeliveries.map((delivery) => {
             const id = delivery._id || delivery.id;
             const isProcessing = actionLoadingId === id;
-            // Only attach a bill that explicitly includes this plan's next delivery.
-            // A plan may have historical bills, which must never be presented as its current bill.
+            // Prefer the bill covering the next delivery. Per-order bills cover
+            // only one occurrence, so retain the oldest unpaid bill as fallback
+            // after the scheduler advances nextDeliveryDate.
             const nextDeliveryKey = delivery.nextDeliveryDate ? new Date(delivery.nextDeliveryDate).toISOString().slice(0, 10) : undefined;
-            const bill = recurringBills.find((item) =>
-              (typeof item.recurringDeliveryId === "string" ? item.recurringDeliveryId : item.recurringDeliveryId._id) === id &&
-              !!nextDeliveryKey && item.scheduledDeliveryDates.some((scheduled) => new Date(scheduled).toISOString().slice(0, 10) === nextDeliveryKey),
+            const planBills = recurringBills.filter((item) =>
+              (typeof item.recurringDeliveryId === "string" ? item.recurringDeliveryId : item.recurringDeliveryId._id) === id,
             );
-
+            const outstandingBills = planBills
+              .filter((item) => item.status === "pending" || item.status === "confirmed" || item.status === "overdue")
+              .sort((a, b) => new Date(a.periodStart).getTime() - new Date(b.periodStart).getTime());
+            const dueBill = (nextDeliveryKey && outstandingBills.find((item) =>
+              item.scheduledDeliveryDates.some((scheduled) => new Date(scheduled).toISOString().slice(0, 10) === nextDeliveryKey),
+            )) || outstandingBills[0];
+            const latestPaidBill = planBills
+              .filter((item) => item.status === "paid")
+              .sort((a, b) => new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime())[0];
+            const currentBill = latestPaidBill && dueBill &&
+              new Date(latestPaidBill.periodStart).getTime() < new Date(dueBill.periodStart).getTime()
+              ? latestPaidBill
+              : dueBill || latestPaidBill;
+            const nextBill = currentBill?.status === "paid" && dueBill?._id !== currentBill._id ? dueBill : undefined;
+            const bill = currentBill || nextBill;
+            const billHeading = (item: RecurringBill) => item.billingFrequency === "weekly"
+              ? "This Week's Payment"
+              : item.billingFrequency === "monthly"
+                ? "This Month's Payment"
+                : "This Delivery's Payment";
             return (
               <View key={id} style={[styles.deliveryCard, recurringDeliveryId === id && { borderColor: COLORS.primary, borderWidth: 2 }]}>
                 <View style={styles.deliveryHeader}>
@@ -334,19 +359,6 @@ export default function RecurringDeliveriesScreen() {
                     </Text>
                   </View>
 
-                  {bill ? (
-                    <View style={styles.detailRow}>
-                      <Feather
-                        name="dollar-sign"
-                        size={15}
-                        color={COLORS.primary}
-                      />
-                      <Text style={styles.detailText}>
-                        Bill: <Text style={styles.detailHighlight}>₹{bill.amount}</Text> ({bill.billingFrequency.replace('_', ' ')})
-                      </Text>
-                    </View>
-                  ) : null}
-
                   <View style={styles.detailRow}>
                     <Feather
                       name="credit-card"
@@ -358,13 +370,6 @@ export default function RecurringDeliveriesScreen() {
                       <Text style={styles.detailHighlight}>
                         {(bill?.paymentMethod || bill?.preferredPaymentMethod) === 'shop' ? t('payAtShop') : (bill?.paymentMethod || bill?.preferredPaymentMethod) === 'cash' ? t('cashOnDelivery') : t('paymentMethodNotRecorded')}
                       </Text>
-                    </Text>
-                  </View>
-
-                  <View style={styles.paymentNoticeBox}>
-                    <Ionicons name="information-circle" size={16} color="#0284C7" />
-                    <Text style={styles.paymentNoticeText}>
-                      {bill ? `Due ${formatDate(bill.dueDate)} · ${bill.status === 'confirmed' ? 'Payment will be collected offline.' : 'Bill awaiting confirmation.'}` : 'Bill information will appear when available.'}
                     </Text>
                   </View>
 
@@ -391,6 +396,33 @@ export default function RecurringDeliveriesScreen() {
                       {delivery.deliveryAddress}
                     </Text>
                   </View>
+                </View>
+
+                <View style={styles.upcomingBillBox}>
+                  <View style={styles.upcomingBillHeader}>
+                    <Ionicons name="information-circle" size={18} color="#0284C7" />
+                    <Text style={styles.paymentNoticeText}>{currentBill ? billHeading(currentBill) : "Upcoming Bill"}</Text>
+                  </View>
+                  {currentBill ? <>
+                    <Text style={styles.billAmountLabel}>{currentBill.status === "paid" ? "AMOUNT PAID" : "TOTAL TO PAY"}</Text>
+                    <Text style={styles.billAmount}>₹{currentBill.amount}</Text>
+                    <Text style={styles.billSummaryLine}>{formatBillingFrequency(currentBill.billingFrequency)} · {formatBillPeriod(currentBill)}</Text>
+                    <Text style={styles.billSummaryLine}>Due: {formatDate(currentBill.dueDate)}</Text>
+                    <Text style={styles.billStatus}>{currentBill.status === "paid" ? "✓ Payment completed" : currentBill.status === "overdue" ? "Payment overdue" : "Payment due"}</Text>
+                  </> : <>
+                    <Text style={styles.billPreparing}>Bill is being prepared</Text>
+                    <Text style={styles.billHelperText}>The billing system will calculate the bill from scheduled deliveries.</Text>
+                    <Text style={styles.billHelperText}>Payment is due on the first delivery in the billing period.</Text>
+                    <Text style={styles.billSummaryLine}>Pull to refresh; if it remains unavailable, contact support.</Text>
+                  </>}
+                  {nextBill ? <View style={styles.nextPaymentBox}>
+                    <Text style={styles.paymentNoticeText}>Next Payment</Text>
+                    <Text style={styles.billAmount}>₹{nextBill.amount}</Text>
+                    <Text style={styles.billStatus}>{nextBill.status === "overdue" ? "Payment overdue" : "Payment due"}</Text>
+                    <Text style={styles.billSummaryLine}>Billing period: {formatBillPeriod(nextBill)}</Text>
+                    <Text style={styles.billSummaryLine}>Due: {formatDate(nextBill.dueDate)}</Text>
+                  </View> : null}
+                  <Text style={styles.billHelperText}>Payment is due on the first delivery in the billing period.</Text>
                 </View>
 
                 {/* Actions */}
@@ -664,6 +696,61 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#0284C7",
     flex: 1,
+  },
+  upcomingBillBox: {
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#BAE6FD",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    gap: 4,
+  },
+  upcomingBillHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  billAmountLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.textLight,
+    letterSpacing: 0.5,
+  },
+  billAmount: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.primary,
+    marginBottom: 2,
+  },
+  billSummaryLine: {
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  billStatus: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  billPreparing: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  billHelperText: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: COLORS.textLight,
+    marginTop: 3,
+  },
+  nextPaymentBox: {
+    borderTopWidth: 1,
+    borderTopColor: "#BAE6FD",
+    marginTop: 8,
+    paddingTop: 8,
+    gap: 4,
   },
   deliveryDetails: {
     gap: 8,

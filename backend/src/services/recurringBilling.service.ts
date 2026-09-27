@@ -101,6 +101,10 @@ export const getScheduledDatesInPeriod = (
   const normalized = normalizeFrequency(plan.frequency);
   const planStart = atStartOfDay(plan.startDate);
   const planEnd = plan.endDate ? atEndOfDay(plan.endDate) : undefined;
+  if (
+    !Number.isFinite(planStart.getTime()) ||
+    (planEnd && !Number.isFinite(planEnd.getTime()))
+  ) return dates;
   for (let candidate = atStartOfDay(periodStart); candidate <= periodEnd; candidate = new Date(candidate.getTime() + DAY_MS)) {
     if (candidate < planStart || (planEnd && candidate > planEnd)) continue;
     if (normalized === 'daily' || ((normalized === '2_per_week' || normalized === '3_per_week') && plan.deliveryDays?.includes(candidate.getDay()))) {
@@ -115,11 +119,55 @@ export const isBillOverdue = (dueDate: Date, now: Date = new Date()): boolean =>
 export const calculateRecurringBillAmount = (unitPrice: number, quantityPerDelivery: number, deliveryCount: number): number =>
   unitPrice * quantityPerDelivery * deliveryCount;
 
+export interface RecurringBillCalculationInput {
+  unitPrice: number;
+  quantityPerDelivery: number;
+  frequency: IRecurringDelivery['frequency'];
+  deliveryDays?: number[];
+  billingFrequency: BillingFrequency;
+  startDate: Date;
+  endDate?: Date;
+  occurrence: Date;
+}
+
+export const calculateRecurringBill = (input: RecurringBillCalculationInput) => {
+  const { periodStart, periodEnd } = getBillingPeriod(input.occurrence, input.billingFrequency);
+  let scheduledDates: Date[];
+  if (input.billingFrequency === 'per_order') {
+    const occurrence = atStartOfDay(input.occurrence);
+    const planStart = atStartOfDay(input.startDate);
+    const planEnd = input.endDate ? atEndOfDay(input.endDate) : undefined;
+    scheduledDates = occurrence >= planStart && (!planEnd || occurrence <= planEnd) ? [occurrence] : [];
+  } else {
+    scheduledDates = getScheduledDatesInPeriod(input, periodStart, periodEnd);
+  }
+  // An empty valid schedule must not become a fabricated occurrence outside
+  // the plan's active dates. Callers can safely skip bill creation on this error.
+  if (scheduledDates.length === 0) {
+    throw new Error('No scheduled deliveries within the recurring plan billing period');
+  }
+  const scheduledDeliveryDates = scheduledDates;
+  const dueDate = scheduledDeliveryDates.reduce(
+    (first, date) => date < first ? date : first,
+    scheduledDeliveryDates[0],
+  );
+  const deliveryCount = scheduledDeliveryDates.length;
+
+  return {
+    periodStart,
+    periodEnd,
+    scheduledDeliveryDates,
+    deliveryCount,
+    dueDate,
+    amount: calculateRecurringBillAmount(input.unitPrice, input.quantityPerDelivery, deliveryCount),
+  };
+};
+
 export const isOfflinePaymentMethod = (value: unknown): value is 'cash' | 'shop' => value === 'cash' || value === 'shop';
 
 export const canCustomerConfirmBill = (status: string): boolean => status === 'pending' || status === 'confirmed';
 
-export const canRecordRecurringBillPayment = (status: string): boolean => status === 'confirmed' || status === 'overdue';
+export const canRecordRecurringBillPayment = (status: string): boolean => status === 'pending' || status === 'confirmed' || status === 'overdue';
 
 export const isFullBillPayment = (amount: unknown, billAmount: number): boolean =>
   Number.isFinite(Number(amount)) && Number(amount) === billAmount;
@@ -132,3 +180,41 @@ export const recurringBillIdentity = (
 ): string => `${recurringDeliveryId}:${billingFrequency}:${dateKey(periodStart)}:${occurrenceDateKey}`;
 
 export const shouldAutoMarkOrderPaidOnDelivery = (isRecurring?: boolean): boolean => !isRecurring;
+
+type IdLike = string | { toString(): string } | null | undefined;
+
+interface RecurringBillAccessRecord {
+  _id: IdLike;
+  recurringDeliveryId: IdLike;
+  scheduledDeliveryDates?: Date[];
+  orderIds?: IdLike[];
+}
+
+interface RecurringOrderAccessRecord {
+  _id: IdLike;
+  recurringBillId?: IdLike;
+  recurringDeliveryId?: IdLike;
+  deliverySlot?: Date;
+  assignedStaffId?: IdLike;
+  isRecurring?: boolean;
+}
+
+const sameId = (left: IdLike, right: IdLike): boolean =>
+  Boolean(left && right && left.toString() === right.toString());
+
+/** Staff may collect a bill only on its first scheduled delivery. */
+export const canStaffHandleRecurringBill = (
+  bill: RecurringBillAccessRecord,
+  order: RecurringOrderAccessRecord,
+  staffId: IdLike,
+): boolean => {
+  if (!bill || !order || !staffId || order.isRecurring !== true || !order.deliverySlot) return false;
+  if (!sameId(order.assignedStaffId, staffId)) return false;
+  if (!sameId(order.recurringDeliveryId, bill.recurringDeliveryId)) return false;
+  if (!sameId(order.recurringBillId, bill._id) && !(bill.orderIds || []).some((id) => sameId(id, order._id))) return false;
+  const scheduledDates = (bill.scheduledDeliveryDates || [])
+    .filter((date) => date instanceof Date && Number.isFinite(date.getTime()))
+    .map(dateKey)
+    .sort();
+  return scheduledDates.length > 0 && dateKey(order.deliverySlot) === scheduledDates[0];
+};

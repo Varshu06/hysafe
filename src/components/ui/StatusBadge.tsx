@@ -20,24 +20,38 @@ interface StatusBadgeProps {
 const getStatusConfig = (status: string) => {
   switch (status.toLowerCase()) {
     case "pending":
-      return { color: COLORS.warning, bgColor: "#FEF3C7", label: "pending" };
+      return {
+        color: COLORS.statusPending,
+        bgColor: COLORS.statusPendingBackground,
+        label: "pending",
+      };
     case "accepted":
       return {
-        color: COLORS.primary,
-        bgColor: COLORS.accent,
+        color: COLORS.statusAccepted,
+        bgColor: COLORS.statusAcceptedBackground,
         label: "accepted",
       };
-    case "picked":
-      return { color: "#8B5CF6", bgColor: "#EDE9FE", label: "picked" };
+    case "out_for_delivery":
+      return {
+        color: COLORS.statusAccepted,
+        bgColor: COLORS.statusAcceptedBackground,
+        label: "out_for_delivery",
+      };
     case "transit":
     case "on_the_way":
       return {
-        color: COLORS.primary,
-        bgColor: COLORS.accent,
+        color: COLORS.statusAccepted,
+        bgColor: COLORS.statusAcceptedBackground,
         label: "on_the_way",
       };
+    case "picked":
+      return { color: "#8B5CF6", bgColor: "#EDE9FE", label: "picked" };
     case "delivered":
-      return { color: COLORS.success, bgColor: "#D1FAE5", label: "delivered" };
+      return {
+        color: COLORS.statusDelivered,
+        bgColor: COLORS.statusDeliveredBackground,
+        label: "delivered",
+      };
     case "missed":
       return { color: COLORS.error, bgColor: "#FEE2E2", label: "missed" };
     case "cancelled":
