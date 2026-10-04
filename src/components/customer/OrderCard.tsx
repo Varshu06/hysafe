@@ -1,0 +1,221 @@
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { COLORS } from "../../utils/constants";
+
+interface OrderCardProps {
+  order: {
+    id: string;
+    date: string;
+    status: string;
+    price: number;
+    driver: string;
+    address: string;
+  };
+}
+
+const getStatusIcon = (status: string) => {
+  const statusLower = status.toLowerCase();
+  if (statusLower === "pending") {
+    return <Feather name="clock" size={12} color={COLORS.statusPending} />;
+  }
+  if (statusLower === "accepted" || statusLower === "out_for_delivery") {
+    return <Feather name="check" size={12} color={COLORS.statusAccepted} />;
+  }
+  if (statusLower === "cancelled") {
+    return <Feather name="x" size={12} color={COLORS.textLight} />;
+  }
+  if (statusLower === "delivered") {
+    return <Feather name="check" size={12} color={COLORS.statusDelivered} />;
+  }
+  return <Feather name="check" size={12} color={COLORS.primary} />;
+};
+
+export const OrderCard = ({ order }: OrderCardProps) => {
+  const router = useRouter();
+  const { t } = useTranslation();
+
+  const statusKey = order.status?.toLowerCase() || "pending";
+  const displayStatus = t(statusKey) || order.status;
+  const displayDriver =
+    order.driver === "notAssigned"
+      ? t("notAssigned")
+      : order.driver || t("notAssigned");
+
+  return (
+    <TouchableOpacity
+      style={styles.orderCard}
+      onPress={() => router.push(`/(customer)/order-details/${order.id}`)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.cardHeader}>
+        <View
+          style={[
+            styles.statusBadge,
+            statusKey === "pending" && styles.pendingStatusBadge,
+            (statusKey === "accepted" || statusKey === "out_for_delivery") && styles.acceptedStatusBadge,
+            statusKey === "delivered" && styles.deliveredStatusBadge,
+          ]}
+        >
+          {getStatusIcon(order.status)}
+          <Text
+            style={[
+              styles.statusText,
+              statusKey === "pending" && styles.pendingStatusText,
+              (statusKey === "accepted" || statusKey === "out_for_delivery") && styles.acceptedStatusText,
+              statusKey === "delivered" && styles.deliveredStatusText,
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+          >
+            {displayStatus}
+          </Text>
+        </View>
+        <Text style={styles.date}>{order.date}</Text>
+        <Text style={styles.price}>₹ {order.price}</Text>
+      </View>
+
+      <View style={styles.cardDetails}>
+        <View style={styles.detailRow}>
+          <Text style={styles.driverLabel}>{displayDriver}</Text>
+          <Text style={styles.addressText} numberOfLines={1}>
+            {order.address}
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.viewDetailsBtn}
+        onPress={() => router.push(`/(customer)/order-details/${order.id}`)}
+      >
+        <Text style={styles.viewDetailsText}>{t("viewDetails")}</Text>
+        <Feather name="chevron-right" size={16} color="#0F172A" />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  orderCard: {
+    backgroundColor: "#0F172A",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+    gap: 8,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "white",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    flexShrink: 1,
+    maxWidth: "55%",
+  },
+  pendingStatusBadge: {
+    backgroundColor: COLORS.statusPendingBackground,
+  },
+  acceptedStatusBadge: {
+    backgroundColor: COLORS.statusAcceptedBackground,
+  },
+  deliveredStatusBadge: {
+    backgroundColor: COLORS.statusDeliveredBackground,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#0F172A",
+    lineHeight: 18,
+    paddingVertical: 1,
+    textTransform: "capitalize",
+  },
+  pendingStatusText: {
+    color: COLORS.statusPending,
+  },
+  acceptedStatusText: {
+    color: COLORS.statusAccepted,
+  },
+  deliveredStatusText: {
+    color: COLORS.statusDelivered,
+  },
+  date: {
+    color: "white",
+    fontSize: 12,
+    flex: 1,
+    flexShrink: 1,
+    marginLeft: 8,
+    lineHeight: 18,
+    textAlign: "center",
+    paddingVertical: 1,
+  },
+  price: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
+    flexShrink: 0,
+    lineHeight: 20,
+    paddingVertical: 1,
+  },
+  cardDetails: {
+    marginBottom: 14,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexShrink: 0,
+    gap: 10,
+  },
+  driverLabel: {
+    color: "white",
+    fontSize: 13,
+    fontWeight: "bold",
+    marginRight: 10,
+    flexShrink: 0,
+    lineHeight: 20,
+    paddingVertical: 1,
+  },
+  addressText: {
+    color: "#94A3B8",
+    fontSize: 12,
+    flex: 1,
+    textAlign: "right",
+    lineHeight: 18,
+    flexShrink: 1,
+    paddingVertical: 1,
+  },
+  viewDetailsBtn: {
+    backgroundColor: "white",
+    alignSelf: "flex-end",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    gap: 4,
+    minHeight: 34,
+  },
+  viewDetailsText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#0F172A",
+    lineHeight: 18,
+    paddingVertical: 1,
+  },
+});
