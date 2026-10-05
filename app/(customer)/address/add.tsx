@@ -21,6 +21,40 @@ interface LocationData {
   fullAddress: string;
 }
 
+let googleMapsLoadingPromise: Promise<void> | null = null;
+
+const loadGoogleMaps = (apiKey: string): Promise<void> => {
+  if (typeof window === 'undefined') return Promise.reject(new Error('Google Maps requires a browser'));
+  const browserWindow = window as any;
+  if (browserWindow.google?.maps) return Promise.resolve();
+  if (googleMapsLoadingPromise) return googleMapsLoadingPromise;
+
+  googleMapsLoadingPromise = new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-hysafe-google-maps], script[src*="maps.googleapis.com/maps/api/js"]');
+    const script = existingScript || document.createElement('script');
+    const fail = () => reject(new Error('Google Maps failed to load'));
+    const loaded = () => browserWindow.google?.maps ? resolve() : fail();
+    browserWindow.gm_authFailure = fail;
+    if (existingScript) {
+      script.addEventListener('load', loaded, { once: true });
+      script.addEventListener('error', fail, { once: true });
+      if (browserWindow.google?.maps) resolve();
+      return;
+    }
+    script.dataset.hysafeGoogleMaps = 'true';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = loaded;
+    script.onerror = fail;
+    document.head.appendChild(script);
+  }).catch((error) => {
+    googleMapsLoadingPromise = null;
+    throw error;
+  });
+  return googleMapsLoadingPromise;
+};
+
 export default function AddAddressScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -40,6 +74,11 @@ export default function AddAddressScreen() {
   const hasInitialized = useRef(false);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const webViewRef = useRef<WebView>(null);
+  const webMapContainerRef = useRef<HTMLDivElement | null>(null);
+  const webMapRef = useRef<any>(null);
+  const webMarkerRef = useRef<any>(null);
+  const webMapListenersRef = useRef<any[]>([]);
+  const [webMapUnavailable, setWebMapUnavailable] = useState(false);
   const reverseGeocodeRequest = useRef(0);
   
   const fromCurrentLocation = params.fromCurrentLocation === 'true';
@@ -90,6 +129,12 @@ export default function AddAddressScreen() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && locationData && webMapRef.current) {
+      updateMapLocation(locationData.latitude, locationData.longitude);
+    }
+  }, [locationData?.latitude, locationData?.longitude]);
 
   const handleGetCurrentLocation = async () => {
     setIsLoadingLocation(true);
@@ -171,6 +216,13 @@ export default function AddAddressScreen() {
   };
 
   const updateMapLocation = (lat: number, lng: number) => {
+    if (Platform.OS === 'web') {
+      const position = { lat, lng };
+      webMarkerRef.current?.setPosition(position);
+      webMapRef.current?.setCenter(position);
+      webMapRef.current?.setZoom(15);
+      return;
+    }
     if (webViewRef.current) {
       webViewRef.current.injectJavaScript(`
         if (window.map && window.marker) {
@@ -182,6 +234,66 @@ export default function AddAddressScreen() {
       `);
     }
   };
+
+  const handleWebMapSelection = (latitude: number, longitude: number) => {
+    void handleMapRegionChangeComplete({ latitude, longitude });
+    const maps = (window as any).google?.maps;
+    if (!maps || !webMapRef.current) return;
+    const request = reverseGeocodeRequest.current;
+    new maps.Geocoder().geocode({ location: { lat: latitude, lng: longitude } }, (results: any[], status: string) => {
+      if (status !== 'OK' || !results?.[0] || request !== reverseGeocodeRequest.current) return;
+      const result = results[0];
+      const components = result.address_components || [];
+      const component = (type: string) => components.find((part: any) => part.types?.includes(type))?.long_name || '';
+      const street = [component('street_number'), component('route')].filter(Boolean).join(' ');
+      const city = component('locality') || component('sublocality') || component('administrative_area_level_2');
+      const region = component('administrative_area_level_1');
+      const postalCode = component('postal_code');
+      setLocationData({ latitude, longitude, street, city, region, postalCode, name: result.name || '', fullAddress: result.formatted_address || '' });
+      setLocationError(result.formatted_address ? '' : 'Address not available for this point. Enter the delivery address below before confirming.');
+      setIsUpdatingLocation(false);
+    });
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let active = true;
+    if (!GOOGLE_MAPS_API_KEY) {
+      setWebMapUnavailable(true);
+      return;
+    }
+    loadGoogleMaps(GOOGLE_MAPS_API_KEY).then(() => {
+      if (!active || !webMapContainerRef.current) return;
+      const maps = (window as any).google.maps;
+      const initialPosition = locationData
+        ? { lat: locationData.latitude, lng: locationData.longitude }
+        : { lat: FACTORY_LOCATION.lat, lng: FACTORY_LOCATION.lng };
+      const map = new maps.Map(webMapContainerRef.current, { center: initialPosition, zoom: 16, streetViewControl: false, fullscreenControl: true, gestureHandling: 'greedy' });
+      const marker = new maps.Marker({ position: initialPosition, map, draggable: true, title: 'Drag to set your location' });
+      webMapRef.current = map;
+      webMarkerRef.current = marker;
+      const clickListener = map.addListener('click', (event: any) => {
+        if (!event.latLng) return;
+        const point = { lat: event.latLng.lat(), lng: event.latLng.lng() };
+        marker.setPosition(point);
+        handleWebMapSelection(point.lat, point.lng);
+      });
+      const dragListener = marker.addListener('dragend', (event: any) => {
+        if (event.latLng) handleWebMapSelection(event.latLng.lat(), event.latLng.lng());
+      });
+      webMapListenersRef.current = [clickListener, dragListener];
+    }).catch(() => {
+      if (active) setWebMapUnavailable(true);
+    });
+    return () => {
+      active = false;
+      webMapListenersRef.current.forEach((listener) => listener.remove?.());
+      webMapListenersRef.current = [];
+      webMarkerRef.current?.setMap(null);
+      webMarkerRef.current = null;
+      webMapRef.current = null;
+    };
+  }, []);
 
   const handleMapRegionChangeComplete = async (region: { latitude: number; longitude: number }) => {
     if (!Number.isFinite(region.latitude) || !Number.isFinite(region.longitude) || Math.abs(region.latitude) > 90 || Math.abs(region.longitude) > 180) return;
@@ -521,13 +633,13 @@ export default function AddAddressScreen() {
   return (
     <View style={styles.container}>
       {/* WebView is native-only; web uses the address form below. */}
-      {Platform.OS === 'web' ? (
+      {Platform.OS === 'web' ? (webMapUnavailable ? (
         <View style={styles.webAddressPanel}>
           <Ionicons name="location-outline" size={30} color={COLORS.primary} />
           <Text style={styles.webAddressTitle}>Map unavailable on web</Text>
-          <Text style={styles.webAddressHint}>Open HySafe on a supported mobile device to choose a delivery location on the interactive map.</Text>
+          <Text style={styles.webAddressHint}>The interactive map could not be loaded. You can still enter your address and continue.</Text>
         </View>
-      ) : !GOOGLE_MAPS_API_KEY ? (
+      ) : React.createElement('div', { ref: webMapContainerRef, style: { width: '100%', height: '100%', minHeight: 260, flex: 1 } })) : !GOOGLE_MAPS_API_KEY ? (
         <View style={styles.webAddressPanel}>
           <Ionicons name="map-outline" size={30} color={COLORS.primary} />
           <Text style={styles.webAddressTitle}>Map configuration required</Text>
