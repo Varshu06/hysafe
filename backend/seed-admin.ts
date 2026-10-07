@@ -9,10 +9,10 @@ const seedAdmin = async () => {
   try {
     await connectDatabase();
 
-    const phone = '9342981893';
-    const email = 'admin@hysafe.com';
+    const phone = '8012555333';
+    const email = 'hygieneandsafe@gmail.com';
     const name = 'Admin User';
-    const password = 'HysafeAdmin@123';
+    const password = 'Hysafe@Vanessa645';
 
     const hashedPassword = await hashPassword(password);
 
