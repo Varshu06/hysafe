@@ -125,32 +125,9 @@ export const SERVICE_RADIUS_KM = Number(
 // app's allowed origins/restrictions in Google Cloud. Never put a server key here.
 export const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || "";
 
-// Google OAuth Client IDs
-//
-// To get your Google OAuth Client IDs:
-// 1. Go to https://console.cloud.google.com/
-// 2. Create a new project or select an existing one
-// 3. Enable "Google Identity Services API" or "Google+ API"
-// 4. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
-//
-// For Web Application (development/Expo Go):
-// 5. Select "Web application" as the application type
-// 6. Add these Authorized redirect URIs:
-//    - http://localhost:8081
-//    (Check the console log when testing to see the exact redirect URI)
-// 7. Click "Create" and copy the Client ID
-//
-// For Android Application:
-// 5. Select "Android" as the application type
-// 6. Enter Package name: com.hysafe.mobile
-// 7. Enter SHA-1 certificate fingerprint (get from keytool or EAS)
-// 8. Click "Create" and copy the Client ID
-//
-// IMPORTANT:
-// - For production, use environment variables instead of hardcoding!
-// - Make sure to PUBLISH your app in OAuth consent screen (not just Testing mode)
-//
-export const GOOGLE_CLIENT_ID_WEB =
-  "983159745644-ch9jhanqpjbucuq4nlo87erlnkckangi.apps.googleusercontent.com";
-export const GOOGLE_CLIENT_ID_ANDROID =
-  "983159745644-0ue4ckrh12h0r506v3f3lalk0ciqcap9.apps.googleusercontent.com";
+// Public Google OAuth client IDs. These identify the app; they are not secrets.
+// Android native sign-in uses the Web client as the ID token audience.
+// It does not send a custom-scheme redirect_uri.
+export const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() || "";
+export const GOOGLE_ANDROID_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim() || "";
+export const GOOGLE_WEB_REDIRECT_URI = process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URI?.trim() || "";

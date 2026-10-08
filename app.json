@@ -19,7 +19,7 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": [
+    "assetBundlePatterns": [ 
       "**/*"
     ],
     "ios": {
@@ -34,7 +34,20 @@
       }
     },
     "web": {
-      "favicon": "./src/assets/logo1.png"
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./src/assets/logo1.png",
+      "name": "HySafe",
+      "shortName": "HySafe",
+      "lang": "en",
+      "description": "Order HySafe drinking water, manage recurring deliveries, and track orders.",
+      "themeColor": "#0284C7",
+      "backgroundColor": "#F0F9FF",
+      "display": "standalone",
+      "startUrl": "/",
+      "scope": "/",
+      "orientation": "any",
+      "barStyle": "black-translucent"
     },
     "plugins": [
       "expo-router",

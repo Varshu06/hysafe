@@ -19,15 +19,25 @@ import {
 import { ensureNextRecurringBillAfterPayment } from "../services/recurringDelivery.service";
 import { canStaffHandleRecurringBill } from "../services/recurringBilling.service";
 import { notifyCustomerBill, notifyCustomerOrderStatus } from "../services/inAppNotification.service";
+import { parseCoordinates } from "../utils/coordinates";
 
 // Toggle online/offline status
 export const toggleStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { isOnline, location, fcmToken } = req.body;
 
+    let currentLocation: { lat: number; lng: number } | undefined;
+    if (location != null) {
+      const parsed = parseCoordinates(location);
+      if (!parsed) {
+        return res.status(400).json({ message: "Staff coordinates are invalid." });
+      }
+      currentLocation = parsed;
+    }
+
     const updateData: any = {
       isOnline,
-      ...(location && { currentLocation: location }),
+      ...(currentLocation && { currentLocation }),
     };
 
     // Update FCM token if provided

@@ -7,6 +7,7 @@ export interface User {
   phone: string;
   role: UserRole;
   name?: string;
+  googleId?: string;
   customerType?: 'home' | 'shop' | 'hotel' | 'bank' | 'event';
 }
 

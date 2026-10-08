@@ -9,6 +9,7 @@ export interface IUser extends Document {
   isActive: boolean;
   googleId?: string;
   picture?: string;
+  sessionValidAfter?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +54,9 @@ const UserSchema = new Schema<IUser>(
     },
     picture: {
       type: String,
+    },
+    sessionValidAfter: {
+      type: Date,
     },
   },
   {

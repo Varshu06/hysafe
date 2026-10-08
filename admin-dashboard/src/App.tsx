@@ -14,13 +14,40 @@ import { CustomersPage } from '@pages/CustomersPage';
 import { StaffPage } from '@pages/StaffPage';
 import { InventoryPage } from '@pages/InventoryPage';
 import { RecurringDeliveriesPage } from '@pages/RecurringDeliveriesPage';
-import { Loading } from '@components/Common';
+import { ErrorState, Loading } from '@components/Common';
+
+const SessionRetry = () => {
+  const { retrySession, logout } = useAuth();
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-white px-6">
+      <ErrorState message="Can't reach HySafe. Your account was not signed out." />
+      <button
+        type="button"
+        onClick={retrySession}
+        className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white"
+      >
+        Try again
+      </button>
+      <button type="button" onClick={logout} className="text-sm font-semibold text-primary">
+        Sign in
+      </button>
+    </div>
+  );
+};
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading, sessionError } = useAuth();
 
   if (isLoading) {
-    return <Loading />;
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loading />
+      </div>
+    );
+  }
+
+  if (sessionError) {
+    return <SessionRetry />;
   }
 
   if (!isAuthenticated || user?.role !== 'admin') {
@@ -31,7 +58,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const App: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, sessionError } = useAuth();
 
   return (
     <Router>
@@ -39,7 +66,17 @@ export const App: React.FC = () => {
         <Route
           path="/login"
           element={
-            isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+            isLoading ? (
+              <div className="flex min-h-screen items-center justify-center">
+                <Loading />
+              </div>
+            ) : sessionError ? (
+              <SessionRetry />
+            ) : isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <LoginPage />
+            )
           }
         />
 

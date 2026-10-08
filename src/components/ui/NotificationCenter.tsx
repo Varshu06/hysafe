@@ -2,23 +2,38 @@ import { Feather } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../context/AuthContext';
 import { COLORS } from '../../utils/constants';
+import { canLoadPrivateData } from '../../utils/sessionAuth';
 import { getInAppNotifications, InAppNotification, markAllInAppNotificationsRead, markInAppNotificationRead } from '../../services/inAppNotification.service';
 
 type Props = { topInset?: number; onNotificationPress?: (item: InAppNotification) => void };
 export function NotificationCenter({ topInset = 0, onNotificationPress }: Props) {
   const { t } = useTranslation();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const canLoad = canLoadPrivateData({ isLoading: authLoading, isAuthenticated });
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<InAppNotification[]>([]);
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const load = useCallback(async () => {
+    if (!canLoad) return;
     setLoading(true); setError(false);
     try { const result = await getInAppNotifications(); setItems(result.notifications); setUnread(result.unreadCount); }
     catch { setError(true); } finally { setLoading(false); }
-  }, []);
-  useEffect(() => { void load(); }, [load]);
+  }, [canLoad]);
+  useEffect(() => {
+    if (authLoading) return;
+    if (!canLoad) {
+      setOpen(false);
+      setItems([]);
+      setUnread(0);
+      setError(false);
+      return;
+    }
+    void load();
+  }, [authLoading, canLoad, load]);
   const markRead = async (item: InAppNotification) => {
     if (!item.isRead) {
       try { await markInAppNotificationRead(item._id); setItems(current => current.map(row => row._id === item._id ? { ...row, isRead: true } : row)); setUnread(value => Math.max(0, value - 1)); }
@@ -39,7 +54,7 @@ export function NotificationCenter({ topInset = 0, onNotificationPress }: Props)
     return t(keys[item.type] || 'notifications', { product: item.productName || t('orders') });
   };
   return <>
-    <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('notifications')} style={styles.bell} onPress={() => { setOpen(true); void load(); }}>
+    <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('notifications')} style={styles.bell} onPress={() => { if (!canLoad) return; setOpen(true); void load(); }}>
       <Feather name="bell" size={20} color={COLORS.text} />{unread > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{unread > 9 ? '9+' : unread}</Text></View>}
     </TouchableOpacity>
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>

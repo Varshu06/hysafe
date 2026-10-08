@@ -2,10 +2,12 @@ import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useAuth } from '../../../src/context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { accountId } from '../../../src/utils/addressRecord';
 import { addressStorage } from '../../../src/utils/addressStorage';
 import { COLORS, FACTORY_LOCATION, GOOGLE_MAPS_API_KEY } from '../../../src/utils/constants';
 import { ensureForegroundLocationPermission, getCurrentPositionWithTimeout } from '../../../src/utils/location';
@@ -59,6 +61,7 @@ export default function AddAddressScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const params = useLocalSearchParams();
   
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -80,6 +83,7 @@ export default function AddAddressScreen() {
   const webMapListenersRef = useRef<any[]>([]);
   const [webMapUnavailable, setWebMapUnavailable] = useState(false);
   const reverseGeocodeRequest = useRef(0);
+  const savingRef = useRef(false);
   
   const fromCurrentLocation = params.fromCurrentLocation === 'true';
 
@@ -122,10 +126,11 @@ export default function AddAddressScreen() {
       updateMapLocation(newLocationData.latitude, newLocationData.longitude);
     } else {
       hasInitialized.current = true;
+      if (typeof params.fullAddress === 'string' && params.fullAddress) {
+        setApartmentRoad(params.fullAddress);
+      }
       if (params.edit === 'true') {
         setLocationError('This saved address has no stored coordinates. Select its location on the map before saving the edit.');
-      } else {
-        handleGetCurrentLocation();
       }
     }
   }, []);
@@ -581,7 +586,14 @@ export default function AddAddressScreen() {
       setLocationConfirmed(true);
       return;
     }
-    
+    const userId = accountId(user);
+    if (!userId) {
+      Alert.alert(t('Error'), t('failedToSaveAddress'));
+      return;
+    }
+    if (savingRef.current) return;
+    savingRef.current = true;
+
     try {
       // Generate a unique ID for the address
       const addressId = params.edit === 'true' && params.addressId
@@ -601,9 +613,8 @@ export default function AddAddressScreen() {
       };
 
       // Save address to storage
-      await addressStorage.addAddress(addressToSave);
-      // Set as selected address
-      await addressStorage.setSelectedAddressId(addressId);
+      await addressStorage.addAddress(userId, addressToSave);
+      await addressStorage.setSelectedAddressId(userId, addressId);
 
       if (fromCurrentLocation || params.edit === 'true') {
         router.replace('/(customer)/address/search');
@@ -615,6 +626,8 @@ export default function AddAddressScreen() {
     } catch (error) {
       console.error('Error saving address:', error);
       Alert.alert(t('Error'), t('failedToSaveAddress'));
+    } finally {
+      savingRef.current = false;
     }
   };
 

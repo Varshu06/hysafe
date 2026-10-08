@@ -11,7 +11,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
@@ -31,8 +30,7 @@ import {
 } from "../../src/components/staff/DeliveryConfirmModal";
 import { useTranslation } from "react-i18next";
 import { openDirectionsToLocation } from "../../src/utils/geo";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import { subscribeAppResume } from "../../src/utils/appResume";
 
 type FilterType = "all" | "accepted" | "picked" | "transit" | "delivered";
 
@@ -51,22 +49,25 @@ export default function OngoingOrdersScreen() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [confirming, setConfirming] = useState<any | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [pageWidth, setPageWidth] = useState(0);
 
   useEffect(() => {
     if (isAuthenticated && user?.role === "staff") {
       refreshOngoingOrders();
-      // Set initial scroll position to match current filter
-      const initialIndex = FILTERS.findIndex((f) => f.key === filter);
-      if (initialIndex !== -1 && scrollViewRef.current) {
-        setTimeout(() => {
-          scrollViewRef.current?.scrollTo({
-            x: initialIndex * (SCREEN_WIDTH - 40),
-            animated: false,
-          });
-        }, 100);
-      }
     }
   }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    const initialIndex = FILTERS.findIndex((f) => f.key === filter);
+    if (initialIndex > 0 && scrollViewRef.current && pageWidth > 0) {
+      scrollViewRef.current.scrollTo({
+        x: initialIndex * pageWidth,
+        animated: false,
+      });
+    }
+    // Realign the open page after the web layout width is measured.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageWidth]);
 
   // Refresh orders when component comes into focus (e.g., after login)
   useFocusEffect(
@@ -92,6 +93,14 @@ export default function OngoingOrdersScreen() {
       setIsLoading(false);
     }
   };
+
+  const refreshOngoingOrdersRef = useRef(refreshOngoingOrders);
+  refreshOngoingOrdersRef.current = refreshOngoingOrders;
+  useEffect(() => {
+    return subscribeAppResume(() => {
+      void refreshOngoingOrdersRef.current();
+    });
+  }, []);
 
   const handleStatusUpdate = async (
     orderId: string,
@@ -172,7 +181,7 @@ export default function OngoingOrdersScreen() {
 
   const handleTabScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const pageWidth = SCREEN_WIDTH - 40; // Account for container padding
+    if (pageWidth <= 0) return;
     const index = Math.round(offsetX / pageWidth);
     const newFilter = FILTERS[index]?.key || "all";
     if (newFilter !== filter) {
@@ -183,7 +192,7 @@ export default function OngoingOrdersScreen() {
   const handleTabPress = (filterKey: FilterType) => {
     const index = FILTERS.findIndex((f) => f.key === filterKey);
     if (index !== -1 && scrollViewRef.current) {
-      const pageWidth = SCREEN_WIDTH - 40; // Account for container padding
+      if (pageWidth <= 0) return;
       scrollViewRef.current.scrollTo({
         x: index * pageWidth,
         animated: true,
@@ -308,11 +317,12 @@ export default function OngoingOrdersScreen() {
           onScroll={handleTabScroll}
           scrollEventThrottle={16}
           style={styles.swipeContainer}
+          onLayout={(event) => setPageWidth(event.nativeEvent.layout.width)}
         >
           {FILTERS.map((filterItem) => {
             const filtered = getFilteredOrders(filterItem.key);
             return (
-              <View key={filterItem.key} style={styles.swipePage}>
+              <View key={filterItem.key} style={[styles.swipePage, pageWidth > 0 ? { width: pageWidth } : null]}>
                 <FlatList
                   data={filtered}
                   renderItem={renderOrderCard}
@@ -419,7 +429,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   swipePage: {
-    width: SCREEN_WIDTH - 40, // Account for container padding (20 on each side)
     flex: 1,
   },
   listContent: {

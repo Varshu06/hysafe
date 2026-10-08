@@ -3,6 +3,7 @@ import http from 'http';
 import app from './app';
 import { connectDatabase } from './config/database';
 import { initializeSocket } from './services/socket.service';
+import { validateGoogleConfiguration } from './services/googleToken.service';
 import { validateJwtConfiguration } from './utils/jwt.util';
 import { startRecurringDeliveryScheduler } from './services/recurringDelivery.service';
 
@@ -16,6 +17,7 @@ const io = initializeSocket(httpServer);
 
 try {
   validateJwtConfiguration();
+  validateGoogleConfiguration();
 } catch (error: any) {
   console.error(`Server startup failed: ${error.message}`);
   process.exit(1);

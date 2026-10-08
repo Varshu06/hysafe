@@ -18,7 +18,6 @@ export const getProducts = async (
       error.response?.data?.message ||
       error.message ||
       "Failed to fetch products";
-    console.error("Get products error:", errorMessage);
     throw new Error(errorMessage);
   }
 };

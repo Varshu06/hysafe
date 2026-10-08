@@ -173,10 +173,14 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
     return response.data;
   } catch (error: any) {
     // Extract error message from various possible locations
-    const errorMessage = 
-      error.response?.data?.message || 
-      error.response?.data?.error?.message ||
-      error.message || 
+    const responseData = error.response?.data;
+    const fieldMessage = Array.isArray(responseData?.errors)
+      ? responseData.errors.find((issue: { message?: string }) => issue?.message)?.message
+      : undefined;
+    const errorMessage =
+      fieldMessage ||
+      (typeof responseData?.message === 'string' ? responseData.message : undefined) ||
+      error.message ||
       'Registration failed. Please try again.';
     
     throw new Error(errorMessage);
@@ -187,6 +191,12 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
  * Logout
  */
 export const logout = async (): Promise<void> => {
+  try {
+    await api.post('/auth/logout', {}, { timeout: 2500 });
+  } catch {
+    // The device still forgets the session. A token that could not reach the
+    // server remains valid until it expires.
+  }
   await storage.clearAll();
 };
 

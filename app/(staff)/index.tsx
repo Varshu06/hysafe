@@ -27,10 +27,11 @@ import { StaffHeader } from "../../src/components/staff/StaffHeader";
 import { StaffOrderCard } from "../../src/components/staff/StaffOrderCard";
 import { Chip, ChipRow } from "../../src/components/staff/StaffChips";
 import { ReasonModal } from "../../src/components/staff/ReasonModal";
-import { haversineKm, etaMinutes, openDirectionsToLocation } from "../../src/utils/geo";
+import { haversineKm, openDirectionsToLocation } from "../../src/utils/geo";
 import { storage } from "../../src/utils/storage";
 import { socketService } from "../../src/services/socket.service";
 import { useTranslation } from "react-i18next";
+import { subscribeAppResume } from "../../src/utils/appResume";
 // Push notifications temporarily disabled
 // import { registerForPushNotifications, setupNotificationListeners } from '../../src/services/notification.service';
 
@@ -200,6 +201,14 @@ export default function NewOrdersScreen() {
       setIsLoading(false);
     }
   };
+
+  const refreshAvailableOrdersRef = useRef(refreshAvailableOrders);
+  refreshAvailableOrdersRef.current = refreshAvailableOrders;
+  useEffect(() => {
+    return subscribeAppResume(() => {
+      if (isOnline) void refreshAvailableOrdersRef.current();
+    });
+  }, [isOnline]);
 
   const handleToggleStatus = async () => {
     // Don't allow if not authenticated
@@ -377,9 +386,6 @@ export default function NewOrdersScreen() {
         : item.paymentMethod === 'cash' || item.paymentMethod === 'offline'
           ? t('cash')
           : 'UPI';
-    const dist = haversineKm(staffLocation || undefined, item.location);
-    const eta = etaMinutes(dist);
-
     return (
       <StaffOrderCard
         status={item.status}
@@ -391,8 +397,7 @@ export default function NewOrdersScreen() {
         deliveryAddress={item.deliveryAddress}
         customer={item.customer}
         paymentLabel={paymentLabel}
-        distanceKm={dist}
-        etaMin={eta}
+        distanceKm={null}
         slot={item.deliverySlot}
         notes={item.notes}
         compact

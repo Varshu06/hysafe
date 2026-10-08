@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { notifyUnauthorized } from './api';
 import { SOCKET_URL } from '../utils/constants';
 import { storage } from '../utils/storage';
 
@@ -26,8 +27,11 @@ class SocketService {
       return;
     }
 
-    // Keep the active socket and its listeners when the same session requests a connection again.
-    if (this.socket && this.connectionToken === connectionToken) return;
+    // Reuse the socket for this session, and restart it after iOS suspends the page.
+    if (this.socket && this.connectionToken === connectionToken) {
+      if (!this.socket.connected) this.socket.connect();
+      return;
+    }
 
     if (requestId !== this.connectionRequestId) return;
 
@@ -46,7 +50,7 @@ class SocketService {
         transports: ['polling', 'websocket'],
         reconnection: true,
         reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
+        reconnectionAttempts: Infinity,
         timeout: 20000,
         forceNew: true,
       });
@@ -72,12 +76,15 @@ class SocketService {
 
       socket.on('connect_error', (error) => {
         if (this.socket !== socket) return;
-        // Only log connection errors, not websocket upgrade failures
-        // WebSocket errors are expected if the server doesn't support it
+        this.isConnected = false;
+        if (error.message?.includes('Authentication error')) {
+          this.disconnect();
+          void storage.clearAll().then(() => notifyUnauthorized());
+          return;
+        }
         if (error.message && !error.message.includes('websocket')) {
           console.warn('Socket.io connection error:', error.message);
         }
-        this.isConnected = false;
       });
 
       // Handle transport errors silently (they're expected during fallback)

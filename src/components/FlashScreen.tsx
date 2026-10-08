@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, Platform, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../utils/constants';
 
 export const FlashScreen = ({ onComplete }: { onComplete?: () => void }) => {
@@ -12,6 +12,15 @@ export const FlashScreen = ({ onComplete }: { onComplete?: () => void }) => {
   useEffect(() => {
     let animation: Animated.CompositeAnimation | undefined;
     let cancelled = false;
+    let completed = false;
+    const finish = () => {
+      if (cancelled || completed) return;
+      completed = true;
+      onComplete?.();
+    };
+    // Web can leave the native-driver animation unfinished, which blocks login.
+    const useNativeDriver = Platform.OS !== "web";
+    const safetyTimer = Platform.OS === "web" ? setTimeout(finish, 1600) : undefined;
     AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
       if (cancelled) return;
       if (reduceMotion) {
@@ -19,23 +28,27 @@ export const FlashScreen = ({ onComplete }: { onComplete?: () => void }) => {
         scaleAnim.setValue(1);
         textOpacity.setValue(1);
         dotOpacity.setValue(0);
-        onComplete?.();
+        finish();
         return;
       }
       animation = Animated.sequence([
         Animated.parallel([
-          Animated.timing(dotScale, { toValue: 2.8, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-          Animated.timing(dotOpacity, { toValue: 0, duration: 280, delay: 120, useNativeDriver: true }),
+          Animated.timing(dotScale, { toValue: 2.8, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver }),
+          Animated.timing(dotOpacity, { toValue: 0, duration: 280, delay: 120, useNativeDriver }),
         ]),
         Animated.parallel([
-          Animated.timing(fadeAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
-          Animated.timing(scaleAnim, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 380, useNativeDriver }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 420, easing: Easing.out(Easing.cubic), useNativeDriver }),
         ]),
-        Animated.timing(textOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(textOpacity, { toValue: 1, duration: 220, useNativeDriver }),
       ]);
-      animation.start(({ finished }) => { if (finished) onComplete?.(); });
-    });
-    return () => { cancelled = true; animation?.stop(); };
+      animation.start(({ finished }) => { if (finished) finish(); });
+    }).catch(() => finish());
+    return () => {
+      cancelled = true;
+      if (safetyTimer) clearTimeout(safetyTimer);
+      animation?.stop();
+    };
   }, [onComplete]);
 
   return (

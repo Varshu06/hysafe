@@ -61,11 +61,10 @@ export const ProductCard = ({ item, selected, onSelect }: ProductCardProps) => {
     }
   }, [shouldAnimate]);
   
-  const getProductImage = (volume: string) => {
+  const getProductImage = (volume?: string) => {
+    const key = String(volume || "20l").toLowerCase();
     return (
-      ProductImages[
-        volume.toLowerCase() as keyof typeof ProductImages
-      ] || ProductImages["20l"]
+      ProductImages[key as keyof typeof ProductImages] || ProductImages["20l"]
     );
   };
 

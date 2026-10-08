@@ -1,6 +1,6 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -24,11 +24,12 @@ import { useCart } from "../../../src/context/CartContext";
 import { useOrder } from "../../../src/context/OrderContext";
 import { createOrder } from "../../../src/services/order.service";
 import { getProductsByIds } from "../../../src/services/product.service";
+import { accountId, chooseSelectedAddressId } from "../../../src/utils/addressRecord";
 import {
   addressStorage,
   SavedAddress,
 } from "../../../src/utils/addressStorage";
-import { haversineKm } from "../../../src/utils/geo";
+import { assessClientDeliveryPin } from "../../../src/utils/deliveryArea";
 import {
   COLORS,
   FACTORY_LOCATION,
@@ -44,6 +45,8 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const accountRef = useRef<string | null>(null);
+  accountRef.current = accountId(user);
   const {
     items,
     incrementQuantity,
@@ -80,20 +83,16 @@ export default function CheckoutScreen() {
   const [showBillDetails, setShowBillDetails] = useState(false);
   const [isEventOrder, setIsEventOrder] = useState(false);
   const [eventName, setEventName] = useState("");
-  const [distanceFromFactory, setDistanceFromFactory] = useState<number | null>(
-    null,
-  );
-  const [isWithinServiceArea, setIsWithinServiceArea] = useState<boolean>(true);
   const { products: availableProducts } = useProduct();
   // Load saved addresses
   const loadAddresses = useCallback(async () => {
-    const addresses = await addressStorage.getAllAddresses(user);
+    const userId = accountRef.current;
+    const addresses = await addressStorage.getAllAddresses(userId, user);
+    const storedId = await addressStorage.getSelectedAddressId(userId);
+    if (accountRef.current !== userId) return;
     setSavedAddresses(addresses);
-    // Set default selected address
-    if (addresses.length > 0 && !selectedAddressId) {
-      setSelectedAddressId(addresses[0].id);
-    }
-  }, [user, selectedAddressId]);
+    setSelectedAddressId((current) => chooseSelectedAddressId(addresses, current, storedId));
+  }, [user]);
 
   useEffect(() => {
     loadAddresses();
@@ -137,24 +136,43 @@ export default function CheckoutScreen() {
     savedAddresses.find((a) => a.id === selectedAddressId) ||
     savedAddresses[0] ||
     null;
-
-  // Calculate distance from factory and validate 5km radius
-  React.useEffect(() => {
-    if (selectedAddress?.location) {
-      const distance = haversineKm(FACTORY_LOCATION, selectedAddress.location);
-      setDistanceFromFactory(distance);
-      setIsWithinServiceArea(
-        distance !== null && distance <= SERVICE_RADIUS_KM,
-      );
-    } else {
-      setDistanceFromFactory(null);
-      setIsWithinServiceArea(true); // Assume valid if no location data
-    }
-  }, [selectedAddress]);
+  const deliveryDecision = useMemo(
+    () =>
+      selectedAddress
+        ? assessClientDeliveryPin(
+            selectedAddress.location,
+            FACTORY_LOCATION,
+            SERVICE_RADIUS_KM,
+          )
+        : null,
+    [selectedAddress],
+  );
+  const deliveryBlocked =
+    deliveryDecision?.kind === "outside" ||
+    deliveryDecision?.kind === "invalid" ||
+    deliveryDecision?.kind === "unconfigured";
 
   const handlePlaceOrder = async () => {
     if (!selectedAddress) {
       Alert.alert(t("Error"), t("pleaseSelectDeliveryAddress"));
+      return;
+    }
+    if (deliveryDecision?.kind === "invalid") {
+      Alert.alert(t("Error"), t("invalidDeliveryCoordinates"));
+      return;
+    }
+    if (deliveryDecision?.kind === "outside") {
+      Alert.alert(
+        t("addressOutsideServiceArea"),
+        t("outsideServiceAreaWarning", {
+          dist: deliveryDecision.distanceKm.toFixed(1),
+          limit: SERVICE_RADIUS_KM,
+        }),
+      );
+      return;
+    }
+    if (deliveryDecision?.kind === "unconfigured") {
+      Alert.alert(t("Error"), t("deliveryAreaNotConfigured"));
       return;
     }
 
@@ -296,7 +314,7 @@ export default function CheckoutScreen() {
           };
         }),
         deliveryAddress: selectedAddress.fullAddress || selectedAddress.address,
-        location: selectedAddress.location,
+        location: deliveryDecision?.kind === "inside" ? deliveryDecision.point : undefined,
         paymentMethod: "offline",
         notes: deliveryInstructions || "",
         deliveryCharge: deliveryCharge,
@@ -479,30 +497,36 @@ export default function CheckoutScreen() {
                   {selectedAddress?.address || t("selectDeliveryAddress")}
                 </Text>
                 {/* 5km Radius Validation */}
-                {distanceFromFactory !== null && (
+                {deliveryDecision?.kind === "inside" || deliveryDecision?.kind === "outside" ? (
                   <View style={styles.distanceInfo}>
                     <Ionicons
                       name={
-                        isWithinServiceArea ? "checkmark-circle" : "warning"
+                        deliveryDecision.kind === "inside" ? "checkmark-circle" : "warning"
                       }
                       size={14}
                       color={
-                        isWithinServiceArea ? COLORS.success : COLORS.error
+                        deliveryDecision.kind === "inside" ? COLORS.success : COLORS.error
                       }
                     />
                     <Text
                       style={[
                         styles.distanceText,
-                        !isWithinServiceArea && styles.distanceTextError,
+                        deliveryDecision.kind === "outside" && styles.distanceTextError,
                       ]}
                       numberOfLines={2}
                     >
-                      {isWithinServiceArea
-                        ? t("withinServiceArea", { dist: distanceFromFactory.toFixed(1) })
-                        : t("outsideServiceArea", { dist: distanceFromFactory.toFixed(1) })}
+                      {deliveryDecision.kind === "inside"
+                        ? t("withinServiceArea", { dist: deliveryDecision.distanceKm.toFixed(1) })
+                        : t("outsideServiceArea", { dist: deliveryDecision.distanceKm.toFixed(1) })}
                     </Text>
                   </View>
-                )}
+                ) : deliveryDecision?.kind === "invalid" || deliveryDecision?.kind === "unconfigured" ? (
+                  <Text style={[styles.distanceText, styles.distanceTextError]} numberOfLines={2}>
+                    {deliveryDecision.kind === "invalid"
+                      ? t("invalidDeliveryCoordinates")
+                      : t("deliveryAreaNotConfigured")}
+                  </Text>
+                ) : null}
                 <TouchableOpacity onPress={() => setShowInstructions(true)}>
                   <Text style={styles.detailLink}>
                     {deliveryInstructions || t("addDeliveryInstructions")}
@@ -576,32 +600,12 @@ export default function CheckoutScreen() {
           <TouchableOpacity
             style={[
               styles.payButton,
-              isPlacingOrder && styles.payButtonDisabled,
+              (isPlacingOrder || deliveryBlocked) && styles.payButtonDisabled,
             ]}
-            onPress={async () => {
-              // Warn but allow orders outside service area
-              if (!isWithinServiceArea && distanceFromFactory !== null) {
-                Alert.alert(
-                  t("addressOutsideServiceArea"),
-                  t("outsideServiceAreaWarning", {
-                    dist: distanceFromFactory.toFixed(1),
-                    limit: SERVICE_RADIUS_KM,
-                  }),
-                  [
-                    { text: t("cancel"), style: "cancel" },
-                    {
-                      text: t("proceed"),
-                      onPress: () => handlePlaceOrder(),
-                      style: "default",
-                    },
-                  ],
-                );
-                return;
-              }
-
+            onPress={() => {
               handlePlaceOrder();
             }}
-            disabled={isPlacingOrder}
+            disabled={isPlacingOrder || deliveryBlocked}
           >
             <Text
               style={styles.payButtonText}
@@ -611,9 +615,7 @@ export default function CheckoutScreen() {
             >
               {isPlacingOrder
                 ? t("placingOrder")
-                : !isWithinServiceArea && distanceFromFactory !== null
-                  ? `${t("proceed")} (${distanceFromFactory.toFixed(1)} km)`
-                  : `${t("placeOrder")} - ₹${totalPrice}`}
+                : `${t("placeOrder")} - ₹${totalPrice}`}
             </Text>
           </TouchableOpacity>
         </View>
@@ -632,11 +634,11 @@ export default function CheckoutScreen() {
         selectedId={selectedAddressId}
         onClose={() => setShowAddressPicker(false)}
         onSelect={async (addr) => {
+          const userId = accountRef.current;
+          await addressStorage.setSelectedAddressId(userId, addr.id);
+          const addresses = await addressStorage.getAllAddresses(userId, user);
+          if (accountRef.current !== userId) return;
           setSelectedAddressId(addr.id);
-          // Save as selected address
-          await addressStorage.setSelectedAddressId(addr.id);
-          // Refresh addresses in case user added a new one
-          const addresses = await addressStorage.getAllAddresses(user);
           setSavedAddresses(addresses);
         }}
         onAddNew={() => {

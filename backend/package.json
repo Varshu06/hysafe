@@ -11,6 +11,10 @@
     "test-db": "ts-node test-connection.ts",
     "test:staff-acceptance": "ts-node test-staff-order-acceptance.ts",
     "test:recurring": "ts-node test-recurring-billing.ts",
+    "test:google-auth": "ts-node --transpile-only src/services/googleIdentity.policy.test.ts",
+    "test:registration": "ts-node --transpile-only src/services/registration.service.test.ts",
+    "test:auth-security": "ts-node --transpile-only src/services/authSecurity.policy.test.ts",
+    "test:auth-integration": "ts-node --transpile-only -r ./src/integration/env.preload.cjs src/integration/auth.integration.test.ts",
     "clear-db": "ts-node clear-db.ts"
   },
   "dependencies": {
@@ -19,6 +23,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^8.6.2",
+    "google-auth-library": "^11.1.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.5.0",
@@ -35,6 +40,7 @@
     "@types/node": "^20.5.0",
     "@types/nodemailer": "^8.0.1",
     "kill-port": "^2.0.1",
+    "mongodb-memory-server": "^11.3.0",
     "nodemon": "^3.0.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"

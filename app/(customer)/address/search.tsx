@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../src/context/AuthContext';
+import { accountId, chooseSelectedAddressId, storedPoint } from '../../../src/utils/addressRecord';
 import { addressStorage, SavedAddress } from '../../../src/utils/addressStorage';
 import { COLORS } from '../../../src/utils/constants';
 import { ensureForegroundLocationPermission, getCurrentPositionWithTimeout } from '../../../src/utils/location';
@@ -15,6 +16,8 @@ export default function AddressSearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const accountRef = useRef<string | null>(null);
+  accountRef.current = accountId(user);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [showAllAddresses, setShowAllAddresses] = useState(false);
@@ -26,18 +29,22 @@ export default function AddressSearchScreen() {
   const [searchError, setSearchError] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchGeneration = useRef(0);
 
   // Load saved addresses - refresh when screen comes into focus
   const loadAddresses = useCallback(async () => {
     try {
-      const addresses = await addressStorage.getAllAddresses(user);
+      const userId = accountRef.current;
+      const addresses = await addressStorage.getAllAddresses(userId, user);
+      const storedId = await addressStorage.getSelectedAddressId(userId);
+      if (accountRef.current !== userId) return;
       setSavedAddresses(addresses);
-      if (addresses.length > 0 && !selectedAddressId) setSelectedAddressId(addresses[0].id);
+      setSelectedAddressId((current) => chooseSelectedAddressId(addresses, current, storedId));
     } catch (error) {
       console.error('Could not load saved addresses:', error);
       Alert.alert(t('error'), t('addressesUnavailable'));
     }
-  }, [user, selectedAddressId, t]);
+  }, [user, t]);
 
   useEffect(() => {
     loadAddresses();
@@ -114,6 +121,7 @@ export default function AddressSearchScreen() {
 
   // Handle location search with debounce
   const performSearch = async (text: string) => {
+    const request = ++searchGeneration.current;
     if (!text || text.trim().length < 3) {
       setSearchResults([]);
       setShowSearchResults(false);
@@ -133,7 +141,6 @@ export default function AddressSearchScreen() {
         addr.type.toLowerCase().includes(text.toLowerCase())
       );
 
-      // Try to use expo-location geocoding to search for new addresses
       let geocodeResults: any[] = [];
       try {
         const results = await Location.geocodeAsync(text);
@@ -157,15 +164,15 @@ export default function AddressSearchScreen() {
                   country: addr.country || '',
                 };
               }
-            } catch (err) {
+            } catch {
               // ignore
             }
             return null;
           })
         );
 
-        geocodeResults = detailedResults.filter((result: any) => result && [result.name, result.street, result.city, result.region, result.postalCode, result.country].some(Boolean)).map((result: any, index) => ({
-          id: `search-${index}-${Date.now()}`,
+        geocodeResults = detailedResults.filter((result: any) => result && [result.name, result.street, result.city, result.region, result.postalCode, result.country].some(Boolean)).map((result: any) => ({
+          id: `search-${result.latitude.toFixed(5)}-${result.longitude.toFixed(5)}`,
           type: 'Search Result',
           address: result.name || result.street || result.city || result.region,
           fullAddress: [
@@ -183,6 +190,7 @@ export default function AddressSearchScreen() {
           isSearchResult: true,
         }));
       } catch (geocodeError) {
+        if (request !== searchGeneration.current) return;
         console.warn('Location search failed:', geocodeError);
         setSearchError('Location search failed. Check your network connection and try again.');
       }
@@ -198,9 +206,11 @@ export default function AddressSearchScreen() {
         index === self.findIndex((r) => r.fullAddress === result.fullAddress)
       );
 
+      if (request !== searchGeneration.current) return;
       setSearchResults(uniqueResults);
       if (uniqueResults.length === 0) setSearchError('No matching saved address or geocoded place was found.');
     } catch (error: any) {
+      if (request !== searchGeneration.current) return;
       console.error('Search error:', error);
       setSearchError('Search is unavailable right now. Please try again.');
       // Fallback: just filter saved addresses
@@ -210,7 +220,7 @@ export default function AddressSearchScreen() {
       );
       setSearchResults(filtered.map(addr => ({ ...addr, isSearchResult: false })));
     } finally {
-      setIsSearching(false);
+      if (request === searchGeneration.current) setIsSearching(false);
     }
   };
 
@@ -223,6 +233,7 @@ export default function AddressSearchScreen() {
     }
 
     if (!text || text.trim().length < 3) {
+      searchGeneration.current += 1;
       setSearchResults([]);
       setShowSearchResults(false);
       return;
@@ -244,12 +255,27 @@ export default function AddressSearchScreen() {
   }, []);
 
   const handleSelectSearchResult = (result: any) => {
-    // Navigate to add address screen with the selected location
+    const point = storedPoint(result.location);
+    if (!point) {
+      router.push({
+        pathname: '/(customer)/address/add',
+        params: {
+          fullAddress: result.fullAddress || result.address || '',
+          edit: result.isSearchResult ? undefined : 'true',
+          addressId: result.isSearchResult ? undefined : result.id,
+          type: result.type,
+        },
+      });
+      setSearchText('');
+      setShowSearchResults(false);
+      setSearchResults([]);
+      return;
+    }
     router.push({
       pathname: '/(customer)/address/add',
       params: {
-        latitude: result.location.lat.toString(),
-        longitude: result.location.lng.toString(),
+        latitude: point.lat.toString(),
+        longitude: point.lng.toString(),
         fullAddress: result.fullAddress,
         name: result.address,
         fromSearch: 'true',
@@ -393,7 +419,9 @@ export default function AddressSearchScreen() {
               style={[styles.addressItem, isSelected && styles.selectedAddressItem]}
               onPress={async () => {
                 try {
-                  await addressStorage.setSelectedAddressId(addr.id);
+                  const userId = accountRef.current;
+                  await addressStorage.setSelectedAddressId(userId, addr.id);
+                  if (accountRef.current !== userId) return;
                   setSelectedAddressId(addr.id);
                   router.back();
                 } catch (error) {
@@ -507,11 +535,13 @@ export default function AddressSearchScreen() {
                         style: 'destructive',
                         onPress: async () => {
                           try {
-                            await addressStorage.removeAddress(showMenuForAddress);
-                            const currentSelected = await addressStorage.getSelectedAddressId();
+                            const userId = accountRef.current;
+                            await addressStorage.removeAddress(userId, showMenuForAddress);
+                            const currentSelected = await addressStorage.getSelectedAddressId(userId);
                             if (currentSelected === showMenuForAddress) {
-                              await addressStorage.setSelectedAddressId('');
+                              await addressStorage.setSelectedAddressId(userId, '');
                             }
+                            if (accountRef.current !== userId) return;
                             await loadAddresses();
                             setShowMenuForAddress(null);
                           } catch (error) {

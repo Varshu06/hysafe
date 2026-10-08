@@ -14,7 +14,8 @@
   ],
   "exclude": [
     "admin-dashboard/**",
-    "backend/**"
+    "backend/**",
+    "**/*.test.ts"
   ]
 }
 

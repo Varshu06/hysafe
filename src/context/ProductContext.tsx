@@ -1,6 +1,7 @@
 import React, { createContext, ReactNode, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { getProducts } from "../services/product.service";
 import { Product } from "../types/product.types";
+import { canLoadPrivateData } from "../utils/sessionAuth";
 import { useAuth } from "./AuthContext";
 
 interface ProductContextType {
@@ -14,7 +15,9 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const canLoadRef = useRef(false);
+  canLoadRef.current = canLoadPrivateData({ isLoading: authLoading, isAuthenticated });
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -26,7 +29,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
     limit: number = 6,
     refresh = false,
   ) => {
-    if (fetchInProgressRef.current) {
+    if (!canLoadRef.current || fetchInProgressRef.current) {
       return;
     }
 
@@ -40,6 +43,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     try {
       const response = await getProducts(page, limit);
+      if (!canLoadRef.current) return;
       setProducts(response.data);
     } catch (err: any) {
       setError(err?.message || "Failed to fetch products");
@@ -58,13 +62,13 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
   }, [loadProducts]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (canLoadPrivateData({ isLoading: authLoading, isAuthenticated })) {
       loadProducts();
-    } else {
+    } else if (!authLoading) {
       setProducts([]);
       setError(null);
     }
-  }, [isAuthenticated, loadProducts]);
+  }, [authLoading, isAuthenticated, loadProducts]);
 
   return (
     <ProductContext.Provider

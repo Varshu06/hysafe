@@ -1,18 +1,12 @@
 import { z } from 'zod';
+import { normalizeIndianMobilePhone } from '../utils/phone.util';
 
 const customerTypes = ['home', 'shop', 'hotel', 'bank', 'event'] as const;
 
 const phoneSchema = z
   .union([z.string(), z.number()])
-  .refine((phone) => {
-    let normalizedPhone = String(phone).replace(/\D/g, '');
-
-    if (normalizedPhone.length === 12 && normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.slice(2);
-    }
-
-    return /^\d{10}$/.test(normalizedPhone);
-  }, 'Phone number must be 10 digits');
+  .transform((phone) => normalizeIndianMobilePhone(String(phone)) ?? '')
+  .pipe(z.string().regex(/^\d{10}$/, 'Phone number must be 10 digits'));
 
 const optionalEmailSchema = z
   .union([z.string().trim().email('Email must be valid'), z.literal('')])
@@ -29,6 +23,36 @@ export const registerSchema = z
   })
   // Preserve backward compatibility for extra client fields such as role.
   .passthrough();
+
+const pkceVerifier = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z0-9\-._~]{43,128}$/, 'Code verifier is invalid');
+
+export const googleAuthSchema = z
+  .object({
+    idToken: z.string().trim().min(20).max(8192).optional(),
+    code: z.string().trim().min(1).max(2048).optional(),
+    codeVerifier: pkceVerifier.optional(),
+    redirectUri: z.string().trim().min(1).max(500).optional(),
+  })
+  .strict()
+  .superRefine((data, context) => {
+    const hasToken = Boolean(data.idToken);
+    const hasCodeParts = Boolean(data.code || data.codeVerifier || data.redirectUri);
+    if (hasToken && hasCodeParts) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Send either a Google ID token or an authorization code',
+      });
+    }
+    if (!hasToken && !(data.code && data.codeVerifier && data.redirectUri)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A Google ID token or an authorization code, verifier, and redirect URI are required',
+      });
+    }
+  });
 
 export const loginSchema = z
   .object({

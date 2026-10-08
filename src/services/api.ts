@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { API_BASE_URL } from '../utils/constants';
+import { requestHadBearerToken, shouldClearStoredSession } from '../utils/sessionAuth';
 import { storage } from '../utils/storage';
 
 const api: AxiosInstance = axios.create({
@@ -16,7 +17,7 @@ const isAuthenticationRequest = (url?: string): boolean =>
 // Request interceptor - Add token to requests
 api.interceptors.request.use(
   async (config) => {
-    const token = await storage.getToken();
+    const token = (await storage.getToken())?.trim();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -46,35 +47,47 @@ export const setUnauthorizedCallback = (callback: () => void) => {
   onUnauthorizedCallback = callback;
 };
 
+export const notifyUnauthorized = () => {
+  if (onUnauthorizedCallback) onUnauthorizedCallback();
+};
+
+let sessionInvalidation: Promise<void> | null = null;
+
+const invalidateStoredSession = (): Promise<void> => {
+  if (sessionInvalidation) return sessionInvalidation;
+  sessionInvalidation = (async () => {
+    await storage.clearAll();
+    notifyUnauthorized();
+  })().finally(() => {
+    sessionInvalidation = null;
+  });
+  return sessionInvalidation;
+};
+
 // Response interceptor - Handle errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const sensitiveAuthRequest = isAuthenticationRequest(error.config?.url);
-    console.error('Axios error:', {
-      message: error.message,
-      code: error.code,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: sensitiveAuthRequest ? '[REDACTED]' : error.response?.data,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        baseURL: error.config?.baseURL,
-      },
-    });
+    const status = error.response?.status as number | undefined;
+    const hadBearerToken = requestHadBearerToken(error.config?.headers);
+    const missingToken = status === 401 && !hadBearerToken;
 
-    if (error.response?.status === 401) {
-      // Token expired or invalid - clear storage
-      await storage.clearAll();
-      if (onUnauthorizedCallback) {
-        onUnauthorizedCallback();
-      }
+    if (!missingToken) {
+      console.error('API request failed', {
+        message: error.message,
+        code: error.code,
+        status,
+        method: error.config?.method,
+        url: error.config?.url,
+      });
+    }
+
+    if (shouldClearStoredSession(status, error.config?.url, hadBearerToken)) {
+      await invalidateStoredSession();
     }
 
     // Handle timeout errors
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      console.error('Request timeout:', error.message);
       const timeoutError: any = new Error('Connection timeout. The server took too long to respond. Please check if the backend is running at ' + API_BASE_URL);
       timeoutError.isTimeout = true;
       throw timeoutError;
@@ -82,7 +95,6 @@ api.interceptors.response.use(
 
     // Handle network errors (no internet, server unreachable, etc.)
     if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
-      console.error('Network error:', error.message, error.code);
       const networkError: any = new Error('Cannot connect to server. Please check:\n1. Your internet connection\n2. Backend server is running at ' + API_BASE_URL + '\n3. Firewall settings');
       networkError.isNetworkError = true;
       throw networkError;
@@ -90,15 +102,9 @@ api.interceptors.response.use(
 
     // Handle CORS errors
     if (error.message?.includes('CORS') || error.code === 'ERR_CORS') {
-      console.error('CORS error:', error.message);
       const corsError: any = new Error('CORS error. Please check backend CORS configuration.');
       corsError.isCorsError = true;
       throw corsError;
-    }
-
-    // Handle other axios errors
-    if (error.code) {
-      console.error('Axios error code:', error.code);
     }
 
     return Promise.reject(error);

@@ -1,4 +1,6 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { Platform } from 'react-native';
+import { subscribeAppResume } from '../utils/appResume';
 import { getMyOrders } from '../services/order.service';
 import { Order } from '../types/order.types';
 import { useAuth } from './AuthContext';
@@ -85,6 +87,13 @@ export const OrderProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       socketService.off('order-status-updated', handleOrderStatusUpdate);
       socketService.disconnect();
     };
+  }, [isAuthenticated, userRole, refreshOrders]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isAuthenticated || userRole !== 'customer') return;
+    return subscribeAppResume(() => {
+      void refreshOrders();
+    });
   }, [isAuthenticated, userRole, refreshOrders]);
 
   return (

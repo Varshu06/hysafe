@@ -85,21 +85,25 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const cartJson = await AsyncStorage.getItem(CART_STORAGE_KEY);
         if (cartJson) {
-          const storedItems: StoredCartItem[] = JSON.parse(cartJson);
-          // Reconstruct cart items with image from stored URI or volume fallback
-          const restoredItems: CartItem[] = storedItems.map((storedItem) => {
+          const parsed = JSON.parse(cartJson);
+          const storedItems: StoredCartItem[] = Array.isArray(parsed) ? parsed : [];
+          const restoredItems: CartItem[] = storedItems.flatMap((storedItem) => {
+            if (!storedItem || typeof storedItem !== "object" || !storedItem.id) return [];
             const product = PRODUCTS.find((p) => p.id === storedItem.id);
+            const volume = String(storedItem.volume || product?.volume || "20L");
             const imageSource = normalizeImageSource(
               product?.image ?? storedItem.image,
             );
             const image =
               imageSource ||
-              ProductImages[storedItem.volume.toLowerCase()] ||
+              ProductImages[volume.toLowerCase()] ||
               ProductImages["20l"];
-            return {
+            return [{
               ...storedItem,
+              volume,
+              deliveryCharge: Number(storedItem.deliveryCharge) || 0,
               image,
-            };
+            }];
           });
           setItems(restoredItems);
         }
@@ -168,12 +172,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({
           id: product.id,
           name: product.name,
           price: product.price,
-          volume: product.volume,
+          volume: product.volume || "20L",
           deliveryCharge: product.deliveryCharge,
           quantity: 1,
           image:
             normalizedImage ||
-            ProductImages[product.volume.toLowerCase()] ||
+            ProductImages[String(product.volume || "20L").toLowerCase()] ||
             ProductImages["20l"],
         },
       ];

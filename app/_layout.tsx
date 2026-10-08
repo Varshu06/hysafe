@@ -2,16 +2,36 @@ import "../src/i18n";
 import { loadSavedLanguage } from "../src/i18n";
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StatusBar } from "react-native";
+import { StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { FlashScreen } from "../src/components/FlashScreen";
+import { WebAppShell } from "../src/components/web/WebAppShell";
 import { AuthProvider, useAuth } from "../src/context/AuthContext";
+import { COLORS } from "../src/utils/constants";
 import { CartProvider } from "../src/context/CartContext";
 import { OrderProvider } from "../src/context/OrderContext";
 import { ProductProvider } from "../src/context/ProductContext";
 
+function SessionRetry() {
+  const { retrySession, logout } = useAuth();
+  return (
+    <View style={sessionStyles.screen}>
+      <Text style={sessionStyles.title}>Can't reach HySafe</Text>
+      <Text style={sessionStyles.body}>
+        The connection failed while checking your session. Your account was not signed out.
+      </Text>
+      <TouchableOpacity style={sessionStyles.primary} onPress={retrySession}>
+        <Text style={sessionStyles.primaryText}>Try again</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={sessionStyles.secondary} onPress={() => void logout()}>
+        <Text style={sessionStyles.secondaryText}>Sign in</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function RootStack() {
-  const { isLoading, user } = useAuth();
+  const { isLoading, sessionError, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const segments = useSegments();
@@ -23,7 +43,12 @@ function RootStack() {
   const onSplashComplete = useCallback(() => setSplashAnimationComplete(true), []);
 
   useEffect(() => {
-    if (isLoading || !splashAnimationComplete) return;
+    if (isLoading || !splashAnimationComplete || sessionError) return;
+
+    const path = pathnameRef.current || "/";
+    const onAuthScreen = ["/login", "/signup", "/forgot-password", "/otp"].some(
+      (authPath) => path === authPath || path.endsWith(authPath),
+    );
 
     if (user) {
       const targetGroup = user.role === "customer" ? "(customer)" : user.role === "staff" ? "(staff)" : null;
@@ -36,17 +61,21 @@ function RootStack() {
       } catch (error) {
         console.error("Navigation error:", error);
       }
-    } else if (pathnameRef.current !== "/login" && !pathnameRef.current.endsWith("/login")) {
+    } else if (!onAuthScreen) {
       try {
         router.replace("/(auth)/login");
       } catch (error) {
         console.error("Navigation to login error:", error);
       }
     }
-  }, [isLoading, splashAnimationComplete, user, router]);
+  }, [isLoading, splashAnimationComplete, sessionError, user, router]);
 
   if (isLoading || !splashAnimationComplete) {
     return <FlashScreen onComplete={onSplashComplete} />;
+  }
+
+  if (sessionError) {
+    return <SessionRetry />;
   }
 
   return (
@@ -73,7 +102,9 @@ export default function RootLayout() {
         <CartProvider>
           <OrderProvider>
             <ProductProvider>
-              <RootStack />
+              <WebAppShell>
+                <RootStack />
+              </WebAppShell>
             </ProductProvider>
           </OrderProvider>
         </CartProvider>
@@ -81,3 +112,48 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const sessionStyles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  body: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: COLORS.textLight,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  primary: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    marginBottom: 12,
+  },
+  primaryText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  secondary: {
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+  },
+  secondaryText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});

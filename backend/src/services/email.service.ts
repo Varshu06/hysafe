@@ -1,4 +1,12 @@
 import nodemailer from 'nodemailer';
+import { devOtpLogAllowed } from './otp.policy';
+
+export const emailDeliveryAvailable = (): boolean => {
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+  const smtpPass = (process.env.SMTP_PASS || '').trim();
+  return Boolean(resendKey || (smtpUser && smtpPass));
+};
 
 export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise<boolean> => {
   const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
@@ -7,7 +15,7 @@ export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise
   const SMTP_HOST = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
   const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
   const SENDER_EMAIL = (process.env.RESEND_FROM_EMAIL || process.env.SMTP_FROM || SMTP_USER || '').trim();
-  const isDev = process.env.NODE_ENV !== 'production';
+  const allowDevOtpLog = devOtpLogAllowed();
 
   console.log(`[EMAIL SERVICE] Initiating password reset email delivery to ${recipientEmail}`);
 
@@ -87,8 +95,8 @@ export const sendOtpEmail = async (recipientEmail: string, otp: string): Promise
     }
   }
 
-  // 3. Development Fallback: Print OTP directly to console so development is never blocked
-  if (isDev) {
+  // Development only. Any other environment, including an unset NODE_ENV, must not print the code.
+  if (allowDevOtpLog) {
     console.log(`\n======================================================`);
     console.log(`🔑 [DEV MODE] PASSWORD RESET OTP FOR: ${recipientEmail}`);
     console.log(`👉 OTP CODE: ${otp}`);

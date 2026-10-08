@@ -1,17 +1,22 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { COLORS } from "../../../src/utils/constants";
+import { AndroidGoogleAuth } from "../../../src/components/auth/AndroidGoogleAuth";
+import { GoogleSignInButton } from "../../../src/components/auth/GoogleSignInButton";
 import { useAuth } from "../../../src/context/AuthContext";
+import { beginWebGoogleOAuth, googleErrorMessage, linkGoogleAccount } from "../../../src/services/googleAuth.service";
+import { COLORS } from "../../../src/utils/constants";
 
 export default function PrivacySecurityScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { logout, user, refreshProfile } = useAuth();
+  const [linking, setLinking] = useState(false);
+  const googleLinked = Boolean(user?.googleId);
 
   const handleDeleteAccount = () => {
     router.push("/(customer)/profile/delete-account");
@@ -74,6 +79,39 @@ export default function PrivacySecurityScreen() {
           subtitle="Update your account password"
           onPress={() => router.push("/(customer)/profile/change-password")}
         />
+        {googleLinked ? (
+          <Text style={styles.googleLinked}>{t("googleLinked")}</Text>
+        ) : Platform.OS === "android" ? (
+          <AndroidGoogleAuth
+            label={t("linkGoogle")}
+            disabled={linking}
+            onCredential={async (credential) => {
+              try {
+                await linkGoogleAccount(credential);
+                await refreshProfile();
+                Alert.alert(t("linkGoogle"), t("googleLinked"));
+              } catch (error) {
+                throw new Error(googleErrorMessage(error, t("googleSignInFailed")));
+              }
+            }}
+            onCancel={() => Alert.alert(t("linkGoogle"), t("googleSignInCancelled"))}
+            onError={(message) => Alert.alert(t("error"), message)}
+          />
+        ) : Platform.OS === "web" ? (
+          <GoogleSignInButton
+            label={t("linkGoogle")}
+            loading={linking}
+            disabled={linking}
+            onPress={() => {
+              if (linking) return;
+              setLinking(true);
+              void beginWebGoogleOAuth("link").catch((error: unknown) => {
+                setLinking(false);
+                Alert.alert(t("error"), googleErrorMessage(error, t("googleSignInFailed")));
+              });
+            }}
+          />
+        ) : null}
         <Row
           icon="shield"
           title="Login Activity"
@@ -197,6 +235,12 @@ const styles = StyleSheet.create({
   },
   rowTitleDanger: {
     color: COLORS.error,
+  },
+  googleLinked: {
+    color: COLORS.text,
+    fontSize: 14,
+    marginBottom: 12,
+    marginTop: 4,
   },
   rowSubtitle: {
     fontSize: 12,

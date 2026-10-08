@@ -13,9 +13,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { AndroidGoogleAuth } from "../../src/components/auth/AndroidGoogleAuth";
+import { GoogleSignInButton } from "../../src/components/auth/GoogleSignInButton";
 import { useAuth } from "../../src/context/AuthContext";
+import { beginWebGoogleOAuth, googleErrorMessage } from "../../src/services/googleAuth.service";
 import { COLORS } from "../../src/utils/constants";
+import { normalizeIndianMobilePhone } from "../../src/utils/phone";
 import { useTranslation } from "react-i18next";
 import { changeLanguage, getSavedLanguage } from "@/i18n";
 import LanguageSelectionModal from "@/components/auth/LanguageSelectionModal";
@@ -23,15 +28,25 @@ import LanguageSelectionModal from "@/components/auth/LanguageSelectionModal";
 export default function LoginScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { login, refreshProfile } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
+  const insets = useSafeAreaInsets();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleNotice, setGoogleNotice] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const authBusy = loading || googleLoading;
 
   useEffect(() => {
     checkLanguage();
+    if (Platform.OS !== "web" || typeof sessionStorage === "undefined") return;
+    const notice = sessionStorage.getItem("hysafe_google_notice");
+    if (!notice) return;
+    setGoogleNotice(notice);
+    const timeout = setTimeout(() => sessionStorage.removeItem("hysafe_google_notice"), 0);
+    return () => clearTimeout(timeout);
   }, []);
 
   const checkLanguage = async () => {
@@ -55,10 +70,8 @@ export default function LoginScreen() {
       return;
     }
 
-    // Remove any spaces or special characters
-    const cleanPhone = phone.replace(/\s+/g, "").replace(/[^0-9]/g, "");
-
-    if (cleanPhone.length < 10) {
+    const normalizedPhone = normalizeIndianMobilePhone(phone);
+    if (!normalizedPhone) {
       Alert.alert(t("error"), t("phoneNumberMustBeAtLeast10Digits"));
       return;
     }
@@ -68,10 +81,12 @@ export default function LoginScreen() {
       return;
     }
 
+    if (authBusy) return;
+
     try {
       setLoading(true);
       await login({
-        phone: cleanPhone, // Use cleaned phone number
+        phone: normalizedPhone,
         password,
       });
       // Navigation will be handled by AuthContext based on role
@@ -130,10 +145,40 @@ export default function LoginScreen() {
         <View style={styles.headerWave} />
       </ImageBackground>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: 24 + insets.bottom }]}>
         <Text style={styles.title}>Hy-Safe</Text>
         <Text style={styles.tagline}>{t("tagline")}</Text>
         <Text style={styles.subtitle}>{t("logInToContinue")}</Text>
+
+        {Platform.OS === "android" ? (
+          <AndroidGoogleAuth
+            label={t("continueWithGoogle")}
+            disabled={loading}
+            onBusyChange={setGoogleLoading}
+            onCredential={async (credential) => {
+              setGoogleNotice("");
+              await loginWithGoogle(credential);
+            }}
+            onCancel={() => setGoogleNotice(t("googleSignInCancelled"))}
+            onError={(message) => setGoogleNotice(message)}
+          />
+        ) : Platform.OS === "web" ? (
+          <GoogleSignInButton
+            label={t("continueWithGoogle")}
+            disabled={authBusy}
+            loading={googleLoading}
+            onPress={() => {
+              if (authBusy) return;
+              setGoogleNotice("");
+              setGoogleLoading(true);
+              void beginWebGoogleOAuth("login").catch((error: unknown) => {
+                setGoogleNotice(googleErrorMessage(error, t("googleSignInFailed")));
+                setGoogleLoading(false);
+              });
+            }}
+          />
+        ) : null}
+        {googleNotice ? <Text style={styles.googleNotice}>{googleNotice}</Text> : null}
 
         <View style={styles.dividerContainer}>
           <View style={styles.line} />
@@ -195,9 +240,9 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[styles.button, authBusy && styles.buttonDisabled]}
           onPress={handleLogin}
-          disabled={loading}
+          disabled={authBusy}
         >
           {loading ? (
             <ActivityIndicator color="white" />
@@ -206,15 +251,19 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.signupLink}
-          onPress={() => router.push("/(auth)/signup")}
-        >
+        <View style={styles.signupLink}>
           <Text style={styles.signupText}>
             {t("dontHaveAccount")}
-            <Text style={styles.signupLinkText}>{t("signup")}</Text>
+            <Text
+              style={styles.signupLinkText}
+              onPress={() => {
+                if (!authBusy) router.push("/(auth)/signup");
+              }}
+            >
+              {t("signup")}
+            </Text>
           </Text>
-        </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -271,6 +320,15 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: "center",
     lineHeight: 20,
+  },
+  googleNotice: {
+    width: "100%",
+    color: "#B45309",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: -8,
+    marginBottom: 16,
   },
   dividerContainer: {
     flexDirection: "row",

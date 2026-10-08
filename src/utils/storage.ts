@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// On web, AsyncStorage uses localStorage. The token stays out of URLs and is not
+// cached by the service worker. A browser XSS bug could still read it; the API
+// remains the authorization authority.
 const TOKEN_KEY = '@hysafe_token';
 const USER_KEY = '@hysafe_user';
 const STAFF_ONLINE_KEY = '@hysafe_staff_online';

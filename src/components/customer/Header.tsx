@@ -1,20 +1,24 @@
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { accountId } from '../../utils/addressRecord';
 import { addressStorage, SavedAddress } from '../../utils/addressStorage';
 import { COLORS } from '../../utils/constants';
 import { NotificationCenter } from '../ui/NotificationCenter';
+import { ensureForegroundLocationPermission, getCurrentPositionWithTimeout } from '../../utils/location';
 
 export const CustomerHeader = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const accountRef = useRef<string | null>(null);
+  accountRef.current = accountId(user);
   const { getTotalItems } = useCart();
   const { t } = useTranslation();
   const [selectedAddress, setSelectedAddress] = useState<SavedAddress | null>(null);
@@ -26,21 +30,16 @@ export const CustomerHeader = () => {
   const fetchCurrentLocation = useCallback(async () => {
     setIsFetchingLocation(true);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      if (!(await ensureForegroundLocationPermission())) {
         setIsFetchingLocation(false);
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-
+      const location = await getCurrentPositionWithTimeout();
       const [address] = await Location.reverseGeocodeAsync({
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
-
       const fullAddress = [
         address?.name,
         address?.street,
@@ -59,14 +58,15 @@ export const CustomerHeader = () => {
 
   // Load selected address
   const loadSelectedAddress = useCallback(async () => {
-    const selected = await addressStorage.getSelectedAddress(user);
+    const userId = accountRef.current;
+    const selected = await addressStorage.getSelectedAddress(userId, user);
+    if (accountRef.current !== userId) return;
     setSelectedAddress(selected);
   }, [user]);
 
   useEffect(() => {
     loadSelectedAddress();
-    fetchCurrentLocation();
-  }, [loadSelectedAddress, fetchCurrentLocation]);
+  }, [loadSelectedAddress]);
 
   // Refresh address when screen comes into focus
   useFocusEffect(

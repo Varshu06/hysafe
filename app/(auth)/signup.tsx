@@ -14,8 +14,12 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { AndroidGoogleAuth } from "../../src/components/auth/AndroidGoogleAuth";
+import { GoogleSignInButton } from "../../src/components/auth/GoogleSignInButton";
 import { useAuth } from "../../src/context/AuthContext";
+import { beginWebGoogleOAuth, googleErrorMessage } from "../../src/services/googleAuth.service";
 import { COLORS } from "../../src/utils/constants";
+import { normalizeIndianMobilePhone } from "../../src/utils/phone";
 import { useTranslation } from "react-i18next";
 
 type CustomerType = "home" | "shop" | "hotel" | "bank" | "event";
@@ -56,7 +60,7 @@ const CUSTOMER_TYPES: {
 export default function SignupScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -67,6 +71,9 @@ export default function SignupScreen() {
   const [address, setAddress] = useState("");
   const [customerType, setCustomerType] = useState<CustomerType>("home");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleNotice, setGoogleNotice] = useState("");
+  const authBusy = loading || googleLoading;
 
   const handleSignup = async () => {
     if (!name || !email || !phone || !password) {
@@ -90,9 +97,8 @@ export default function SignupScreen() {
       return;
     }
 
-    const cleanPhone = phone.replace(/\s+/g, "").replace(/[^0-9]/g, "");
-
-    if (cleanPhone.length < 10) {
+    const normalizedPhone = normalizeIndianMobilePhone(phone);
+    if (!normalizedPhone) {
       Alert.alert(t("error"), t("phoneNumberMustBeAtLeast10Digits"));
       return;
     }
@@ -102,7 +108,7 @@ export default function SignupScreen() {
       await register({
         name,
         email: email.trim(),
-        phone: cleanPhone,
+        phone: normalizedPhone,
         password,
         address: address || undefined,
         customerType: customerType,
@@ -134,7 +140,37 @@ export default function SignupScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Hy-Safe</Text>
         <Text style={styles.tagline}>{t("tagline")}</Text>
-        <Text style={styles.subtitle}>{t("signUpToGetStarted")}</Text>
+        <Text style={styles.subtitle}>{t("createYourHySafeAccount")}</Text>
+
+        {Platform.OS === "android" ? (
+          <AndroidGoogleAuth
+            label={t("continueWithGoogle")}
+            disabled={loading}
+            onBusyChange={setGoogleLoading}
+            onCredential={async (credential) => {
+              setGoogleNotice("");
+              await loginWithGoogle(credential);
+            }}
+            onCancel={() => setGoogleNotice(t("googleSignInCancelled"))}
+            onError={(message) => setGoogleNotice(message)}
+          />
+        ) : Platform.OS === "web" ? (
+          <GoogleSignInButton
+            label={t("continueWithGoogle")}
+            disabled={authBusy}
+            loading={googleLoading}
+            onPress={() => {
+              if (authBusy) return;
+              setGoogleNotice("");
+              setGoogleLoading(true);
+              void beginWebGoogleOAuth("login").catch((error: unknown) => {
+                setGoogleNotice(googleErrorMessage(error, t("googleSignInFailed")));
+                setGoogleLoading(false);
+              });
+            }}
+          />
+        ) : null}
+        {googleNotice ? <Text style={styles.googleNotice}>{googleNotice}</Text> : null}
 
         <View style={styles.dividerContainer}>
           <View style={styles.line} />
@@ -346,9 +382,9 @@ export default function SignupScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, authBusy && styles.buttonDisabled]}
             onPress={handleSignup}
-            disabled={loading}
+            disabled={authBusy}
           >
             {loading ? (
               <ActivityIndicator color="white" />
@@ -357,15 +393,19 @@ export default function SignupScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.loginLink}
-            onPress={() => router.push("/(auth)/login")}
-          >
+          <View style={styles.loginLink}>
             <Text style={styles.loginText}>
               {t("alreadyHaveAccount")}
-              <Text style={styles.loginLinkText}>{t("login")}</Text>
+              <Text
+                style={styles.loginLinkText}
+                onPress={() => {
+                  if (!authBusy) router.push("/(auth)/login");
+                }}
+              >
+                {t("login")}
+              </Text>
             </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -422,6 +462,15 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     textAlign: "center",
     lineHeight: 20,
+  },
+  googleNotice: {
+    width: "100%",
+    color: "#B45309",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: -8,
+    marginBottom: 16,
   },
   dividerContainer: {
     flexDirection: "row",

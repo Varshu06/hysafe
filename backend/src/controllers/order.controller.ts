@@ -17,6 +17,7 @@ import {
   restoreInventoryAtomic,
   validateStatusTransition,
 } from "../utils/orderInventory.util";
+import { assessDeliveryLocation, serviceAreaFromEnv } from "../services/deliveryArea.policy";
 
 // Create order
 export const createOrder = async (req: AuthRequest, res: Response) => {
@@ -136,6 +137,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Invalid order total price" });
     }
 
+    const deliveryArea = assessDeliveryLocation(location, serviceAreaFromEnv(process.env));
+    if (!deliveryArea.ok) {
+      return res.status(deliveryArea.status).json({ message: deliveryArea.message });
+    }
+    const storedLocation = deliveryArea.location;
+
     // Create order (Pending state)
     const order = await Order.create({
       customerId,
@@ -149,7 +156,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       paymentMethod: "offline", // Standard COD / offline delivery model
       paymentStatus: "pending",
       deliveryAddress,
-      location,
+      location: storedLocation,
       notes,
       deliverySlot: deliverySlot ? new Date(deliverySlot) : undefined,
       isEventOrder: Boolean(isEventOrder),

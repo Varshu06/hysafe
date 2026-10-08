@@ -1,128 +1,94 @@
 import crypto from 'crypto';
 import { Request, Response } from 'express';
+import { ClientSession } from 'mongoose';
 import { User } from '../models/User.model';
 import { CustomerProfile } from '../models/CustomerProfile.model';
 import { Staff } from '../models/Staff.model';
 import { LoginActivity } from '../models/LoginActivity.model';
 import { Otp } from '../models/Otp.model';
-import { sendOtpEmail } from '../services/email.service';
 import { hashPassword, comparePassword } from '../utils/bcrypt.util';
 import { generateToken } from '../utils/jwt.util';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { normalizeIndianMobilePhone } from '../utils/phone.util';
+import { runTransaction } from '../utils/transaction.util';
+import {
+  createCustomerAccount,
+  REGISTRATION_FAILED_MESSAGE,
+  registrationErrorLog,
+  RegistrationDeps,
+} from '../services/registration.service';
+import { emailDeliveryAvailable, sendOtpEmail } from '../services/email.service';
+import {
+  decideForgotPassword,
+  evaluateOtpAttempt,
+  FORGOT_PASSWORD_MESSAGE,
+  hashOtp,
+  OTP_INVALID_MESSAGE,
+  OTP_LOCKED_MESSAGE,
+  OTP_REUSED_MESSAGE,
+  OTP_UNAVAILABLE_MESSAGE,
+  resolveOtpSalt,
+} from '../services/otp.policy';
+import {
+  classifyDuplicateKey,
+  decideGoogleLink,
+  decideGoogleLogin,
+  GoogleAccountSnapshot,
+  GoogleAuthError,
+  GoogleIdentity,
+  GOOGLE_MESSAGES,
+  googlePlaceholderPhone,
+  isDuplicateKeyError,
+} from '../services/googleIdentity.policy';
+import { resolveGoogleCredential } from '../services/googleToken.service';
 
-const hashOtp = (otp: string): string => {
-  const salt = process.env.OTP_SALT || 'hysafe_secure_otp_salt_2026';
-  return crypto.createHash('sha256').update(otp + salt).digest('hex');
+const registrationDeps: RegistrationDeps = {
+  findExisting: async (phone, email) => {
+    const filters: Array<Record<string, string>> = [{ phone }];
+    if (email) filters.push({ email });
+    const existing = await User.findOne({ $or: filters }).select('_id');
+    return Boolean(existing);
+  },
+  insertUser: async (data, session) => {
+    const user = new User(data);
+    await user.save(session ? { session: session as ClientSession } : undefined);
+    return user;
+  },
+  insertProfile: async (data, session) => {
+    const profile = new CustomerProfile(data);
+    await profile.save(session ? { session: session as ClientSession } : undefined);
+  },
+  deleteCreatedUser: async (userId) => {
+    if (!userId) return;
+    // Only the customer row created by this request can match.
+    await User.deleteOne({ _id: userId, role: 'customer' });
+  },
+  runTransaction,
+  hashPassword,
 };
-
 
 // Register
 export const register = async (req: Request, res: Response) => {
-  try {
-    const { email, phone, password, name, customerType, address } = req.body;
-
-    const normalizedEmail = typeof email === 'string' && email.trim()
-      ? email.trim().toLowerCase()
-      : undefined;
-    const rawPhone = typeof phone === 'string' ? phone : String(phone || '');
-    let normalizedPhone = rawPhone.replace(/\D/g, '');
-
-    // Support inputs like +91XXXXXXXXXX by storing only the local 10-digit number.
-    if (normalizedPhone.length === 12 && normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.slice(2);
-    }
-
-    // Validation
-    if (!normalizedPhone || !password) {
-      return res.status(400).json({ message: 'Phone and password are required' });
-    }
-
-    if (!/^\d{10}$/.test(normalizedPhone)) {
-      return res.status(400).json({ message: 'Phone number must be 10 digits' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
-    }
-
-    // Check if user exists
-    const duplicateFilters: Array<Record<string, string>> = [{ phone: normalizedPhone }];
-    if (normalizedEmail) {
-      duplicateFilters.push({ email: normalizedEmail });
-    }
-
-    const existingUser = await User.findOne({
-      $or: duplicateFilters,
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Hash password
-    const hashedPassword = await hashPassword(password);
-
-    // Create user
-    const userData: Record<string, any> = {
-      phone: normalizedPhone,
-      password: hashedPassword,
-      name,
-      // Public registration must never grant a privileged role. Staff accounts
-      // are created through the authenticated admin staff-management endpoint.
-      role: 'customer',
-    };
-
-    if (normalizedEmail) {
-      userData.email = normalizedEmail;
-    }
-
-    const user = await User.create(userData);
-
-    // Create role-specific profile
-    if (user.role === 'customer') {
-      await CustomerProfile.create({
-        userId: user._id,
-        name: name || 'Customer',
-        address: (address && address.trim()) || 'Address not provided',
-        customerType: customerType || 'home',
-        paymentTerms: 'one-time',
-        defaultPaymentMethod: 'offline',
-      });
-    } else if (user.role === 'staff') {
-      await Staff.create({
-        userId: user._id,
-        name: name || 'Staff',
-        phone: user.phone,
-        isOnline: false,
-      });
-    }
-
-    // Generate token
-    const token = generateToken({
-      userId: user._id.toString(),
-      role: user.role,
-    });
-
-    // Remove password from response
-    const { password: _, ...userResponse } = user.toObject();
-
-    res.status(201).json({
-      message: 'Registration successful',
-      token,
-      user: userResponse,
-    });
-  } catch (error: any) {
-    console.error('Registration error:', error);
-    console.error('Error stack:', error.stack);
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Phone or email already exists' });
-    }
-    res.status(500).json({ 
-      message: error.message || 'Registration failed',
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+  const outcome = await createCustomerAccount(req.body, registrationDeps);
+  if (!outcome.ok) {
+    return res.status(outcome.status).json({ message: outcome.message });
   }
+
+  const userId = outcome.user._id || outcome.user.id;
+  if (outcome.user.role !== 'customer' || !userId) {
+    return res.status(500).json({ message: REGISTRATION_FAILED_MESSAGE });
+  }
+
+  const token = generateToken({
+    userId: String(userId),
+    role: 'customer',
+  });
+
+  return res.status(201).json({
+    message: 'Registration successful',
+    token,
+    user: outcome.user,
+  });
 };
 
 // Login
@@ -290,8 +256,8 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
     // Hash new password
     const hashedPassword = await hashPassword(newPassword);
 
-    // Update password
     user.password = hashedPassword;
+    user.sessionValidAfter = new Date();
     await user.save();
 
     res.json({ message: 'Password changed successfully' });
@@ -301,133 +267,275 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Google OAuth authentication
-export const googleAuth = async (req: Request, res: Response) => {
-  try {
-    const { googleId, email, name, picture } = req.body;
+const googleAccountSnapshot = (user: {
+  googleId?: string | null;
+  email?: string | null;
+  role?: string | null;
+  isActive?: boolean | null;
+} | null): GoogleAccountSnapshot | null => {
+  if (!user) return null;
+  return {
+    googleId: user.googleId,
+    email: user.email,
+    role: user.role || '',
+    isActive: user.isActive !== false,
+  };
+};
 
-    if (!googleId || !email) {
-      return res.status(400).json({ message: 'Google ID and email are required' });
-    }
-
-    // Check if user exists by Google ID or email
-    let user = await User.findOne({
-      $or: [
-        { googleId },
-        { email: email.toLowerCase() },
-      ],
+const rejectGoogleDecision = (res: Response, type: string): boolean => {
+  if (type === 'unverified-email') {
+    res.status(400).json({ message: GOOGLE_MESSAGES.unverifiedEmail });
+    return true;
+  }
+  if (type === 'invalid-identity') {
+    res.status(400).json({ message: GOOGLE_MESSAGES.invalid });
+    return true;
+  }
+  if (type === 'conflict' || type === 'email-mismatch') {
+    res.status(409).json({
+      message: type === 'email-mismatch' ? GOOGLE_MESSAGES.emailMismatch : GOOGLE_MESSAGES.conflict,
     });
+    return true;
+  }
+  if (type === 'taken') {
+    res.status(409).json({ message: GOOGLE_MESSAGES.taken });
+    return true;
+  }
+  if (type === 'forbidden-role') {
+    res.status(403).json({ message: GOOGLE_MESSAGES.forbidden });
+    return true;
+  }
+  if (type === 'inactive') {
+    res.status(401).json({ message: GOOGLE_MESSAGES.inactive });
+    return true;
+  }
+  return false;
+};
 
-    if (user) {
-      // Update Google ID if not set
-      if (!user.googleId) {
-        user.googleId = googleId;
-        await user.save();
-      }
+const sendGoogleAuthError = (res: Response, error: unknown) => {
+  if (error instanceof GoogleAuthError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  console.error('Google authentication failed');
+  return res.status(500).json({ message: 'Google sign-in failed' });
+};
 
-      // Update name and picture if provided
-      if (name && !user.name) {
-        user.name = name;
-      }
-      if (picture) {
-        user.picture = picture;
-      }
-      await user.save();
-    } else {
-      // Create new user with Google account
-      // Generate a random phone number placeholder (user can update later)
-      const randomPhone = `9${crypto.randomInt(100000000, 1000000000)}`;
-      
-      user = await User.create({
-        email: email.toLowerCase(),
-        phone: randomPhone,
-        name: name || 'Google User',
-        password: await hashPassword(crypto.randomBytes(16).toString('hex')), // Random password
-        googleId,
-        picture,
-        role: 'customer',
-      });
-
-
-      // Create customer profile
-      await CustomerProfile.create({
+const createGoogleCustomer = async (identity: GoogleIdentity) => {
+  const password = await hashPassword(crypto.randomBytes(32).toString('hex'));
+  return runTransaction(async (session) => {
+    const user = new User({
+      email: identity.email,
+      phone: googlePlaceholderPhone(identity.sub),
+      name: identity.name,
+      password,
+      googleId: identity.sub,
+      picture: identity.picture,
+      role: 'customer',
+      isActive: true,
+    });
+    await user.save(session ? { session: session as ClientSession } : undefined);
+    try {
+      const profile = new CustomerProfile({
         userId: user._id,
-        name: name || 'Google User',
+        name: identity.name || 'HySafe Customer',
         address: 'Address not provided',
         customerType: 'home',
         paymentTerms: 'one-time',
         defaultPaymentMethod: 'offline',
       });
+      await profile.save(session ? { session: session as ClientSession } : undefined);
+    } catch (profileError) {
+      if (!session) {
+        await User.deleteOne({ _id: user._id, role: 'customer', googleId: identity.sub });
+      }
+      throw profileError;
+    }
+    return user;
+  });
+};
+
+const ensureCustomerProfile = async (user: { _id: unknown; name?: string }, fallbackName: string) => {
+  const existing = await CustomerProfile.findOne({ userId: user._id });
+  if (existing) return existing;
+  return CustomerProfile.create({
+    userId: user._id,
+    name: user.name || fallbackName,
+    address: 'Address not provided',
+    customerType: 'home',
+    paymentTerms: 'one-time',
+    defaultPaymentMethod: 'offline',
+  });
+};
+
+const buildSessionUser = async (user: any) => {
+  let profile = null;
+  if (user.role === 'customer') {
+    profile = await CustomerProfile.findOne({ userId: user._id });
+  } else if (user.role === 'staff') {
+    profile = await Staff.findOne({ userId: user._id });
+  }
+  const raw = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+  delete raw.password;
+  return {
+    ...raw,
+    ...(profile?.toObject() || {}),
+  };
+};
+
+const recordLoginActivity = async (req: Request, userId: unknown) => {
+  try {
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
+    const userAgent = req.get('user-agent') || 'Unknown';
+    let deviceInfo = 'Unknown Device';
+    if (userAgent.includes('Mobile')) deviceInfo = 'Mobile Device';
+    else if (userAgent.includes('Tablet')) deviceInfo = 'Tablet';
+    else if (userAgent.includes('Windows') || userAgent.includes('Mac') || userAgent.includes('Linux')) {
+      deviceInfo = 'Desktop';
+    }
+    await LoginActivity.create({
+      userId,
+      deviceInfo,
+      ipAddress: ipAddress.toString(),
+      userAgent,
+      location: 'Unknown',
+      loginAt: new Date(),
+    });
+  } catch (activityError) {
+    console.error('Failed to track login activity');
+  }
+};
+
+const publicUser = (user: any) => {
+  const raw = typeof user.toObject === 'function' ? user.toObject() : { ...user };
+  delete raw.password;
+  return raw;
+};
+
+// Google sign-in. Identity comes only from a verified Google ID token.
+export const googleAuth = async (req: Request, res: Response) => {
+  try {
+    const identity = await resolveGoogleCredential(req.body);
+    let linked = await User.findOne({ googleId: identity.sub });
+    const emailAccount = await User.findOne({ email: identity.email });
+    const decision = decideGoogleLogin(
+      identity,
+      googleAccountSnapshot(linked),
+      googleAccountSnapshot(emailAccount),
+    );
+
+    if (rejectGoogleDecision(res, decision.type)) return;
+
+    let user = linked;
+    if (!user && emailAccount?.googleId === identity.sub) {
+      user = emailAccount;
     }
 
+    if (decision.type === 'create') {
+      try {
+        user = await createGoogleCustomer(identity);
+      } catch (error) {
+        if (!isDuplicateKeyError(error)) {
+          console.error('Google account creation failed:', registrationErrorLog(error));
+          return res.status(500).json({ message: 'Google sign-in failed' });
+        }
+        const duplicate = classifyDuplicateKey(error.keyPattern);
+        if (duplicate === 'email') {
+          const existing = await User.findOne({ email: identity.email });
+          if (existing?.googleId === identity.sub) {
+            user = existing;
+          } else {
+            return res.status(409).json({ message: GOOGLE_MESSAGES.conflict });
+          }
+        } else if (duplicate === 'google' || duplicate === 'phone') {
+          user = await User.findOne({ googleId: identity.sub });
+        }
+        if (!user) {
+          return res.status(409).json({ message: GOOGLE_MESSAGES.conflict });
+        }
+        const raced = decideGoogleLogin(identity, googleAccountSnapshot(user), null);
+        if (rejectGoogleDecision(res, raced.type)) return;
+        if (user.role === 'customer') {
+          await ensureCustomerProfile(user, identity.name || user.name || 'HySafe Customer');
+        }
+      }
+    }
+
+    if (!user) {
+      return res.status(400).json({ message: GOOGLE_MESSAGES.invalid });
+    }
+    if (user.role !== 'customer') {
+      return res.status(403).json({ message: GOOGLE_MESSAGES.forbidden });
+    }
     if (!user.isActive) {
-      return res.status(401).json({ message: 'Account is inactive' });
+      return res.status(401).json({ message: GOOGLE_MESSAGES.inactive });
     }
 
-    // Generate token
     const token = generateToken({
       userId: user._id.toString(),
       role: user.role,
     });
+    await recordLoginActivity(req, user._id);
 
-    // Get profile data
-    let profile = null;
-    if (user.role === 'customer') {
-      profile = await CustomerProfile.findOne({ userId: user._id });
-    } else if (user.role === 'staff') {
-      profile = await Staff.findOne({ userId: user._id });
-    }
-
-    // Remove password from response
-    const { password: _, ...userResponse } = user.toObject();
-
-    // Merge profile data
-    const userWithProfile = {
-      ...userResponse,
-      ...(profile?.toObject() || {}),
-    };
-
-    // Track login activity
-    try {
-      const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
-      const userAgent = req.get('user-agent') || 'Unknown';
-      
-      let deviceInfo = 'Unknown Device';
-      if (userAgent.includes('Mobile')) {
-        deviceInfo = 'Mobile Device';
-      } else if (userAgent.includes('Tablet')) {
-        deviceInfo = 'Tablet';
-      } else if (userAgent.includes('Windows') || userAgent.includes('Mac') || userAgent.includes('Linux')) {
-        deviceInfo = 'Desktop';
-      }
-
-      await LoginActivity.create({
-        userId: user._id,
-        deviceInfo,
-        ipAddress: ipAddress.toString(),
-        userAgent,
-        location: 'Unknown',
-        loginAt: new Date(),
-      });
-    } catch (activityError) {
-      console.error('Failed to track login activity:', activityError);
-    }
-
-    res.json({
-      message: 'Google authentication successful',
+    return res.json({
+      message: GOOGLE_MESSAGES.success,
       token,
-      user: userWithProfile,
+      user: await buildSessionUser(user),
     });
-  } catch (error: any) {
-    console.error('Google auth error:', error);
-    if (error.code === 11000) {
-      return res.status(400).json({ message: 'Email already exists' });
-    }
-    res.status(500).json({ message: error.message || 'Google authentication failed' });
+  } catch (error) {
+    return sendGoogleAuthError(res, error);
   }
 };
 
-// Forgot Password - Send OTP to user's email
+// Link Google to the already authenticated customer. Email must already match.
+export const linkGoogle = async (req: AuthRequest, res: Response) => {
+  try {
+    const current = req.user;
+    if (!current) {
+      return res.status(401).json({ message: 'User not found or inactive' });
+    }
+
+    const identity = await resolveGoogleCredential(req.body);
+    const owner = await User.findOne({ googleId: identity.sub, _id: { $ne: current._id } });
+    const decision = decideGoogleLink(identity, {
+      googleId: current.googleId,
+      email: current.email,
+      role: current.role,
+      isActive: current.isActive !== false,
+    }, googleAccountSnapshot(owner));
+
+    if (decision === 'already-linked') {
+      return res.json({ message: GOOGLE_MESSAGES.alreadyLinked, user: publicUser(current) });
+    }
+    if (rejectGoogleDecision(res, decision)) return;
+    if (decision !== 'link') {
+      return res.status(400).json({ message: GOOGLE_MESSAGES.invalid });
+    }
+
+    const updates: { googleId: string; picture?: string; name?: string } = { googleId: identity.sub };
+    if (identity.picture && !current.picture) updates.picture = identity.picture;
+    if (identity.name && !current.name) updates.name = identity.name;
+    try {
+      await User.updateOne({ _id: current._id, role: 'customer', isActive: true }, { $set: updates });
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        return res.status(409).json({ message: GOOGLE_MESSAGES.taken });
+      }
+      throw error;
+    }
+
+    const updated = await User.findById(current._id).select('-password');
+    return res.json({ message: GOOGLE_MESSAGES.linked, user: publicUser(updated || current) });
+  } catch (error) {
+    return sendGoogleAuthError(res, error);
+  }
+};
+
+const genericForgotPassword = {
+  success: true,
+  message: FORGOT_PASSWORD_MESSAGE,
+};
+
+// Forgot Password - Send OTP to the account email. Phone-only accounts have no SMS provider.
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email, phone } = req.body;
@@ -437,10 +545,20 @@ export const forgotPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Email or phone number is required' });
     }
 
-    const genericSuccessResponse = {
-      success: true,
-      message: 'If an account exists, a verification code has been sent.',
-    };
+    const salt = resolveOtpSalt();
+    const production = process.env.NODE_ENV === 'production';
+    const unavailable = decideForgotPassword({
+      saltOk: salt.ok,
+      providerReady: emailDeliveryAvailable(),
+      production,
+      userExists: true,
+      hasEmail: true,
+      cooldown: false,
+      delivered: true,
+    });
+    if (unavailable.status === 503) {
+      return res.status(503).json({ message: unavailable.message });
+    }
 
     const normalizedPhone = normalizeIndianMobilePhone(identifier);
     const user = await User.findOne({
@@ -450,49 +568,47 @@ export const forgotPassword = async (req: Request, res: Response) => {
       ],
     });
 
-    // Account Enumeration Prevention: Return same generic response if user doesn't exist
-    if (!user) {
-      return res.json(genericSuccessResponse);
-    }
-
     const possibleIdentifiers = [
-      user.email,
-      user.phone,
+      user?.email,
+      user?.phone,
       identifier,
     ].filter(Boolean) as string[];
 
-    // Rate Limiting / Cooldown Check: Ensure 60s cooldown per user request
-    const existingRecentOtp = await Otp.findOne({
-      identifier: { $in: possibleIdentifiers },
-      createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
-    });
+    const existingRecentOtp = user
+      ? await Otp.findOne({
+          identifier: { $in: possibleIdentifiers },
+          createdAt: { $gt: new Date(Date.now() - 60 * 1000) },
+        })
+      : null;
 
-    if (existingRecentOtp) {
-      return res.status(429).json({
-        message: 'Please wait 60 seconds before requesting another verification code.',
+    const decision = decideForgotPassword({
+      saltOk: true,
+      providerReady: true,
+      production,
+      userExists: Boolean(user),
+      hasEmail: Boolean(user?.email),
+      cooldown: Boolean(existingRecentOtp),
+      delivered: true,
+    });
+    if (!decision.send) {
+      return res.status(decision.status).json({
+        success: decision.status === 200 ? true : undefined,
+        message: decision.message,
       });
     }
 
-    // Phone-Only User Check (No SMS provider integrated currently)
-    if (!user.email && user.phone) {
-      return res.json(genericSuccessResponse);
+    const targetEmail = user?.email;
+    if (!salt.ok || !targetEmail) {
+      return res.json(genericForgotPassword);
     }
 
-    const targetEmail = user.email;
-    if (!targetEmail) {
-      return res.json(genericSuccessResponse);
-    }
-
-    // Cryptographically secure 6-digit OTP generation using Node's crypto module
     const generatedOtp = crypto.randomInt(100000, 1000000).toString();
-    const otpHash = hashOtp(generatedOtp);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    // Remove existing OTPs for this user's identifiers and store hashed OTP
     await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
     await Otp.create({
       identifier: targetEmail,
-      otpHash,
+      otpHash: hashOtp(generatedOtp, salt.salt),
       expiresAt,
       attempts: 0,
       maxAttempts: 5,
@@ -500,19 +616,15 @@ export const forgotPassword = async (req: Request, res: Response) => {
       isVerified: false,
     });
 
-    // Send email with OTP code (Resend API / SMTP)
     const emailDelivered = await sendOtpEmail(targetEmail, generatedOtp);
-
     if (!emailDelivered) {
-      // Clean up stored OTP if email delivery failed
       await Otp.deleteMany({ identifier: { $in: possibleIdentifiers } });
-      return res.status(500).json({
-        message: 'Password reset service is currently unavailable. Please try again later.',
-      });
+      console.error('[Auth] Password reset delivery failed.');
+      return res.json(genericForgotPassword);
     }
 
     console.info('[Auth] Password reset code sent.');
-    return res.json(genericSuccessResponse);
+    return res.json(genericForgotPassword);
   } catch (error: any) {
     console.error('[Auth] Forgot password request failed.');
     res.status(500).json({ message: 'Failed to process forgot password request' });
@@ -528,6 +640,11 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
     if (!identifier || !cleanOtp || cleanOtp.length !== 6) {
       return res.status(400).json({ message: 'A valid email/phone and 6-digit OTP code are required' });
+    }
+
+    const salt = resolveOtpSalt();
+    if (!salt.ok) {
+      return res.status(503).json({ message: OTP_UNAVAILABLE_MESSAGE });
     }
 
     const normalizedPhone = normalizeIndianMobilePhone(identifier);
@@ -554,33 +671,43 @@ export const verifyOtp = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Invalid or expired OTP code' });
     }
 
-    if (otpRecord.attempts >= otpRecord.maxAttempts) {
-      return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
-    }
-
-    const submittedHash = hashOtp(cleanOtp);
-    const isMatch = crypto.timingSafeEqual(
-      Buffer.from(otpRecord.otpHash),
-      Buffer.from(submittedHash)
+    const result = evaluateOtpAttempt(
+      otpRecord,
+      hashOtp(cleanOtp, salt.salt),
+      otpRecord.otpHash,
     );
-
-    if (!isMatch) {
-      otpRecord.attempts += 1;
+    if (result === 'match') {
+      otpRecord.isVerified = true;
       await otpRecord.save();
-
-      if (otpRecord.attempts >= otpRecord.maxAttempts) {
-        return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
-      }
-
-      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+      return res.json({
+        success: true,
+        message: 'OTP verified successfully',
+      });
     }
 
-    otpRecord.isVerified = true;
-    await otpRecord.save();
+    if (result === 'invalid' || (result === 'locked' && otpRecord.attempts < otpRecord.maxAttempts)) {
+      const updatedOtp = await Otp.findOneAndUpdate(
+        {
+          _id: otpRecord._id,
+          isUsed: false,
+          expiresAt: { $gt: new Date() },
+          attempts: { $lt: otpRecord.maxAttempts },
+        },
+        { $inc: { attempts: 1 } },
+        { new: true },
+      );
+      if (!updatedOtp || updatedOtp.attempts >= updatedOtp.maxAttempts) {
+        return res.status(400).json({ message: OTP_LOCKED_MESSAGE });
+      }
+      return res.status(400).json({ message: OTP_INVALID_MESSAGE });
+    }
 
-    res.json({
-      success: true,
-      message: 'OTP verified successfully',
+    return res.status(400).json({
+      message: result === 'used'
+        ? OTP_REUSED_MESSAGE
+        : result === 'locked'
+          ? OTP_LOCKED_MESSAGE
+          : OTP_INVALID_MESSAGE,
     });
   } catch (error: any) {
     console.error('[Auth] OTP verification failed.');
@@ -603,6 +730,11 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'New password must be at least 6 characters' });
     }
 
+    const salt = resolveOtpSalt();
+    if (!salt.ok) {
+      return res.status(503).json({ message: OTP_UNAVAILABLE_MESSAGE });
+    }
+
     const normalizedPhone = normalizeIndianMobilePhone(identifier);
     const user = await User.findOne({
       $or: [
@@ -612,7 +744,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ message: 'Invalid request or reset code' });
+      return res.status(400).json({ message: OTP_INVALID_MESSAGE });
     }
 
     const possibleIdentifiers = [
@@ -621,28 +753,25 @@ export const resetPassword = async (req: Request, res: Response) => {
       ...(user.phone ? [user.phone] : []),
     ];
 
-    const submittedHash = hashOtp(cleanOtp);
+    const submittedHash = hashOtp(cleanOtp, salt.salt);
     const otpRecord = await Otp.findOne({
       identifier: { $in: possibleIdentifiers },
-      isUsed: false,
-      expiresAt: { $gt: new Date() },
-    });
+    }).sort({ createdAt: -1 });
 
-    if (!otpRecord) {
+    const resetAttempt = otpRecord
+      ? evaluateOtpAttempt(otpRecord, submittedHash, otpRecord.otpHash)
+      : 'invalid';
+
+    if (!otpRecord || resetAttempt === 'expired') {
       console.warn('[Auth] Password reset rejected: invalid or expired code.');
-      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+      return res.status(400).json({ message: OTP_INVALID_MESSAGE });
     }
 
-    if (otpRecord.attempts >= otpRecord.maxAttempts) {
-      return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
+    if (resetAttempt === 'used') {
+      return res.status(400).json({ message: OTP_REUSED_MESSAGE });
     }
 
-    const isMatch = crypto.timingSafeEqual(
-      Buffer.from(otpRecord.otpHash),
-      Buffer.from(submittedHash)
-    );
-
-    if (!isMatch) {
+    if (resetAttempt === 'invalid' || (resetAttempt === 'locked' && otpRecord.attempts < otpRecord.maxAttempts)) {
       const updatedOtp = await Otp.findOneAndUpdate(
         {
           _id: otpRecord._id,
@@ -651,39 +780,38 @@ export const resetPassword = async (req: Request, res: Response) => {
           attempts: { $lt: otpRecord.maxAttempts },
         },
         { $inc: { attempts: 1 } },
-        { new: true }
+        { new: true },
       );
-
       if (!updatedOtp || updatedOtp.attempts >= updatedOtp.maxAttempts) {
-        return res.status(400).json({ message: 'Maximum verification attempts exceeded. Please request a new OTP code.' });
+        return res.status(400).json({ message: OTP_LOCKED_MESSAGE });
       }
-
-      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+      return res.status(400).json({ message: OTP_INVALID_MESSAGE });
     }
 
-    if (!otpRecord.isVerified) {
-      return res.status(400).json({ message: 'Invalid or expired OTP code' });
+    if (resetAttempt !== 'match') {
+      return res.status(400).json({
+        message: resetAttempt === 'locked' ? OTP_LOCKED_MESSAGE : OTP_INVALID_MESSAGE,
+      });
     }
 
-    // Atomic consumption to prevent race conditions & double-use
+    // The reset screen sends the code once. A prior /verify-otp call is optional.
     const consumedOtp = await Otp.findOneAndUpdate(
       {
         _id: otpRecord._id,
-        isVerified: true,
         isUsed: false,
         expiresAt: { $gt: new Date() },
         attempts: { $lt: otpRecord.maxAttempts },
       },
-      { $set: { isUsed: true } },
-      { new: true }
+      { $set: { isUsed: true, isVerified: true } },
+      { new: true },
     );
 
     if (!consumedOtp) {
-      return res.status(400).json({ message: 'OTP has already been used. Please request a new OTP code.' });
+      return res.status(400).json({ message: OTP_REUSED_MESSAGE });
     }
 
-    // Update user password with bcrypt hashing
     user.password = await hashPassword(String(newPassword));
+    user.sessionValidAfter = new Date();
     await user.save();
 
     // Invalidate / clear all OTP records for this user
@@ -697,5 +825,20 @@ export const resetPassword = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Auth] Password reset failed.');
     res.status(500).json({ message: 'Failed to reset password' });
+  }
+};
+
+export const logout = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    await User.updateOne({ _id: userId }, { $set: { sessionValidAfter: new Date() } });
+    return res.json({ message: 'Logged out' });
+  } catch (error: any) {
+    console.error('[Auth] Logout failed.');
+    return res.status(500).json({ message: 'Failed to log out' });
   }
 };
